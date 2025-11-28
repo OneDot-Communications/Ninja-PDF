@@ -1,12 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { FileUpload } from "../ui/file-upload";
 import { Button } from "../ui/button";
-import { ArrowRight, Presentation, Loader2, RefreshCw, Settings, Monitor, Image as ImageIcon } from "lucide-react";
-import pptxgen from "pptxgenjs";
+import { ArrowRight, Presentation, Loader2, RefreshCw, Settings, Monitor } from "lucide-react";
 import { Label } from "../ui/label";
-import { Switch } from "../ui/switch";
+import { saveAs } from "file-saver";
 
 export function PdfToPowerPointTool() {
     const [files, setFiles] = useState<File[]>([]);
