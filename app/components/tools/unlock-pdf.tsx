@@ -5,7 +5,7 @@ import { saveAs } from "file-saver";
 import { FileUpload } from "../ui/file-upload";
 import { Button } from "../ui/button";
 import { Unlock, Lock, CheckCircle } from "lucide-react";
-import { pdfStrategyManager, isPdfEncrypted } from "../../lib/pdf-strategies";
+import { pdfStrategyManager, isPdfEncrypted } from "../../lib/pdf-service";
 import { toast } from "../../lib/use-toast";
 
 export function UnlockPdfTool() {

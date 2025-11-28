@@ -70,6 +70,7 @@ export const FileUpload = ({
           ref={fileInputRef}
           id="file-upload-handle"
           type="file"
+          multiple={maxFiles > 1}
           onChange={(e) => handleFileChange(Array.from(e.target.files || []))}
           className="hidden"
         />

@@ -6,7 +6,7 @@ import { FileUpload } from "../ui/file-upload";
 import { Button } from "../ui/button";
 import { ArrowRight, AlertTriangle, Check } from "lucide-react";
 import { cn } from "../../lib/utils";
-import { pdfStrategyManager } from "../../lib/pdf-strategies";
+import { pdfStrategyManager } from "../../lib/pdf-service";
 import { toast } from "../../lib/use-toast";
 
 export function CompressPdfTool() {
@@ -37,11 +37,19 @@ export function CompressPdfTool() {
                 variant: "success",
                 position: "top-right",
             });
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error compressing PDF:", error);
+
+            let errorMessage = "Failed to compress PDF. Please try again.";
+            if (error.message?.includes('corrupted') || error.message?.includes('Invalid PDF structure')) {
+                errorMessage = "The PDF file appears to be corrupted. Try using the Repair PDF tool first.";
+            } else if (error.message?.includes('encrypted') || error.message?.includes('password')) {
+                errorMessage = "The PDF is encrypted. Please use the Unlock PDF tool first.";
+            }
+
             toast.show({
                 title: "Compression Failed",
-                message: "Failed to compress PDF. Please try again.",
+                message: errorMessage,
                 variant: "error",
                 position: "top-right",
             });

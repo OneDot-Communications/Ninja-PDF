@@ -6,7 +6,7 @@ import { FileUpload } from "../ui/file-upload";
 import { Button } from "../ui/button";
 import { Hash } from "lucide-react";
 import { PdfPreview } from "../ui/pdf-preview";
-import { pdfStrategyManager } from "../../lib/pdf-strategies";
+import { pdfStrategyManager } from "../../lib/pdf-service";
 import { toast } from "../../lib/use-toast";
 
 export function PageNumbersTool() {
@@ -53,11 +53,19 @@ export function PageNumbersTool() {
                 variant: "success",
                 position: "top-right",
             });
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error adding page numbers:", error);
+
+            let errorMessage = "Failed to add page numbers. Please try again.";
+            if (error.message?.includes('corrupted') || error.message?.includes('Invalid PDF structure')) {
+                errorMessage = "The PDF file appears to be corrupted. Try using the Repair PDF tool first.";
+            } else if (error.message?.includes('encrypted') || error.message?.includes('password')) {
+                errorMessage = "The PDF is encrypted. Please use the Unlock PDF tool first.";
+            }
+
             toast.show({
                 title: "Operation Failed",
-                message: "Failed to add page numbers. Please try again.",
+                message: errorMessage,
                 variant: "error",
                 position: "top-right",
             });

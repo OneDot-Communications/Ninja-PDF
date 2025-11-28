@@ -7,7 +7,7 @@ import { Button } from "../ui/button";
 import { Trash2, RotateCw, Plus, CheckSquare, RotateCcw } from "lucide-react";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { cn } from "../../lib/utils";
-import { pdfStrategyManager } from "../../lib/pdf-strategies";
+import { pdfStrategyManager, getPdfJs } from "../../lib/pdf-service";
 import { toast } from "../../lib/use-toast";
 
 interface PageItem {
@@ -18,48 +18,86 @@ interface PageItem {
 }
 
 // Thumbnail component to render a single page from the shared PDF proxy
-const PageThumbnail = ({ 
-    pdf, 
-    pageIndex, 
-    rotation, 
-    isBlank 
-}: { 
-    pdf: any, 
-    pageIndex: number, 
-    rotation: number, 
-    isBlank?: boolean 
+const PageThumbnail = ({
+    pdf,
+    pageIndex,
+    rotation,
+    isBlank
+}: {
+    pdf: any,
+    pageIndex: number,
+    rotation: number,
+    isBlank?: boolean
 }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    const renderTaskRef = useRef<any>(null);
+    const [isRendering, setIsRendering] = useState(false);
 
     useEffect(() => {
         if (isBlank || !pdf || !canvasRef.current) return;
 
+        // If already rendering, don't start another render
+        if (isRendering) return;
+
+        setIsRendering(true);
+
+        // Cancel any ongoing render
+        if (renderTaskRef.current) {
+            renderTaskRef.current.cancel();
+        }
+
         const render = async () => {
             try {
-                const pdfjsLib = await import("pdfjs-dist");
-                if (typeof window !== "undefined") {
-                    pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
-                }
+                const pdfjsLib = await getPdfJs();
+
                 const page = await pdf.getPage(pageIndex + 1);
                 const viewport = page.getViewport({ scale: 0.3 }); // Thumbnail scale
                 const canvas = canvasRef.current!;
+
+                // Clear the canvas first
                 const context = canvas.getContext("2d")!;
+                context.clearRect(0, 0, canvas.width, canvas.height);
 
                 canvas.height = viewport.height;
                 canvas.width = viewport.width;
 
-                await page.render({
+                const renderTask = page.render({
                     canvasContext: context,
                     viewport: viewport,
                     canvas: canvas,
-                }).promise;
-            } catch (err) {
-                console.error("Error rendering thumbnail:", err);
+                });
+                renderTaskRef.current = renderTask;
+
+                await renderTask.promise;
+                if (renderTaskRef.current === renderTask) {
+                    renderTaskRef.current = null;
+                }
+            } catch (err: any) {
+                if (err?.name !== 'RenderingCancelledException' && err !== 'cancelled') {
+                    console.error("Error rendering thumbnail:", err);
+                }
+            } finally {
+                setIsRendering(false);
             }
         };
 
         render();
+
+        return () => {
+            if (renderTaskRef.current) {
+                renderTaskRef.current.cancel();
+            }
+        };
     }, [pdf, pageIndex, isBlank]);
+
+    // Cleanup on unmount
+    useEffect(() => {
+        return () => {
+            if (renderTaskRef.current) {
+                renderTaskRef.current.cancel();
+            }
+        };
+    }, []);
 
     if (isBlank) {
         return (
@@ -70,8 +108,8 @@ const PageThumbnail = ({
     }
 
     return (
-        <canvas 
-            ref={canvasRef} 
+        <canvas
+            ref={canvasRef}
             className="h-full w-full object-contain transition-transform duration-300"
             style={{ transform: `rotate(${rotation}deg)` }}
         />
@@ -93,12 +131,12 @@ export function OrganizePdfTool() {
             setSelectedPages(new Set());
 
             try {
-                const pdfjsLib = await import("pdfjs-dist");
-                if (typeof window !== "undefined") {
-                    pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
-                }
+                const pdfjsLib = await getPdfJs();
                 const arrayBuffer = await selectedFile.arrayBuffer();
-                const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+                const pdf = await pdfjsLib.getDocument({
+                    data: new Uint8Array(arrayBuffer),
+                    verbosity: 0
+                }).promise;
                 setPdfProxy(pdf);
 
                 const newPages: PageItem[] = [];
@@ -110,11 +148,23 @@ export function OrganizePdfTool() {
                     });
                 }
                 setPages(newPages);
-            } catch (error) {
+            } catch (error: any) {
                 console.error("Error loading PDF:", error);
+                setFile(null); // Reset file so user can try again
+                setPdfProxy(null);
+
+                let errorMessage = "Failed to load PDF.";
+                if (error.message?.includes('Invalid PDF structure') || error.name === 'InvalidPDFException') {
+                    errorMessage = "The PDF file appears to be corrupted or has an invalid structure. Try using the Repair PDF tool first.";
+                } else if (error.message?.includes('password') || error.name === 'PasswordException') {
+                    errorMessage = "The PDF is password-protected. Please remove the password first.";
+                } else if (error.message?.includes('encrypted')) {
+                    errorMessage = "The PDF is encrypted and cannot be processed.";
+                }
+
                 toast.show({
                     title: "Load Failed",
-                    message: "Failed to load PDF.",
+                    message: errorMessage,
                     variant: "error",
                     position: "top-right",
                 });
@@ -176,18 +226,30 @@ export function OrganizePdfTool() {
             });
 
             saveAs(result.blob, result.fileName || `organized-${file.name}`);
-            
+
             toast.show({
                 title: "Success",
                 message: "PDF organized successfully!",
                 variant: "success",
                 position: "top-right",
             });
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error organizing PDF:", error);
+
+            let errorMessage = "Failed to organize PDF. Please try again.";
+            if (error.message?.includes('corrupted') ||
+                error.message?.includes('Invalid PDF structure') ||
+                error.name === 'InvalidPDFException' ||
+                error.message?.includes('InvalidPDFException') ||
+                error.message?.includes('could not be repaired')) {
+                errorMessage = "The PDF file appears to be corrupted. Try using the Repair PDF tool first.";
+            } else if (error.message?.includes('encrypted') || error.message?.includes('password')) {
+                errorMessage = "The PDF is encrypted. Please use the Unlock PDF tool first.";
+            }
+
             toast.show({
                 title: "Operation Failed",
-                message: "Failed to organize PDF. Please try again.",
+                message: errorMessage,
                 variant: "error",
                 position: "top-right",
             });
@@ -273,9 +335,9 @@ export function OrganizePdfTool() {
                                             )}
                                         >
                                             <div className="relative aspect-[1/1.4] w-full overflow-hidden rounded-md bg-muted/20">
-                                                <PageThumbnail 
-                                                    pdf={pdfProxy} 
-                                                    pageIndex={page.originalIndex} 
+                                                <PageThumbnail
+                                                    pdf={pdfProxy}
+                                                    pageIndex={page.originalIndex}
                                                     rotation={page.rotation}
                                                     isBlank={page.isBlank}
                                                 />

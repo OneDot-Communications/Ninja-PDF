@@ -7,7 +7,7 @@ import { Button } from "../ui/button";
 import { ArrowRight, Download, Trash2, FileText, Settings, CheckSquare, Square } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
-import { pdfStrategyManager } from "../../lib/pdf-strategies";
+import { pdfStrategyManager } from "../../lib/pdf-service";
 import { toast } from "../../lib/use-toast";
 
 interface MergeFile {
@@ -101,11 +101,19 @@ export function MergePdfTool() {
                 variant: "success",
                 position: "top-right",
             });
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error merging PDFs:", error);
+
+            let errorMessage = "Failed to merge PDFs. Please try again.";
+            if (error.message?.includes('corrupted') || error.message?.includes('Invalid PDF structure')) {
+                errorMessage = "One or more PDF files appear to be corrupted. Try using the Repair PDF tool first.";
+            } else if (error.message?.includes('encrypted') || error.message?.includes('password')) {
+                errorMessage = "One or more PDF files are encrypted. Please use the Unlock PDF tool first.";
+            }
+
             toast.show({
                 title: "Merge Failed",
-                message: "Failed to merge PDFs. Please try again.",
+                message: errorMessage,
                 variant: "error",
                 position: "top-right",
             });

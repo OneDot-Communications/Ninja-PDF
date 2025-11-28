@@ -6,7 +6,7 @@ import { FileUpload } from "../ui/file-upload";
 import { Button } from "../ui/button";
 import { Type, Sliders, Image as ImageIcon, Grid } from "lucide-react";
 import { PdfPreview } from "../ui/pdf-preview";
-import { pdfStrategyManager } from "../../lib/pdf-strategies";
+import { pdfStrategyManager } from "../../lib/pdf-service";
 import { toast } from "../../lib/use-toast";
 
 export function WatermarkPdfTool() {
@@ -118,7 +118,10 @@ export function WatermarkPdfTool() {
                         
                         <div className="flex gap-2 rounded-lg bg-muted p-1">
                             <button
-                                onClick={() => setType("text")}
+                                onClick={() => {
+                                    setType("text");
+                                    if (!text) setText("CONFIDENTIAL");
+                                }}
                                 className={`flex-1 rounded-md py-2 text-sm font-medium transition-all ${type === "text" ? "bg-background shadow-sm" : "hover:bg-background/50"}`}
                             >
                                 <Type className="mx-auto mb-1 h-4 w-4" /> Text

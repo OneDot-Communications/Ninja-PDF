@@ -5,7 +5,7 @@ import { saveAs } from "file-saver";
 import { FileUpload } from "../ui/file-upload";
 import { Button } from "../ui/button";
 import { Type, Image as ImageIcon, Trash2, Save, ChevronLeft, ChevronRight } from "lucide-react";
-import { pdfStrategyManager } from "../../lib/pdf-strategies";
+import { pdfStrategyManager } from "../../lib/pdf-service";
 import { toast } from "../../lib/use-toast";
 
 interface EditorElement {
@@ -34,6 +34,7 @@ export function EditPdfTool() {
     // Canvas refs
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
+    const renderTaskRef = useRef<any>(null);
 
     // Text input state
     const [newText, setNewText] = useState("New Text");
@@ -49,7 +50,7 @@ export function EditPdfTool() {
             // Load PDF to get page count
             const pdfjsLib = await import("pdfjs-dist");
             if (typeof window !== "undefined") {
-                pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+                pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
             }
             const arrayBuffer = await files[0].arrayBuffer();
             const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
@@ -62,9 +63,14 @@ export function EditPdfTool() {
         if (!file || !canvasRef.current) return;
 
         const renderPage = async () => {
+            // Cancel any ongoing render
+            if (renderTaskRef.current) {
+                renderTaskRef.current.cancel();
+            }
+
             const pdfjsLib = await import("pdfjs-dist");
             if (typeof window !== "undefined") {
-                pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+                pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
             }
             const arrayBuffer = await file.arrayBuffer();
             const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
@@ -77,15 +83,28 @@ export function EditPdfTool() {
             canvas.height = viewport.height;
             canvas.width = viewport.width;
 
-            await page.render({
+            const renderTask = page.render({
                 canvasContext: context,
                 viewport: viewport,
                 canvas: canvas,
-            }).promise;
+            });
+            renderTaskRef.current = renderTask;
+
+            await renderTask.promise;
+            renderTaskRef.current = null;
         };
 
         renderPage();
     }, [file, currentPage]);
+
+    // Cleanup render task on unmount
+    useEffect(() => {
+        return () => {
+            if (renderTaskRef.current) {
+                renderTaskRef.current.cancel();
+            }
+        };
+    }, []);
 
     const addTextElement = () => {
         const id = Math.random().toString(36).substr(2, 9);

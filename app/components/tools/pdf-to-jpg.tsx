@@ -7,7 +7,7 @@ import { Button } from "../ui/button";
 import { ArrowRight, Settings, Loader2 } from "lucide-react";
 import { PdfPreview } from "../ui/pdf-preview";
 import { toast } from "../../lib/use-toast";
-import { pdfStrategyManager } from "../../lib/pdf-strategies";
+import { pdfStrategyManager } from "../../lib/pdf-service";
 
 export function PdfToJpgTool() {
     const [file, setFile] = useState<File | null>(null);

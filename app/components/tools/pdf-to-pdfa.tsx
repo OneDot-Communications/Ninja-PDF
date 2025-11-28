@@ -6,7 +6,7 @@ import { FileUpload } from "../ui/file-upload";
 import { Button } from "../ui/button";
 import { Archive, Check, Info } from "lucide-react";
 import { cn } from "../../lib/utils";
-import { pdfStrategyManager } from "../../lib/pdf-strategies";
+import { pdfStrategyManager } from "../../lib/pdf-service";
 import { toast } from "../../lib/use-toast";
 
 export function PdfToPdfATool() {

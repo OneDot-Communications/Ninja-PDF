@@ -6,7 +6,7 @@ import { Button } from "../ui/button";
 import { Search, FileText, Download, Loader2, RefreshCw, Copy, Check } from "lucide-react";
 import { saveAs } from "file-saver";
 import { cn } from "../../lib/utils";
-import { pdfStrategyManager } from "../../lib/pdf-strategies";
+import { pdfStrategyManager } from "../../lib/pdf-service";
 
 const LANGUAGES = [
     { code: "eng", name: "English" },

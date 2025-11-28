@@ -8,7 +8,7 @@ import { Switch } from "../ui/switch";
 import { Label } from "../ui/label";
 import { Slider } from "../ui/slider";
 import { saveAs } from "file-saver";
-import { pdfStrategyManager } from "../../lib/pdf-strategies";
+import { pdfStrategyManager } from "../../lib/pdf-service";
 
 export function PdfToExcelTool() {
     const [files, setFiles] = useState<File[]>([]);
