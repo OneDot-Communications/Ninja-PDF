@@ -5,7 +5,8 @@ import { saveAs } from "file-saver";
 import { FileUpload } from "../ui/file-upload";
 import { Button } from "../ui/button";
 import { Wrench, AlertTriangle, CheckCircle, FileText, Eye, RefreshCw } from "lucide-react";
-import { pdfStrategyManager } from "../../lib/pdf-strategies";
+import { pdfStrategyManager } from "../../lib/pdf-service";
+import { toast } from "../../lib/use-toast";
 
 export function RepairPdfTool() {
     const [file, setFile] = useState<File | null>(null);
@@ -46,9 +47,22 @@ export function RepairPdfTool() {
             setStatus("success");
             addLog("Success: File processed and downloaded.");
 
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error repairing PDF:", error);
-            addLog("Critical Error: Unable to process file.");
+
+            let errorMessage = error.message || "Failed to repair PDF. The file may be too severely corrupted.";
+
+            // Add helpful suggestions based on error type
+            if (errorMessage.includes('too severely corrupted') || errorMessage.includes('completely invalid')) {
+                errorMessage += "\n\nSuggestions:\n• Verify this is actually a PDF file\n• Try opening it in Adobe Acrobat or another PDF viewer\n• If it's a scanned document, you may need to re-scan it";
+            }
+
+            toast.show({
+                title: "Repair Failed",
+                message: errorMessage,
+                variant: "error",
+                position: "top-right",
+            });
             setStatus("error");
         } finally {
             setIsProcessing(false);
@@ -97,7 +111,7 @@ export function RepairPdfTool() {
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
-                            <div 
+                            <div
                                 className={`cursor-pointer rounded-lg border p-3 text-center transition-all ${repairMode === "auto" ? "border-primary bg-primary/5 ring-1 ring-primary" : "hover:bg-muted"}`}
                                 onClick={() => setRepairMode("auto")}
                             >
@@ -105,7 +119,7 @@ export function RepairPdfTool() {
                                 <div className="text-sm font-medium">Auto Repair</div>
                                 <div className="text-xs text-muted-foreground">Try standard first</div>
                             </div>
-                            <div 
+                            <div
                                 className={`cursor-pointer rounded-lg border p-3 text-center transition-all ${repairMode === "visual" ? "border-primary bg-primary/5 ring-1 ring-primary" : "hover:bg-muted"}`}
                                 onClick={() => setRepairMode("visual")}
                             >

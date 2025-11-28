@@ -1,24 +1,81 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Features
+
+- **PDF Tools**: Comprehensive PDF processing tools including merge, split, compress, protect, watermark, sign, and more
+- **PDF Protection**: Secure PDF encryption using iLovePDF API (requires API key setup)
+- **Modern UI**: Built with Next.js 16, React 19, and Tailwind CSS
+
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+
+- Node.js 18+
+- pnpm (recommended) or npm
+
+### Installation
+
+1. Clone the repository:
+```bash
+git clone https://github.com/Divith123/OneDot-Reader.git
+cd OneDot-Reader
+```
+
+2. Install dependencies:
+```bash
+pnpm install
+```
+
+3. Set up environment variables:
+```bash
+cp .env.local.example .env.local
+```
+
+Edit `.env.local` and add your iLovePDF API credentials:
+```env
+NEXT_PUBLIC_ILOVEPDF_PUBLIC_KEY=your_public_key_here
+NEXT_PUBLIC_ILOVEPDF_SECRET_KEY=your_secret_key_here
+```
+
+### Get iLovePDF API Keys
+
+1. Sign up at [iLoveAPI](https://www.iloveapi.com/signup)
+2. Create a new project in your dashboard
+3. Copy your Public Key and Secret Key
+4. Add them to your `.env.local` file
+
+**Note**: PDF protection feature requires valid iLovePDF API credentials. Without them, the protect PDF tool will show an error message.
+
+### Development
+
+Run the development server:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
 pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## PDF Tools
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Available Tools
+- **Merge PDF**: Combine multiple PDFs into one
+- **Split PDF**: Divide PDFs into separate files
+- **Compress PDF**: Reduce file size while maintaining quality
+- **Protect PDF**: Encrypt PDFs with passwords (requires iLovePDF API)
+- **Unlock PDF**: Remove password protection
+- **Watermark PDF**: Add text or image watermarks
+- **Sign PDF**: Add visual signatures
+- **Crop PDF**: Trim PDF margins
+- **Rotate PDF**: Change page orientation
+- **Repair PDF**: Fix corrupted PDFs
+- **Page Numbers**: Add page numbering
+- **Organize PDF**: Reorder PDF pages
+- **Convert PDF**: PDF to various formats
+
+### API Integration
+
+The PDF protection feature uses the iLovePDF API for server-side PDF encryption since browser-based encryption is not supported for security reasons.
 
 ## Learn More
 
@@ -26,8 +83,6 @@ To learn more about Next.js, take a look at the following resources:
 
 - [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
 - [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
 ## Deploy on Vercel
 

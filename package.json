@@ -27,6 +27,7 @@
     "mammoth": "^1.11.0",
     "next": "16.0.3",
     "pdf-lib": "^1.17.1",
+    "pdf-password": "^1.0.0",
     "pdfjs-dist": "^5.4.394",
     "pptxgenjs": "^4.0.1",
     "react": "19.2.0",
@@ -39,6 +40,7 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "@eslint/eslintrc": "^3.3.3",
     "@tailwindcss/postcss": "^4",
     "@types/file-saver": "^2.0.7",
     "@types/node": "^20",

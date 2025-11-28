@@ -24,8 +24,10 @@ export function PdfPreview({
     const renderTaskRef = useRef<any>(null);
 
     useEffect(() => {
+        let isMounted = true;
         const loadPdf = async () => {
             try {
+                if (!isMounted) return;
                 setLoading(true);
                 setError(null);
 
@@ -69,19 +71,28 @@ export function PdfPreview({
                 renderTaskRef.current = renderTask;
                 await renderTask.promise;
                 renderTaskRef.current = null;
-            } catch (err) {
-                if ((err as any).name !== 'RenderingCancelledException') {
+            } catch (err: any) {
+                if (err.name !== 'RenderingCancelledException') {
                     console.error("Error rendering PDF:", err);
-                    setError("Failed to load PDF preview.");
+                    if (err.name === 'InvalidPDFException' || err.message?.includes('Invalid PDF structure')) {
+                        setError("Invalid or corrupted PDF file.");
+                    } else if (err.name === 'PasswordException' || err.message?.includes('password')) {
+                        setError("Password protected PDF.");
+                    } else {
+                        setError("Failed to load PDF preview.");
+                    }
                 }
             } finally {
-                setLoading(false);
+                if (isMounted) {
+                    setLoading(false);
+                }
             }
         };
 
         loadPdf();
 
         return () => {
+            isMounted = false;
             if (renderTaskRef.current) {
                 renderTaskRef.current.cancel();
                 renderTaskRef.current = null;

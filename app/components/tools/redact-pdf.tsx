@@ -5,7 +5,7 @@ import { saveAs } from "file-saver";
 import { FileUpload } from "../ui/file-upload";
 import { Button } from "../ui/button";
 import { PdfPreview } from "../ui/pdf-preview";
-import { pdfStrategyManager } from "../../lib/pdf-strategies";
+import { pdfStrategyManager } from "../../lib/pdf-service";
 import { toast } from "../../lib/use-toast";
 
 export function RedactPdfTool() {

@@ -6,7 +6,7 @@ import { FileUpload } from "../ui/file-upload";
 import { Button } from "../ui/button";
 import { PenTool, Trash2, Type, Image as ImageIcon } from "lucide-react";
 import { PdfPreview } from "../ui/pdf-preview";
-import { pdfStrategyManager } from "../../lib/pdf-strategies";
+import { pdfStrategyManager } from "../../lib/pdf-service";
 import { toast } from "../../lib/use-toast";
 
 export function SignPdfTool() {

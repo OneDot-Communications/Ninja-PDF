@@ -6,7 +6,7 @@ import { FileUpload } from "../ui/file-upload";
 import { Button } from "../ui/button";
 import { ArrowRight, RotateCw, RotateCcw, RefreshCw, Loader2, CheckSquare, Square } from "lucide-react";
 import { cn } from "../../lib/utils";
-import { pdfStrategyManager } from "../../lib/pdf-strategies";
+import { pdfStrategyManager } from "../../lib/pdf-service";
 import { toast } from "../../lib/use-toast";
 
 export function RotatePdfTool() {
@@ -51,11 +51,12 @@ export function RotatePdfTool() {
                 canvas.width = viewport.width;
                 
                 if (context) {
-                    await page.render({
+                    const renderTask = page.render({
                         canvasContext: context,
                         viewport: viewport,
                         canvas: canvas
-                    }).promise;
+                    });
+                    await renderTask.promise;
                     thumbs.push(canvas.toDataURL());
                 }
             }
@@ -139,11 +140,19 @@ export function RotatePdfTool() {
                 variant: "success",
                 position: "top-right",
             });
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error rotating PDF:", error);
+
+            let errorMessage = "Failed to rotate PDF. Please try again.";
+            if (error.message?.includes('corrupted') || error.message?.includes('Invalid PDF structure')) {
+                errorMessage = "The PDF file appears to be corrupted. Try using the Repair PDF tool first.";
+            } else if (error.message?.includes('encrypted') || error.message?.includes('password')) {
+                errorMessage = "The PDF is encrypted. Please use the Unlock PDF tool first.";
+            }
+
             toast.show({
                 title: "Rotation Failed",
-                message: "Failed to rotate PDF. Please try again.",
+                message: errorMessage,
                 variant: "error",
                 position: "top-right",
             });

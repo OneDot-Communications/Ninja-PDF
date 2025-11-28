@@ -5,7 +5,7 @@ import { saveAs } from "file-saver";
 import { FileUpload } from "../ui/file-upload";
 import { Button } from "../ui/button";
 import { Crop, CheckSquare, Square, ChevronLeft, ChevronRight } from "lucide-react";
-import { pdfStrategyManager } from "../../lib/pdf-strategies";
+import { pdfStrategyManager } from "../../lib/pdf-service";
 import { toast } from "../../lib/use-toast";
 
 export function CropPdfTool() {
@@ -28,7 +28,7 @@ export function CropPdfTool() {
             setFile(files[0]);
             const pdfjsLib = await import("pdfjs-dist");
             if (typeof window !== "undefined") {
-                pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+                pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
             }
             const arrayBuffer = await files[0].arrayBuffer();
             const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
@@ -43,7 +43,7 @@ export function CropPdfTool() {
         const renderPage = async () => {
             const pdfjsLib = await import("pdfjs-dist");
             if (typeof window !== "undefined") {
-                pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+                pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
             }
             const arrayBuffer = await file.arrayBuffer();
             const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
@@ -66,56 +66,142 @@ export function CropPdfTool() {
         renderPage();
     }, [file, currentPage]);
 
-    const handleMouseDown = (e: React.MouseEvent, handle: string | null) => {
+    const handleMouseDown = (e: React.MouseEvent) => {
         e.preventDefault();
-        setIsDragging(true);
-        setDragHandle(handle);
-    };
-
-    const handleMouseMove = (e: React.MouseEvent) => {
-        if (!isDragging || !containerRef.current) return;
-
+        e.stopPropagation();
+        
+        if (!containerRef.current) return;
+        
         const rect = containerRef.current.getBoundingClientRect();
         const x = ((e.clientX - rect.left) / rect.width) * 100;
         const y = ((e.clientY - rect.top) / rect.height) * 100;
-
-        // Clamp values
-        const cx = Math.max(0, Math.min(100, x));
-        const cy = Math.max(0, Math.min(100, y));
-
-        setCropBox(prev => {
-            let newBox = { ...prev };
-
-            if (dragHandle === 'move') {
-                // Move the whole box
-                // This is tricky with percentages, let's skip move for now and just do resize
-                // Or implement move later.
-                // For now, let's just support resizing corners.
-            } else if (dragHandle === 'nw') {
-                newBox.width += newBox.x - cx;
-                newBox.height += newBox.y - cy;
-                newBox.x = cx;
-                newBox.y = cy;
-            } else if (dragHandle === 'ne') {
-                newBox.width = cx - newBox.x;
-                newBox.height += newBox.y - cy;
-                newBox.y = cy;
-            } else if (dragHandle === 'sw') {
-                newBox.width += newBox.x - cx;
-                newBox.height = cy - newBox.y;
-                newBox.x = cx;
-            } else if (dragHandle === 'se') {
-                newBox.width = cx - newBox.x;
-                newBox.height = cy - newBox.y;
-            }
-
-            // Min size check
-            if (newBox.width < 5) newBox.width = 5;
-            if (newBox.height < 5) newBox.height = 5;
-
-            return newBox;
-        });
+        
+        // Calculate relative position within the crop box
+        const relativeX = (x - cropBox.x) / cropBox.width;
+        const relativeY = (y - cropBox.y) / cropBox.height;
+        
+        // Determine which handle to use based on position
+        let detectedHandle: string = 'move';
+        const edgeThreshold = 0.25; // 25% from edge for resize handles
+        
+        if (relativeX < edgeThreshold && relativeY < edgeThreshold) {
+            detectedHandle = 'nw';
+        } else if (relativeX > 1 - edgeThreshold && relativeY < edgeThreshold) {
+            detectedHandle = 'ne';
+        } else if (relativeX < edgeThreshold && relativeY > 1 - edgeThreshold) {
+            detectedHandle = 'sw';
+        } else if (relativeX > 1 - edgeThreshold && relativeY > 1 - edgeThreshold) {
+            detectedHandle = 'se';
+        } else if (relativeX < edgeThreshold) {
+            detectedHandle = 'w';
+        } else if (relativeX > 1 - edgeThreshold) {
+            detectedHandle = 'e';
+        } else if (relativeY < edgeThreshold) {
+            detectedHandle = 'n';
+        } else if (relativeY > 1 - edgeThreshold) {
+            detectedHandle = 's';
+        }
+        
+        setIsDragging(true);
+        setDragHandle(detectedHandle);
     };
+
+    useEffect(() => {
+        const handleGlobalMouseMove = (e: MouseEvent) => {
+            if (!isDragging || !containerRef.current) return;
+
+            const rect = containerRef.current.getBoundingClientRect();
+            const x = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
+            const y = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100));
+
+            setCropBox(prev => {
+                let newBox = { ...prev };
+
+                if (dragHandle === 'move') {
+                    // Move the entire box
+                    const deltaX = x - (prev.x + prev.width / 2);
+                    const deltaY = y - (prev.y + prev.height / 2);
+                    newBox.x = Math.max(0, Math.min(100 - prev.width, prev.x + deltaX));
+                    newBox.y = Math.max(0, Math.min(100 - prev.height, prev.y + deltaY));
+                } else if (dragHandle === 'nw') {
+                    const newWidth = prev.x + prev.width - x;
+                    const newHeight = prev.y + prev.height - y;
+                    if (newWidth >= 5 && newHeight >= 5) {
+                        newBox.width = newWidth;
+                        newBox.height = newHeight;
+                        newBox.x = x;
+                        newBox.y = y;
+                    }
+                } else if (dragHandle === 'ne') {
+                    const newWidth = x - prev.x;
+                    const newHeight = prev.y + prev.height - y;
+                    if (newWidth >= 5 && newHeight >= 5) {
+                        newBox.width = newWidth;
+                        newBox.height = newHeight;
+                        newBox.y = y;
+                    }
+                } else if (dragHandle === 'sw') {
+                    const newWidth = prev.x + prev.width - x;
+                    const newHeight = y - prev.y;
+                    if (newWidth >= 5 && newHeight >= 5) {
+                        newBox.width = newWidth;
+                        newBox.height = newHeight;
+                        newBox.x = x;
+                    }
+                } else if (dragHandle === 'se') {
+                    const newWidth = x - prev.x;
+                    const newHeight = y - prev.y;
+                    if (newWidth >= 5 && newHeight >= 5) {
+                        newBox.width = newWidth;
+                        newBox.height = newHeight;
+                    }
+                } else if (dragHandle === 'n') {
+                    const newHeight = prev.y + prev.height - y;
+                    if (newHeight >= 5) {
+                        newBox.height = newHeight;
+                        newBox.y = y;
+                    }
+                } else if (dragHandle === 's') {
+                    const newHeight = y - prev.y;
+                    if (newHeight >= 5) {
+                        newBox.height = newHeight;
+                    }
+                } else if (dragHandle === 'w') {
+                    const newWidth = prev.x + prev.width - x;
+                    if (newWidth >= 5) {
+                        newBox.width = newWidth;
+                        newBox.x = x;
+                    }
+                } else if (dragHandle === 'e') {
+                    const newWidth = x - prev.x;
+                    if (newWidth >= 5) {
+                        newBox.width = newWidth;
+                    }
+                }
+
+                // Ensure minimum size and bounds
+                newBox.width = Math.max(5, Math.min(100 - newBox.x, newBox.width));
+                newBox.height = Math.max(5, Math.min(100 - newBox.y, newBox.height));
+
+                return newBox;
+            });
+        };
+
+        const handleGlobalMouseUp = () => {
+            setIsDragging(false);
+            setDragHandle(null);
+        };
+
+        if (isDragging) {
+            document.addEventListener('mousemove', handleGlobalMouseMove);
+            document.addEventListener('mouseup', handleGlobalMouseUp);
+        }
+
+        return () => {
+            document.removeEventListener('mousemove', handleGlobalMouseMove);
+            document.removeEventListener('mouseup', handleGlobalMouseUp);
+        };
+    }, [isDragging, dragHandle]);
 
     const handleMouseUp = () => {
         setIsDragging(false);
@@ -141,11 +227,19 @@ export function CropPdfTool() {
                 variant: "success",
                 position: "top-right",
             });
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error cropping PDF:", error);
+
+            let errorMessage = "Failed to crop PDF. Please try again.";
+            if (error.message?.includes('corrupted') || error.message?.includes('Invalid PDF structure')) {
+                errorMessage = "The PDF file appears to be corrupted. Try using the Repair PDF tool first.";
+            } else if (error.message?.includes('encrypted') || error.message?.includes('password')) {
+                errorMessage = "The PDF is encrypted. Please use the Unlock PDF tool first.";
+            }
+
             toast.show({
                 title: "Operation Failed",
-                message: "Failed to crop PDF. Please try again.",
+                message: errorMessage,
                 variant: "error",
                 position: "top-right",
             });
@@ -168,7 +262,7 @@ export function CropPdfTool() {
     }
 
     return (
-        <div className="space-y-8" onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}>
+        <div className="space-y-8">
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                     <h2 className="text-2xl font-bold truncate max-w-[300px]">{file.name}</h2>
@@ -206,7 +300,7 @@ export function CropPdfTool() {
                         </div>
 
                         <div className="text-xs text-muted-foreground">
-                            Drag the corners of the box on the preview to set the crop area.
+                            Drag the edges or corners of the box on the preview to resize the crop area. Drag inside the box to move it.
                         </div>
 
                         <Button
@@ -225,41 +319,63 @@ export function CropPdfTool() {
                         ref={containerRef}
                         className="relative shadow-lg select-none"
                         style={{ width: "fit-content", height: "fit-content" }}
-                        onMouseMove={handleMouseMove}
                     >
                         <canvas ref={canvasRef} className="max-w-full h-auto block pointer-events-none" />
                         
                         {/* Crop Overlay */}
-                        <div className="absolute inset-0 bg-black/50 pointer-events-none">
-                            {/* The "Hole" */}
+                        <div className="absolute inset-0 pointer-events-none">
+                            {/* Top overlay */}
                             <div 
-                                className="absolute border-2 border-white shadow-[0_0_0_9999px_rgba(0,0,0,0.5)] pointer-events-auto cursor-move"
+                                className="absolute bg-black/50"
+                                style={{
+                                    left: 0,
+                                    top: 0,
+                                    width: '100%',
+                                    height: `${cropBox.y}%`
+                                }}
+                            />
+                            {/* Bottom overlay */}
+                            <div 
+                                className="absolute bg-black/50"
+                                style={{
+                                    left: 0,
+                                    top: `${cropBox.y + cropBox.height}%`,
+                                    width: '100%',
+                                    height: `${100 - cropBox.y - cropBox.height}%`
+                                }}
+                            />
+                            {/* Left overlay */}
+                            <div 
+                                className="absolute bg-black/50"
+                                style={{
+                                    left: 0,
+                                    top: `${cropBox.y}%`,
+                                    width: `${cropBox.x}%`,
+                                    height: `${cropBox.height}%`
+                                }}
+                            />
+                            {/* Right overlay */}
+                            <div 
+                                className="absolute bg-black/50"
+                                style={{
+                                    left: `${cropBox.x + cropBox.width}%`,
+                                    top: `${cropBox.y}%`,
+                                    width: `${100 - cropBox.x - cropBox.width}%`,
+                                    height: `${cropBox.height}%`
+                                }}
+                            />
+                            
+                            {/* Crop box border */}
+                            <div 
+                                className="absolute border-2 border-white cursor-move pointer-events-auto"
                                 style={{
                                     left: `${cropBox.x}%`,
                                     top: `${cropBox.y}%`,
                                     width: `${cropBox.width}%`,
                                     height: `${cropBox.height}%`,
                                 }}
-                                onMouseDown={(e) => handleMouseDown(e, 'move')}
-                            >
-                                {/* Handles */}
-                                <div 
-                                    className="absolute -top-1.5 -left-1.5 w-3 h-3 bg-white border border-primary cursor-nw-resize"
-                                    onMouseDown={(e) => handleMouseDown(e, 'nw')}
-                                />
-                                <div 
-                                    className="absolute -top-1.5 -right-1.5 w-3 h-3 bg-white border border-primary cursor-ne-resize"
-                                    onMouseDown={(e) => handleMouseDown(e, 'ne')}
-                                />
-                                <div 
-                                    className="absolute -bottom-1.5 -left-1.5 w-3 h-3 bg-white border border-primary cursor-sw-resize"
-                                    onMouseDown={(e) => handleMouseDown(e, 'sw')}
-                                />
-                                <div 
-                                    className="absolute -bottom-1.5 -right-1.5 w-3 h-3 bg-white border border-primary cursor-se-resize"
-                                    onMouseDown={(e) => handleMouseDown(e, 'se')}
-                                />
-                            </div>
+                                onMouseDown={handleMouseDown}
+                            />
                         </div>
                     </div>
                 </div>
