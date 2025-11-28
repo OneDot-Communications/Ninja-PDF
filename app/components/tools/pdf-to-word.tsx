@@ -10,7 +10,7 @@ import { getPdfPageCount } from "../../lib/pdf-utils";
 export function PdfToWordTool() {
     const [file, setFile] = useState<File | null>(null);
     const [isProcessing, setIsProcessing] = useState(false);
-    
+
     // Options
     const [format, setFormat] = useState<"doc" | "txt">("doc");
     const [pageRange, setPageRange] = useState("");
@@ -24,10 +24,10 @@ export function PdfToWordTool() {
 
     const parsePageRange = (rangeStr: string, totalPages: number): Set<number> => {
         if (!rangeStr.trim()) return new Set(Array.from({ length: totalPages }, (_, i) => i + 1));
-        
+
         const pages = new Set<number>();
         const parts = rangeStr.split(",");
-        
+
         parts.forEach(part => {
             const range = part.trim().split("-");
             if (range.length === 2) {
@@ -45,7 +45,7 @@ export function PdfToWordTool() {
                 }
             }
         });
-        
+
         return pages;
     };
 
@@ -54,74 +54,15 @@ export function PdfToWordTool() {
         setIsProcessing(true);
 
         try {
-            const pdfjsLib = await import("pdfjs-dist");
-            if (typeof window !== "undefined" && !pdfjsLib.GlobalWorkerOptions.workerSrc) {
-                pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
-            }
+            const { pdfStrategyManager } = await import("../../lib/pdf-service");
 
-            const arrayBuffer = await file.arrayBuffer();
-            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-            const totalPages = pdf.numPages;
-            const pagesToConvert = parsePageRange(pageRange, totalPages);
-            
-            let fullText = "";
+            const result = await pdfStrategyManager.execute('pdf-to-word', [file], {
+                format,
+                pageRange,
+                preserveLineBreaks
+            });
 
-            for (let i = 1; i <= totalPages; i++) {
-                if (!pagesToConvert.has(i)) continue;
-                
-                const page = await pdf.getPage(i);
-                const textContent = await page.getTextContent();
-                
-                // Simple text extraction
-                // To improve layout, we could sort items by Y position?
-                // PDF.js usually returns them in reading order but not always.
-                // For now, let's just join them.
-                
-                let pageText = "";
-                if (preserveLineBreaks) {
-                    // Try to respect some layout by checking Y difference?
-                    // This is complex. Let's stick to simple join with space, 
-                    // but maybe add newlines if items are far apart vertically?
-                    // For now, standard join is safer for "flow" text.
-                    // Actually, let's use the item.hasEOL property if available (it's not always reliable).
-                    
-                    // Better approach:
-                    let lastY = -1;
-                    textContent.items.forEach((item: any) => {
-                        if (lastY !== -1 && Math.abs(item.transform[5] - lastY) > 10) {
-                            pageText += "\n";
-                        }
-                        pageText += item.str + " ";
-                        lastY = item.transform[5];
-                    });
-                } else {
-                    pageText = textContent.items.map((item: any) => item.str).join(" ");
-                }
-                
-                fullText += pageText + "\n\n";
-            }
-
-            if (format === "txt") {
-                const blob = new Blob([fullText], { type: "text/plain;charset=utf-8" });
-                saveAs(blob, `${file.name.replace(".pdf", "")}.txt`);
-            } else {
-                // Create a simple HTML-based Doc file
-                const header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' " +
-                    "xmlns:w='urn:schemas-microsoft-com:office:word' " +
-                    "xmlns='http://www.w3.org/TR/REC-html40'>" +
-                    "<head><meta charset='utf-8'><title>Export HTML to Word Document with JavaScript</title></head><body>";
-                const footer = "</body></html>";
-                
-                // Convert newlines to <br/> or <p>
-                const htmlContent = fullText.split("\n").map(line => `<p>${line}</p>`).join("");
-                const sourceHTML = header + `<div>${htmlContent}</div>` + footer;
-
-                const blob = new Blob(['\ufeff', sourceHTML], {
-                    type: 'application/msword'
-                });
-
-                saveAs(blob, `${file.name.replace(".pdf", "")}.doc`);
-            }
+            saveAs(result.blob, result.fileName || `converted.${format}`);
         } catch (error) {
             console.error("Error converting PDF to Word:", error);
             alert("Failed to convert PDF to Word. Please try again.");
@@ -225,7 +166,7 @@ export function PdfToWordTool() {
                     <h3 className="text-lg font-semibold">Ready to Convert</h3>
                     <p className="mt-2 max-w-xs text-sm text-muted-foreground">
                         We will extract the text from your PDF and save it as a {format === "doc" ? "Word document" : "Text file"}.
-                        <br/><br/>
+                        <br /><br />
                         <span className="text-xs opacity-70">Note: Complex layouts and images may not be fully preserved in this client-side conversion.</span>
                     </p>
                 </div>

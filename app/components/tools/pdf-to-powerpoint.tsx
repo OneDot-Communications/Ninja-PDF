@@ -15,6 +15,7 @@ export function PdfToPowerPointTool() {
     const [progress, setProgress] = useState(0);
     const [status, setStatus] = useState("");
 
+
     // Options
     const [aspectRatio, setAspectRatio] = useState<"16:9" | "4:3">("16:9");
     const [quality, setQuality] = useState<"low" | "medium" | "high">("medium");
@@ -78,6 +79,7 @@ export function PdfToPowerPointTool() {
             await pres.writeFile({ fileName: file.name.replace(".pdf", ".pptx") });
             setStatus("Completed!");
 
+
         } catch (error) {
             console.error("Conversion Error:", error);
             alert("Failed to convert PDF to PowerPoint.");
@@ -125,10 +127,13 @@ export function PdfToPowerPointTool() {
                         <h3 className="font-semibold">Presentation Settings</h3>
                     </div>
 
+
                     <div className="space-y-4">
                         <div className="space-y-2">
                             <Label>Aspect Ratio</Label>
                             <div className="flex gap-2">
+                                <Button
+                                    variant={aspectRatio === "16:9" ? "default" : "outline"}
                                 <Button
                                     variant={aspectRatio === "16:9" ? "default" : "outline"}
                                     onClick={() => setAspectRatio("16:9")}
@@ -138,6 +143,8 @@ export function PdfToPowerPointTool() {
                                 </Button>
                                 <Button
                                     variant={aspectRatio === "4:3" ? "default" : "outline"}
+                                <Button
+                                    variant={aspectRatio === "4:3" ? "default" : "outline"}
                                     onClick={() => setAspectRatio("4:3")}
                                     className="flex-1"
                                 >
@@ -145,6 +152,7 @@ export function PdfToPowerPointTool() {
                                 </Button>
                             </div>
                         </div>
+
 
                         <div className="space-y-2">
                             <Label>Image Quality</Label>
@@ -173,6 +181,8 @@ export function PdfToPowerPointTool() {
                             <Loader2 className="mx-auto h-10 w-10 animate-spin text-primary" />
                             <p className="text-lg font-medium">{status}</p>
                             <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
+                                <div
+                                    className="h-full bg-primary transition-all duration-300"
                                 <div
                                     className="h-full bg-primary transition-all duration-300"
                                     style={{ width: `${progress}%` }}
