@@ -7,13 +7,14 @@ import { ArrowRight, Presentation, Loader2, RefreshCw, Settings, Monitor, Image 
 import pptxgen from "pptxgenjs";
 import { Label } from "../ui/label";
 import { Switch } from "../ui/switch";
+import { saveAs } from "file-saver";
 
 export function PdfToPowerPointTool() {
     const [files, setFiles] = useState<File[]>([]);
     const [isProcessing, setIsProcessing] = useState(false);
     const [progress, setProgress] = useState(0);
     const [status, setStatus] = useState("");
-    
+
     // Options
     const [aspectRatio, setAspectRatio] = useState<"16:9" | "4:3">("16:9");
     const [quality, setQuality] = useState<"low" | "medium" | "high">("medium");
@@ -36,47 +37,47 @@ export function PdfToPowerPointTool() {
 
             const file = files[0];
             setStatus("Loading PDF...");
-            
+
             const arrayBuffer = await file.arrayBuffer();
             const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
             const numPages = pdf.numPages;
-            
+
             const pres = new pptxgen();
             pres.layout = aspectRatio === "16:9" ? "LAYOUT_16x9" : "LAYOUT_4x3";
-            
+
             const scale = quality === "low" ? 1 : quality === "medium" ? 2 : 3;
-            
+
             for (let i = 1; i <= numPages; i++) {
                 setStatus(`Converting page ${i} of ${numPages}...`);
                 setProgress(Math.round((i / numPages) * 100));
-                
+
                 const page = await pdf.getPage(i);
                 const viewport = page.getViewport({ scale: scale });
-                
+
                 const canvas = document.createElement("canvas");
                 const context = canvas.getContext("2d");
                 canvas.height = viewport.height;
                 canvas.width = viewport.width;
-                
+
                 if (context) {
                     await page.render({ canvasContext: context, viewport } as any).promise;
                     const imageData = canvas.toDataURL("image/png");
-                    
+
                     const slide = pres.addSlide();
-                    slide.addImage({ 
-                        data: imageData, 
-                        x: 0, 
-                        y: 0, 
-                        w: "100%", 
-                        h: "100%" 
+                    slide.addImage({
+                        data: imageData,
+                        x: 0,
+                        y: 0,
+                        w: "100%",
+                        h: "100%"
                     });
                 }
             }
-            
+
             setStatus("Saving PowerPoint file...");
             await pres.writeFile({ fileName: file.name.replace(".pdf", ".pptx") });
             setStatus("Completed!");
-            
+
         } catch (error) {
             console.error("Conversion Error:", error);
             alert("Failed to convert PDF to PowerPoint.");
@@ -123,20 +124,20 @@ export function PdfToPowerPointTool() {
                         <Settings className="h-5 w-5 text-muted-foreground" />
                         <h3 className="font-semibold">Presentation Settings</h3>
                     </div>
-                    
+
                     <div className="space-y-4">
                         <div className="space-y-2">
                             <Label>Aspect Ratio</Label>
                             <div className="flex gap-2">
-                                <Button 
-                                    variant={aspectRatio === "16:9" ? "default" : "outline"} 
+                                <Button
+                                    variant={aspectRatio === "16:9" ? "default" : "outline"}
                                     onClick={() => setAspectRatio("16:9")}
                                     className="flex-1"
                                 >
                                     <Monitor className="mr-2 h-4 w-4" /> 16:9
                                 </Button>
-                                <Button 
-                                    variant={aspectRatio === "4:3" ? "default" : "outline"} 
+                                <Button
+                                    variant={aspectRatio === "4:3" ? "default" : "outline"}
                                     onClick={() => setAspectRatio("4:3")}
                                     className="flex-1"
                                 >
@@ -144,7 +145,7 @@ export function PdfToPowerPointTool() {
                                 </Button>
                             </div>
                         </div>
-                        
+
                         <div className="space-y-2">
                             <Label>Image Quality</Label>
                             <div className="flex gap-2">
@@ -172,8 +173,8 @@ export function PdfToPowerPointTool() {
                             <Loader2 className="mx-auto h-10 w-10 animate-spin text-primary" />
                             <p className="text-lg font-medium">{status}</p>
                             <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
-                                <div 
-                                    className="h-full bg-primary transition-all duration-300" 
+                                <div
+                                    className="h-full bg-primary transition-all duration-300"
                                     style={{ width: `${progress}%` }}
                                 />
                             </div>
