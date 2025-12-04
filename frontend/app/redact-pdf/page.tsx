@@ -2,7 +2,7 @@ import { ToolShell } from "../components/layout/tool-shell";
 import { RedactPdfTool } from "../components/tools/redact-pdf";
 
 export const metadata = {
-    title: "Redact PDF - OneDot PDF",
+    title: "Redact PDF - Ninja PDF",
     description: "Redact text and graphics to permanently remove sensitive information from a PDF.",
 };
 

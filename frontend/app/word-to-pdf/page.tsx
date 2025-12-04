@@ -2,7 +2,7 @@ import { ToolShell } from "../components/layout/tool-shell";
 import { WordToPdfTool } from "../components/tools/word-to-pdf";
 
 export const metadata = {
-    title: "Word to PDF - OneDot PDF",
+    title: "Word to PDF - Ninja PDF",
     description: "Make DOC and DOCX files easy to read by converting them to PDF.",
 };
 

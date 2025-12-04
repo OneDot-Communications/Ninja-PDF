@@ -2,7 +2,7 @@ import { ToolShell } from "../components/layout/tool-shell";
 import { JpgToPdfTool } from "../components/tools/jpg-to-pdf";
 
 export const metadata = {
-    title: "JPG to PDF - OneDot PDF",
+    title: "JPG to PDF - Ninja PDF",
     description: "Convert JPG images to PDF in seconds. Easily adjust orientation and margins.",
 };
 

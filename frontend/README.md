@@ -17,8 +17,8 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/Divith123/OneDot-Reader.git
-cd OneDot-Reader
+git clone https://github.com/Divith123/Ninja-Reader.git
+cd Ninja-Reader
 ```
 
 2. Install dependencies:

@@ -10,7 +10,7 @@ const montserrat = Montserrat({
 });
 
 export const metadata: Metadata = {
-  title: "OneDot PDF - Ultimate PDF Tools",
+  title: "Ninja PDF - Ultimate PDF Tools",
   description: "Merge, Split, Convert, and Edit PDFs with ease. 100% Free and Secure.",
 };
 

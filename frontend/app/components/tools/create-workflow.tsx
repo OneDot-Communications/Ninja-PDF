@@ -105,8 +105,8 @@ export function CreateWorkflowTool() {
             let pdfBytes;
             if (shouldProtect) {
                 pdfBytes = await pdfDoc.save({
-                    userPassword: "onedot",
-                    ownerPassword: "onedot",
+                    userPassword: "Ninja",
+                    ownerPassword: "Ninja",
                     permissions: {
                         printing: "highResolution",
                         modifying: false,
@@ -117,7 +117,7 @@ export function CreateWorkflowTool() {
                         documentAssembly: false,
                     }
                 } as any);
-                alert("PDF Protected with password: 'onedot'");
+                alert("PDF Protected with password: 'Ninja'");
             } else {
                 pdfBytes = await pdfDoc.save();
             }

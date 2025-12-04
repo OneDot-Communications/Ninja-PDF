@@ -2,7 +2,7 @@ import { ToolShell } from "../components/layout/tool-shell";
 import { PdfToPdfATool } from "../components/tools/pdf-to-pdfa";
 
 export const metadata = {
-    title: "PDF to PDF/A - OneDot PDF",
+    title: "PDF to PDF/A - Ninja PDF",
     description: "Transform your PDF to PDF/A, the ISO-standardized version of PDF for long-term archiving.",
 };
 

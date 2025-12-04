@@ -685,8 +685,8 @@ async function pdfToPdfa(file: File, options: any): Promise<StrategyResult> {
     const pdfDoc = await PDFDocument.load(arrayBuffer);
 
     pdfDoc.setTitle(file.name);
-    pdfDoc.setProducer('OneDot Reader');
-    pdfDoc.setCreator('OneDot Reader');
+    pdfDoc.setProducer('Ninja Reader');
+    pdfDoc.setCreator('Ninja Reader');
 
     const pdfBytes = await pdfDoc.save();
     const blob = new Blob([pdfBytes as any], { type: 'application/pdf' });

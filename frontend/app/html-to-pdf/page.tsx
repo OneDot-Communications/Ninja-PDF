@@ -2,7 +2,7 @@ import { ToolShell } from "../components/layout/tool-shell";
 import { HtmlToPdfTool } from "../components/tools/html-to-pdf";
 
 export const metadata = {
-    title: "HTML to PDF - OneDot PDF",
+    title: "HTML to PDF - Ninja PDF",
     description: "Convert webpages in HTML to PDF.",
 };
 
