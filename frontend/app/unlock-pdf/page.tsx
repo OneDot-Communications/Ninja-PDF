@@ -1,0 +1,18 @@
+import { ToolShell } from "../components/layout/tool-shell";
+import { UnlockPdfTool } from "../components/tools/unlock-pdf";
+
+export const metadata = {
+    title: "Unlock PDF - OneDot PDF",
+    description: "Remove PDF password security, giving you the freedom to use your PDFs as you want.",
+};
+
+export default function UnlockPdfPage() {
+    return (
+        <ToolShell
+            title="Unlock PDF"
+            description="Remove PDF password security, giving you the freedom to use your PDFs as you want."
+        >
+            <UnlockPdfTool />
+        </ToolShell>
+    );
+}
