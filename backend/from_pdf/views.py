@@ -11,7 +11,18 @@ def index(request):
     """
     Serve the testing UI for PDF conversions.
     """
-    return render(request, 'from_pdf/index.html')
+    from django.http import FileResponse
+    import os
+    from django.conf import settings
+    
+    # Serve the HTML file from the new location
+    html_path = os.path.join(settings.BASE_DIR, 'from_pdf', 'pdf_to_jpg', 'index.html')
+    
+    with open(html_path, 'r', encoding='utf-8') as f:
+        html_content = f.read()
+    
+    from django.http import HttpResponse
+    return HttpResponse(html_content, content_type='text/html')
 
 
 @csrf_exempt
