@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PDF to JPG Converter - Ninja PDF</title>
+    <title>PDF to PDF/A Converter - Ninja PDF</title>
     <style>
         * {
             margin: 0;
@@ -370,8 +370,8 @@
 <body>
     <!-- Header -->
     <div class="header-section" id="headerSection">
-        <h1>PDF to JPG Converter</h1>
-        <p class="subtitle">Convert PDF pages to high-quality JPG images</p>
+        <h1>PDF to PDF/A Converter</h1>
+        <p class="subtitle">Convert PDF to PDF/A format for long-term archiving</p>
     </div>
 
     <!-- Main Content -->
@@ -380,7 +380,7 @@
         <!-- Initial Upload State -->
         <div class="upload-container" id="uploadContainer">
             <div class="upload-area" id="uploadArea">
-                <div class="upload-icon">📄</div>
+                <div class="upload-icon">📋</div>
                 <p class="upload-text">Click to upload or drag and drop your PDF</p>
                 <p class="help-text">Maximum file size: 50MB</p>
                 <input type="file" id="fileInput" class="file-input" accept=".pdf" style="display: none;">
@@ -423,19 +423,18 @@
                 </div>
 
                 <div class="control-group">
-                    <label class="control-label">Image Quality</label>
-                    <select id="quality">
-                        <option value="low">Low (72 DPI) - Smallest Size</option>
-                        <option value="medium" selected>Medium (150 DPI) - Balanced</option>
-                        <option value="high">High (300 DPI) - Print Ready</option>
-                        <option value="ultra">Ultra (600 DPI) - Maximum Detail</option>
+                    <label class="control-label">PDF/A Version</label>
+                    <select id="format">
+                        <option value="pdfa-1b" selected>PDF/A-1b (Basic)</option>
+                        <option value="pdfa-2b">PDF/A-2b (Enhanced)</option>
+                        <option value="pdfa-3b">PDF/A-3b (Universal)</option>
                     </select>
                 </div>
 
                 <div class="status" id="status"></div>
 
                 <button class="convert-btn" id="convertBtn" disabled>
-                    Convert to JPG
+                    Convert to PDF/A
                 </button>
             </div>
         </div>
@@ -454,7 +453,7 @@
         const selectedCount = document.getElementById('selectedCount');
         const convertBtn = document.getElementById('convertBtn');
         const status = document.getElementById('status');
-        const quality = document.getElementById('quality');
+        const format = document.getElementById('format');
         const pageCountBadge = document.getElementById('pageCountBadge');
 
         // Quick selection buttons
@@ -710,13 +709,13 @@
             const formData = new FormData();
             formData.append('pdf_file', selectedFile);
             formData.append('page_range', pageRangeStr);
-            formData.append('quality', quality.value);
+            formData.append('format', format.value);
 
             convertBtn.disabled = true;
             showStatus('processing', 'Converting...');
 
             try {
-                const response = await fetch('/pdf-conversions/api/pdf-to-jpg/', {
+                const response = await fetch('/pdf-conversions/api/pdf-to-pdfa/', {
                     method: 'POST',
                     body: formData
                 });
@@ -731,9 +730,9 @@
 
                 let filename;
                 if (selectedPages.size === 1) {
-                    filename = `page_${Array.from(selectedPages)[0]}.jpg`;
+                    filename = `page_${Array.from(selectedPages)[0]}.pdf`;
                 } else {
-                    filename = selectedFile.name.replace('.pdf', '_converted.zip');
+                    filename = selectedFile.name.replace('.pdf', '_pdfa.pdf');
                 }
 
                 const a = document.createElement('a');

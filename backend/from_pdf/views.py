@@ -5,6 +5,11 @@ from django.views.decorators.http import require_http_methods
 import io
 import zipfile
 from .pdf_to_jpg.pdf_to_jpg import convert_pdf_to_jpg, get_pdf_page_count
+from .pdf_to_excel.pdf_to_excel import convert_pdf_to_excel
+from .pdf_to_powerpoint.pdf_to_powerpoint import convert_pdf_to_powerpoint
+from .pdf_to_word.pdf_to_word import convert_pdf_to_word
+from .pdf_to_pdfa.pdf_to_pdfa import convert_pdf_to_pdfa
+from .pdf_to_html.pdf_to_html import convert_pdf_to_html
 
 
 def index(request):
@@ -22,6 +27,81 @@ def index(request):
         html_content = f.read()
     
     from django.http import HttpResponse
+    return HttpResponse(html_content, content_type='text/html')
+
+
+def pdf_to_excel_index(request):
+    """
+    Serve the PDF to Excel conversion UI.
+    """
+    import os
+    from django.conf import settings
+    
+    html_path = os.path.join(settings.BASE_DIR, 'from_pdf', 'pdf_to_excel', 'index.html')
+    
+    with open(html_path, 'r', encoding='utf-8') as f:
+        html_content = f.read()
+    
+    return HttpResponse(html_content, content_type='text/html')
+
+
+def pdf_to_powerpoint_index(request):
+    """
+    Serve the PDF to PowerPoint conversion UI.
+    """
+    import os
+    from django.conf import settings
+    
+    html_path = os.path.join(settings.BASE_DIR, 'from_pdf', 'pdf_to_powerpoint', 'index.html')
+    
+    with open(html_path, 'r', encoding='utf-8') as f:
+        html_content = f.read()
+    
+    return HttpResponse(html_content, content_type='text/html')
+
+
+def pdf_to_word_index(request):
+    """
+    Serve the PDF to Word conversion UI.
+    """
+    import os
+    from django.conf import settings
+    
+    html_path = os.path.join(settings.BASE_DIR, 'from_pdf', 'pdf_to_word', 'index.html')
+    
+    with open(html_path, 'r', encoding='utf-8') as f:
+        html_content = f.read()
+    
+    return HttpResponse(html_content, content_type='text/html')
+
+
+def pdf_to_pdfa_index(request):
+    """
+    Serve the PDF to PDF/A conversion UI.
+    """
+    import os
+    from django.conf import settings
+    
+    html_path = os.path.join(settings.BASE_DIR, 'from_pdf', 'pdf_to_pdfa', 'index.html')
+    
+    with open(html_path, 'r', encoding='utf-8') as f:
+        html_content = f.read()
+    
+    return HttpResponse(html_content, content_type='text/html')
+
+
+def pdf_to_html_index(request):
+    """
+    Serve the PDF to HTML conversion UI.
+    """
+    import os
+    from django.conf import settings
+    
+    html_path = os.path.join(settings.BASE_DIR, 'from_pdf', 'pdf_to_html', 'index.html')
+    
+    with open(html_path, 'r', encoding='utf-8') as f:
+        html_content = f.read()
+    
     return HttpResponse(html_content, content_type='text/html')
 
 
@@ -125,3 +205,164 @@ def pdf_to_jpg_view(request):
         return JsonResponse({
             'error': f'Conversion failed: {str(e)}'
         }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def pdf_to_excel_view(request):
+    """
+    API endpoint for PDF to Excel conversion.
+    """
+    try:
+        if 'pdf_file' not in request.FILES:
+            return JsonResponse({'error': 'No PDF file uploaded'}, status=400)
+
+        pdf_file = request.FILES['pdf_file']
+        if not pdf_file.name.lower().endswith('.pdf'):
+            return JsonResponse({'error': 'File must be a PDF'}, status=400)
+
+        options = {
+            'page_range': request.POST.get('page_range', 'all'),
+            'format': request.POST.get('format', 'xlsx'),
+        }
+
+        converted_file = convert_pdf_to_excel(pdf_file, options)
+        filename, file_bytes = converted_file
+
+        response = HttpResponse(file_bytes, content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        return response
+
+    except Exception as e:
+        return JsonResponse({'error': f'Conversion failed: {str(e)}'}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def pdf_to_powerpoint_view(request):
+    """
+    API endpoint for PDF to PowerPoint conversion.
+    """
+    try:
+        if 'pdf_file' not in request.FILES:
+            return JsonResponse({'error': 'No PDF file uploaded'}, status=400)
+
+        pdf_file = request.FILES['pdf_file']
+        if not pdf_file.name.lower().endswith('.pdf'):
+            return JsonResponse({'error': 'File must be a PDF'}, status=400)
+
+        options = {
+            'page_range': request.POST.get('page_range', 'all'),
+            'format': request.POST.get('format', 'pptx'),
+        }
+
+        converted_file = convert_pdf_to_powerpoint(pdf_file, options)
+        filename, file_bytes = converted_file
+
+        response = HttpResponse(file_bytes, content_type='application/vnd.openxmlformats-officedocument.presentationml.presentation')
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        return response
+
+    except Exception as e:
+        return JsonResponse({'error': f'Conversion failed: {str(e)}'}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def pdf_to_word_view(request):
+    """
+    API endpoint for PDF to Word conversion.
+    """
+    try:
+        if 'pdf_file' not in request.FILES:
+            return JsonResponse({'error': 'No PDF file uploaded'}, status=400)
+
+        pdf_file = request.FILES['pdf_file']
+        if not pdf_file.name.lower().endswith('.pdf'):
+            return JsonResponse({'error': 'File must be a PDF'}, status=400)
+
+        options = {
+            'page_range': request.POST.get('page_range', 'all'),
+            'format': request.POST.get('format', 'docx'),
+        }
+
+        converted_file = convert_pdf_to_word(pdf_file, options)
+        filename, file_bytes = converted_file
+
+        response = HttpResponse(file_bytes, content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        return response
+
+    except Exception as e:
+        return JsonResponse({'error': f'Conversion failed: {str(e)}'}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def pdf_to_pdfa_view(request):
+    """
+    API endpoint for PDF to PDF/A conversion.
+    """
+    try:
+        if 'pdf_file' not in request.FILES:
+            return JsonResponse({'error': 'No PDF file uploaded'}, status=400)
+
+        pdf_file = request.FILES['pdf_file']
+        if not pdf_file.name.lower().endswith('.pdf'):
+            return JsonResponse({'error': 'File must be a PDF'}, status=400)
+
+        options = {
+            'page_range': request.POST.get('page_range', 'all'),
+            'version': request.POST.get('format', 'pdfa-1b'),
+        }
+
+        converted_file = convert_pdf_to_pdfa(pdf_file, options)
+        filename, file_bytes = converted_file
+
+        response = HttpResponse(file_bytes, content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        return response
+
+    except Exception as e:
+        return JsonResponse({'error': f'Conversion failed: {str(e)}'}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def pdf_to_html_view(request):
+    """
+    API endpoint for PDF to HTML conversion.
+    """
+    try:
+        if 'pdf_file' not in request.FILES:
+            return JsonResponse({'error': 'No PDF file uploaded'}, status=400)
+
+        pdf_file = request.FILES['pdf_file']
+        if not pdf_file.name.lower().endswith('.pdf'):
+            return JsonResponse({'error': 'File must be a PDF'}, status=400)
+
+        options = {
+            'page_range': request.POST.get('page_range', 'all'),
+            'format': request.POST.get('format', 'html-single'),
+        }
+
+        converted_files = convert_pdf_to_html(pdf_file, options)
+
+        if len(converted_files) == 1:
+            filename, file_bytes = converted_files[0]
+            response = HttpResponse(file_bytes, content_type='text/html')
+            response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        else:
+            zip_buffer = io.BytesIO()
+            with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+                for filename, file_bytes in converted_files:
+                    zip_file.writestr(filename, file_bytes)
+            zip_buffer.seek(0)
+            response = HttpResponse(zip_buffer.read(), content_type='application/zip')
+            zip_filename = pdf_file.name.replace('.pdf', '_converted.zip')
+            response['Content-Disposition'] = f'attachment; filename="{zip_filename}"'
+
+        return response
+
+    except Exception as e:
+        return JsonResponse({'error': f'Conversion failed: {str(e)}'}, status=500)
