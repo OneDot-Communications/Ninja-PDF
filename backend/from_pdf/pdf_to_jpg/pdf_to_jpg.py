@@ -1,11 +1,11 @@
 # pdf_to_jpg.py
 """
 PDF to JPG conversion module.
-Handles conversion of PDF pages to high-quality JPG images.
+Handles conversion of PDF pages to high-quality JPG images using PyMuPDF (fitz).
 """
 
 import io
-from pypdf import PdfReader
+import fitz  # PyMuPDF
 from PIL import Image
 
 
@@ -19,15 +19,25 @@ def get_pdf_page_count(pdf_file):
     Returns:
         int: Number of pages
     """
-    if hasattr(pdf_file, 'read'):
-        # File-like object, reset position
-        pdf_file.seek(0)
-        reader = PdfReader(pdf_file)
-    else:
-        # File path
-        reader = PdfReader(pdf_file)
+    doc = None
+    try:
+        if hasattr(pdf_file, 'read'):
+            # File-like object
+            pdf_file.seek(0)
+            stream = pdf_file.read()
+            pdf_file.seek(0)  # Reset position
+            doc = fitz.open(stream=stream, filetype="pdf")
+        else:
+            # File path
+            doc = fitz.open(pdf_file)
 
-    return len(reader.pages)
+        return doc.page_count
+    except Exception as e:
+        print(f"Error getting page count: {e}")
+        return 0
+    finally:
+        if doc:
+            doc.close()
 
 
 def parse_page_range(page_range, total_pages):
@@ -79,37 +89,6 @@ def get_quality_settings(quality_level):
     return quality_map.get(quality_level.lower(), (150, 75))
 
 
-def render_page_to_jpg(page, dpi=150, jpeg_quality=85):
-    """
-    Render a PDF page to JPG bytes.
-
-    Args:
-        page: PDF page object
-        dpi: Resolution for rendering
-        jpeg_quality: JPEG compression quality
-
-    Returns:
-        bytes: JPEG image data
-    """
-    # For now, we'll create a simple placeholder image
-    # In a full implementation, you'd use a PDF rendering library
-    # This is a simplified version to reduce dependencies
-
-    # Create a white image as placeholder
-    width = int(8.5 * dpi)  # Letter size width
-    height = int(11 * dpi)  # Letter size height
-
-    # Create white background
-    img = Image.new('RGB', (width, height), color='white')
-
-    # Convert to JPEG
-    img_bytes = io.BytesIO()
-    img.save(img_bytes, format='JPEG', quality=jpeg_quality, optimize=True)
-    img_bytes.seek(0)
-
-    return img_bytes.read()
-
-
 def convert_pdf_to_jpg(pdf_file, options=None):
     """
     Convert PDF pages to JPG images.
@@ -132,42 +111,59 @@ def convert_pdf_to_jpg(pdf_file, options=None):
     # Get quality settings
     dpi, jpeg_quality = get_quality_settings(quality_level)
 
-    # Get page count
-    if hasattr(pdf_file, 'read'):
-        pdf_file.seek(0)
-        reader = PdfReader(pdf_file)
-        total_pages = len(reader.pages)
-        pdf_file.seek(0)  # Reset for potential future reads
-    else:
-        reader = PdfReader(pdf_file)
-        total_pages = len(reader.pages)
+    doc = None
+    try:
+        # Open PDF
+        if hasattr(pdf_file, 'read'):
+            pdf_file.seek(0)
+            stream = pdf_file.read()
+            pdf_file.seek(0)  # Reset for potential future reads
+            doc = fitz.open(stream=stream, filetype="pdf")
+        else:
+            doc = fitz.open(pdf_file)
+        
+        total_pages = doc.page_count
 
-    # Parse page range
-    pages_to_convert = parse_page_range(page_range, total_pages)
+        # Parse page range
+        pages_to_convert = parse_page_range(page_range, total_pages)
 
-    if not pages_to_convert:
-        raise ValueError("No valid pages to convert")
+        if not pages_to_convert:
+            raise ValueError("No valid pages to convert")
 
-    converted_images = []
+        converted_images = []
 
-    # For each selected page, create a placeholder image
-    # In production, you'd render actual PDF pages here
-    for page_index in pages_to_convert:
-        try:
-            # Generate filename (page numbers are 1-based for user)
-            filename = f"page_{page_index + 1}.jpg"
+        # For each selected page, render actual PDF content
+        for page_index in pages_to_convert:
+            try:
+                # Generate filename (page numbers are 1-based for user)
+                filename = f"page_{page_index + 1}.jpg"
 
-            # Render page to JPG (placeholder implementation)
-            image_bytes = render_page_to_jpg(None, dpi, jpeg_quality)
+                # Load page
+                page = doc.load_page(page_index)
+                
+                # Render page to pixmap (image)
+                # matrix=fitz.Matrix(zoom, zoom) can be used for scaling, but dpi is better controlled via zoom
+                # 72 dpi is default scale=1. So zoom = dpi / 72
+                zoom = dpi / 72
+                mat = fitz.Matrix(zoom, zoom)
+                pix = page.get_pixmap(matrix=mat, alpha=False) # alpha=False for JPG (no transparency)
 
-            converted_images.append((filename, image_bytes))
+                # Get image bytes
+                # tobytes() supports jpg since v1.14.0
+                image_bytes = pix.tobytes("jpg", jpg_quality=jpeg_quality)
 
-        except Exception as e:
-            # Log error but continue with other pages
-            print(f"Error converting page {page_index + 1}: {str(e)}")
-            continue
+                converted_images.append((filename, image_bytes))
 
-    if not converted_images:
-        raise Exception("Failed to convert any pages")
+            except Exception as e:
+                # Log error but continue with other pages
+                print(f"Error converting page {page_index + 1}: {str(e)}")
+                continue
 
-    return converted_images
+        if not converted_images:
+            raise Exception("Failed to convert any pages")
+
+        return converted_images
+
+    finally:
+        if doc:
+            doc.close()
