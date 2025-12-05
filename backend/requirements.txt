@@ -2,3 +2,4 @@ django
 pypdf
 Pillow
 pymupdf
+pdf2docx
