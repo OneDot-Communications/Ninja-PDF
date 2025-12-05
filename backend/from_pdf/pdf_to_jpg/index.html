@@ -195,10 +195,10 @@
 
         .preview-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
             gap: 10px;
             margin-top: 10px;
-            max-height: 200px;
+            max-height: 400px;
             overflow-y: auto;
             padding: 10px;
             border: 1px solid #e0e0e0;
@@ -207,7 +207,6 @@
         }
 
         .page-thumb {
-            aspect-ratio: 3/4;
             border: 2px solid #ddd;
             border-radius: 4px;
             display: flex;
@@ -348,7 +347,7 @@
         }
     </style>
     <!-- PDF.js from CDN for client-side previews -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.min.mjs" type="module"></script>
 </head>
 <body>
     <div class="container">
@@ -528,11 +527,11 @@
 
                 const arrayBuffer = await file.arrayBuffer();
 
-                const pdfjsLib = window['pdfjsLib'];
-                if (!pdfjsLib) throw new Error('PDF.js not loaded');
+                // Import PDF.js (ES module)
+                const pdfjsLib = await import('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.min.mjs');
 
-                // Use CDN worker
-                pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+                // Configure worker
+                pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.worker.min.mjs';
 
                 const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
                 const pdf = await loadingTask.promise;
@@ -563,14 +562,14 @@
             previewGrid.innerHTML = '';
             previewInfo.style.display = 'none';
 
-            // Render each page as a small canvas thumbnail
+            // Render each page as a small canvas thumbnail with actual PDF content
             for (let i = 1; i <= pdf.numPages; i++) {
                 try {
                     const page = await pdf.getPage(i);
                     const viewport = page.getViewport({ scale: 1 });
 
-                    // Target thumbnail width
-                    const thumbWidth = 140;
+                    // Target thumbnail width for better visibility of content
+                    const thumbWidth = 120;
                     const scale = thumbWidth / viewport.width;
                     const scaledViewport = page.getViewport({ scale });
 
@@ -580,6 +579,7 @@
                     canvas.className = 'page-thumb selected';
                     canvas.dataset.page = i;
                     canvas.onclick = () => togglePageSelection(i);
+                    canvas.style.cursor = 'pointer';
 
                     const ctx = canvas.getContext('2d');
                     const renderContext = {
@@ -587,12 +587,13 @@
                         viewport: scaledViewport,
                     };
 
-                    // Render page to canvas
+                    // Render page to canvas - this shows actual PDF content
                     await page.render(renderContext).promise;
 
                     // Add page number overlay
                     const wrapper = document.createElement('div');
                     wrapper.style.position = 'relative';
+                    wrapper.style.display = 'inline-block';
                     wrapper.appendChild(canvas);
 
                     const pageNumber = document.createElement('div');
@@ -602,11 +603,16 @@
 
                     previewGrid.appendChild(wrapper);
                 } catch (err) {
-                    // if a particular page fails, fall back to placeholder
+                    console.error(`Failed to render page ${i}:`, err);
+                    // if a particular page fails, show error placeholder
                     const pageThumb = document.createElement('div');
                     pageThumb.className = 'page-thumb selected';
                     pageThumb.dataset.page = i;
                     pageThumb.onclick = () => togglePageSelection(i);
+                    pageThumb.style.display = 'flex';
+                    pageThumb.style.alignItems = 'center';
+                    pageThumb.style.justifyContent = 'center';
+                    pageThumb.textContent = '⚠️';
                     const pageNumber = document.createElement('div');
                     pageNumber.className = 'page-number';
                     pageNumber.textContent = i;
@@ -656,14 +662,14 @@
         }
 
         function updateUI() {
-            // Update page thumbnails
-            const thumbs = previewGrid.querySelectorAll('.page-thumb');
-            thumbs.forEach(thumb => {
-                const pageNum = parseInt(thumb.dataset.page);
+            // Update page thumbnails (canvas elements or wrappers)
+            const wrappers = previewGrid.querySelectorAll('[data-page]');
+            wrappers.forEach(element => {
+                const pageNum = parseInt(element.dataset.page);
                 if (selectedPages.has(pageNum)) {
-                    thumb.classList.add('selected');
+                    element.classList.add('selected');
                 } else {
-                    thumb.classList.remove('selected');
+                    element.classList.remove('selected');
                 }
             });
 
