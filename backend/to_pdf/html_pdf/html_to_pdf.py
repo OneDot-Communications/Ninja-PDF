@@ -1,12 +1,9 @@
 import os
-try:
-    from weasyprint import HTML
-except ImportError:
-    HTML = None
+from xhtml2pdf import pisa
 
 def convert_html_to_pdf(input_path, output_path):
     """
-    Convert an HTML file to PDF using WeasyPrint.
+    Convert an HTML file to PDF using xhtml2pdf.
     
     Args:
         input_path (str): Path to the input .html file.
@@ -16,11 +13,8 @@ def convert_html_to_pdf(input_path, output_path):
         str: The path to the generated PDF file.
         
     Raises:
-        RuntimeError: If conversion fails or WeasyPrint is not installed.
+        RuntimeError: If conversion fails.
     """
-    if HTML is None:
-        raise RuntimeError("WeasyPrint is not installed. Please install it with 'pip install WeasyPrint'.")
-
     if not os.path.exists(input_path):
         raise FileNotFoundError(f"Input file not found: {input_path}")
         
@@ -30,9 +24,15 @@ def convert_html_to_pdf(input_path, output_path):
         os.makedirs(output_dir)
 
     try:
-        # Convert
-        # WeasyPrint can take a filename directly
-        HTML(filename=input_path).write_pdf(output_path)
+        with open(input_path, "r", encoding='utf-8') as source_html:
+            with open(output_path, "wb") as output_file:
+                pisa_status = pisa.CreatePDF(
+                    source_html,                # the HTML to convert
+                    dest=output_file            # file handle to recieve result
+                )
+
+        if pisa_status.err:
+            raise RuntimeError(f"HTML to PDF conversion failed with errors: {pisa_status.err}")
             
         return output_path
     except Exception as e:

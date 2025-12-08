@@ -1,3 +1,10 @@
 django
 img2pdf
-WeasyPrint
+xhtml2pdf
+markdown
+mammoth
+openpyxl
+xlrd
+python-pptx
+docx2python
+olefile
