@@ -28,6 +28,16 @@ def index(request):
     
     from django.http import HttpResponse
     return HttpResponse(html_content, content_type='text/html')
+
+
+def pdf_to_excel_index(request):
+    """
+    Serve the PDF to Excel conversion UI.
+    """
+    import os
+    from django.conf import settings
+    
+    html_path = os.path.join(settings.BASE_DIR, 'from_pdf', 'pdf_to_excel', 'index.html')
     
     with open(html_path, 'r', encoding='utf-8') as f:
         html_content = f.read()
@@ -35,38 +45,64 @@ def index(request):
     return HttpResponse(html_content, content_type='text/html')
 
 
-@csrf_exempt
-@require_http_methods(["POST"])
-def analyze_pdf(request):
+def pdf_to_powerpoint_index(request):
     """
-    Analyze uploaded PDF and return page count and info.
+    Serve the PDF to PowerPoint conversion UI.
     """
-    try:
-        if 'pdf_file' not in request.FILES:
-            return JsonResponse({
-                'error': 'No PDF file uploaded'
-            }, status=400)
+    import os
+    from django.conf import settings
+    
+    html_path = os.path.join(settings.BASE_DIR, 'from_pdf', 'pdf_to_powerpoint', 'index.html')
+    
+    with open(html_path, 'r', encoding='utf-8') as f:
+        html_content = f.read()
+    
+    return HttpResponse(html_content, content_type='text/html')
 
-        pdf_file = request.FILES['pdf_file']
 
-        # Validate file type
-        if not pdf_file.name.lower().endswith('.pdf'):
-            return JsonResponse({
-                'error': 'File must be a PDF'
-            }, status=400)
+def pdf_to_word_index(request):
+    """
+    Serve the PDF to Word conversion UI.
+    """
+    import os
+    from django.conf import settings
+    
+    html_path = os.path.join(settings.BASE_DIR, 'from_pdf', 'pdf_to_word', 'index.html')
+    
+    with open(html_path, 'r', encoding='utf-8') as f:
+        html_content = f.read()
+    
+    return HttpResponse(html_content, content_type='text/html')
 
-        # Get page count
-        page_count = get_pdf_page_count(pdf_file)
 
-        return JsonResponse({
-            'page_count': page_count,
-            'filename': pdf_file.name
-        })
+def pdf_to_pdfa_index(request):
+    """
+    Serve the PDF to PDF/A conversion UI.
+    """
+    import os
+    from django.conf import settings
+    
+    html_path = os.path.join(settings.BASE_DIR, 'from_pdf', 'pdf_to_pdfa', 'index.html')
+    
+    with open(html_path, 'r', encoding='utf-8') as f:
+        html_content = f.read()
+    
+    return HttpResponse(html_content, content_type='text/html')
 
-    except Exception as e:
-        return JsonResponse({
-            'error': f'Analysis failed: {str(e)}'
-        }, status=500)
+
+def pdf_to_html_index(request):
+    """
+    Serve the PDF to HTML conversion UI.
+    """
+    import os
+    from django.conf import settings
+    
+    html_path = os.path.join(settings.BASE_DIR, 'from_pdf', 'pdf_to_html', 'index.html')
+    
+    with open(html_path, 'r', encoding='utf-8') as f:
+        html_content = f.read()
+    
+    return HttpResponse(html_content, content_type='text/html')
 
 
 @csrf_exempt
