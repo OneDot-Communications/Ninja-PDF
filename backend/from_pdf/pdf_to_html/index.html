@@ -425,9 +425,8 @@
                 <div class="control-group">
                     <label class="control-label">Output Format</label>
                     <select id="format">
-                        <option value="html-single" selected>Single HTML File</option>
-                        <option value="html-multi">Multiple HTML Files (ZIP)</option>
-                        <option value="html-responsive">Responsive HTML</option>
+                        <option value="html-single" selected>Single HTML File (All Pages)</option>
+                        <option value="html-responsive">Responsive HTML (All Pages)</option>
                     </select>
                 </div>
 
@@ -728,12 +727,8 @@
                 const blob = await response.blob();
                 const url = window.URL.createObjectURL(blob);
 
-                let filename;
-                if (selectedPages.size === 1) {
-                    filename = `page_${Array.from(selectedPages)[0]}.html`;
-                } else {
-                    filename = selectedFile.name.replace('.pdf', '_converted.zip');
-                }
+                // Always download as .html (single file with embedded images)
+                const filename = selectedFile.name.replace('.pdf', '.html');
 
                 const a = document.createElement('a');
                 a.href = url;
