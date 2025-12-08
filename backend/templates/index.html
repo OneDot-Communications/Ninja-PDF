@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ninja PDF - Backend Tester</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <a href="#" class="logo">
+                <i class="fas fa-file-pdf"></i> Ninja PDF <span class="badge">Backend</span>
+            </a>
+        </div>
+    </nav>
+
+    <main class="container">
+        <div class="hero">
+            <h1>Test Backend Features</h1>
+            <p>Select a tool below to test the backend processing capabilities.</p>
+        </div>
+
+        <!-- 1. Converters -->
+        <div class="category-section">
+            <h2 class="category-title">1. Converters (PDF ↔ Other Formats)</h2>
+
+            <h3 class="subcategory-title">Standard Converters</h3>
+            <div class="tools-grid">
+                <div class="tool-card" onclick="window.location.href='/pdf-conversions/pdf-to-word/'">
+                    <div class="icon word"><i class="fas fa-file-word"></i></div>
+                    <h3>PDF to Word</h3>
+                </div>
+                <div class="tool-card" onclick="window.location.href='/to_pdf/word-to-pdf/'">
+                    <div class="icon word"><i class="fas fa-file-word"></i></div>
+                    <h3>Word to PDF</h3>
+                </div>
+                <div class="tool-card" onclick="window.location.href='/pdf-conversions/pdf-to-powerpoint/'">
+                    <div class="icon ppt"><i class="fas fa-file-powerpoint"></i></div>
+                    <h3>PDF to PowerPoint</h3>
+                </div>
+                <div class="tool-card" onclick="window.location.href='/to_pdf/powerpoint-to-pdf/'">
+                    <div class="icon ppt"><i class="fas fa-file-powerpoint"></i></div>
+                    <h3>PowerPoint to PDF</h3>
+                </div>
+                <div class="tool-card" onclick="window.location.href='/pdf-conversions/pdf-to-excel/'">
+                    <div class="icon excel"><i class="fas fa-file-excel"></i></div>
+                    <h3>PDF to Excel</h3>
+                </div>
+                <div class="tool-card" onclick="window.location.href='/to_pdf/excel-to-pdf/'">
+                    <div class="icon excel"><i class="fas fa-file-excel"></i></div>
+                    <h3>Excel to PDF</h3>
+                </div>
+                <div class="tool-card" onclick="window.location.href='/pdf-conversions/'">
+                    <div class="icon image"><i class="fas fa-file-image"></i></div>
+                    <h3>PDF to JPG</h3>
+                </div>
+                <div class="tool-card" onclick="window.location.href='/to_pdf/jpg-to-pdf/'">
+                    <div class="icon image"><i class="fas fa-file-image"></i></div>
+                    <h3>JPG to PDF</h3>
+                </div>
+                <div class="tool-card" onclick="window.location.href='/to_pdf/html-to-pdf/'">
+                    <div class="icon code"><i class="fas fa-code"></i></div>
+                    <h3>HTML to PDF</h3>
+                </div>
+                <div class="tool-card" onclick="window.location.href='/pdf-conversions/pdf-to-pdfa/'">
+                    <div class="icon pdf"><i class="fas fa-file-pdf"></i></div>
+                    <h3>PDF to PDF/A</h3>
+                </div>
+                <div class="tool-card" onclick="window.location.href='/pdf-conversions/pdf-to-html/'">
+                    <div class="icon code"><i class="fas fa-code"></i></div>
+                    <h3>PDF to HTML</h3>
+                </div>
+            </div>
+
+            <h3 class="subcategory-title">AI & Advanced Conversions</h3>
+            <div class="tools-grid">
+                <div class="tool-card" onclick="openTool('pdf-to-presentation-ai', 'PDF to Presentation (AI)')">
+                    <div class="icon ai"><i class="fas fa-magic"></i></div>
+                    <h3>PDF to Presentation (AI)</h3>
+                </div>
+                <div class="tool-card" onclick="window.location.href='/to_pdf/markdown-to-pdf/'">
+                    <div class="icon code"><i class="fab fa-markdown"></i></div>
+                    <h3>Markdown to PDF</h3>
+                </div>
+                <div class="tool-card" onclick="openTool('pdf-translator-ai', 'PDF Translator (AI)')">
+                    <div class="icon ai"><i class="fas fa-language"></i></div>
+                    <h3>PDF Translator (AI)</h3>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. Compression & Optimization -->
+        <div class="category-section">
+            <h2 class="category-title">2. Compression & Optimization</h2>
+            <div class="tools-grid">
+                <div class="tool-card" onclick="openTool('compress-pdf', 'Compress PDF')">
+                    <div class="icon compress"><i class="fas fa-compress-arrows-alt"></i></div>
+                    <h3>Compress PDF</h3>
+                </div>
+                <div class="tool-card" onclick="openTool('image-compression', 'Image Compression')">
+                    <div class="icon compress"><i class="fas fa-compress"></i></div>
+                    <h3>Image Compression</h3>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. PDF Editing & Enhancements -->
+        <div class="category-section">
+            <h2 class="category-title">3. PDF Editing & Enhancements</h2>
+
+            <h3 class="subcategory-title">Core Editing</h3>
+            <div class="tools-grid">
+                <div class="tool-card" onclick="openTool('edit-pdf', 'Edit PDF')">
+                    <div class="icon edit"><i class="fas fa-edit"></i></div>
+                    <h3>Add text, images, shapes</h3>
+                </div>
+                <div class="tool-card" onclick="openTool('annotate-pdf', 'Annotate PDF')">
+                    <div class="icon edit"><i class="fas fa-pen"></i></div>
+                    <h3>Freehand annotations</h3>
+                </div>
+                <div class="tool-card" onclick="openTool('full-edit-pdf', 'Full Edit PDF')">
+                    <div class="icon edit"><i class="fas fa-tools"></i></div>
+                    <h3>Full text/image editing</h3>
+                </div>
+                <div class="tool-card" onclick="openTool('crop-pdf', 'Crop PDF')">
+                    <div class="icon edit"><i class="fas fa-crop"></i></div>
+                    <h3>Crop PDF</h3>
+                </div>
+                <div class="tool-card" onclick="openTool('watermark-pdf', 'Watermark PDF')">
+                    <div class="icon watermark"><i class="fas fa-stamp"></i></div>
+                    <h3>Add watermark</h3>
+                </div>
+                <div class="tool-card" onclick="openTool('page-numbers', 'Page Numbers')">
+                    <div class="icon organize"><i class="fas fa-list-ol"></i></div>
+                    <h3>Add page numbers</h3>
+                </div>
+                <div class="tool-card" onclick="openTool('redact-pdf', 'Redact PDF')">
+                    <div class="icon security"><i class="fas fa-user-secret"></i></div>
+                    <h3>Redaction</h3>
+                </div>
+                <div class="tool-card" onclick="openTool('compare-pdf', 'Compare PDFs')">
+                    <div class="icon edit"><i class="fas fa-not-equal"></i></div>
+                    <h3>Compare PDFs</h3>
+                </div>
+                <div class="tool-card" onclick="openTool('organize-pdf', 'Organize PDF')">
+                    <div class="icon organize"><i class="fas fa-sort"></i></div>
+                    <h3>Organize pages</h3>
+                </div>
+                <div class="tool-card" onclick="openTool('rotate-pdf', 'Rotate PDF')">
+                    <div class="icon organize"><i class="fas fa-sync-alt"></i></div>
+                    <h3>Rotate PDF</h3>
+                </div>
+            </div>
+
+            <h3 class="subcategory-title">Advanced Editing</h3>
+            <div class="tools-grid">
+                <div class="tool-card" onclick="openTool('metadata-cleaner', 'Metadata Cleaner')">
+                    <div class="icon edit"><i class="fas fa-eraser"></i></div>
+                    <h3>Metadata Cleaner</h3>
+                </div>
+                <div class="tool-card" onclick="openTool('rewrite-pdf-ai', 'Rewrite Content (AI)')">
+                    <div class="icon ai"><i class="fas fa-magic"></i></div>
+                    <h3>Rewrite Content (AI)</h3>
+                </div>
+                <div class="tool-card" onclick="openTool('collaborative-edit', 'Collaborative Editing')">
+                    <div class="icon cloud"><i class="fas fa-users"></i></div>
+                    <h3>Real-Time Collaboration</h3>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. Security & Protection -->
+        <div class="category-section">
+            <h2 class="category-title">4. Security & Protection</h2>
+            <div class="tools-grid">
+                <div class="tool-card" onclick="openTool('protect-pdf', 'Protect PDF')">
+                    <div class="icon security"><i class="fas fa-lock"></i></div>
+                    <h3>Protect PDF</h3>
+                </div>
+                <div class="tool-card" onclick="openTool('unlock-pdf', 'Unlock PDF')">
+                    <div class="icon security"><i class="fas fa-unlock"></i></div>
+                    <h3>Unlock PDF</h3>
+                </div>
+                <div class="tool-card" onclick="openTool('secure-sharing', 'Secure Sharing')">
+                    <div class="icon security"><i class="fas fa-share-alt"></i></div>
+                    <h3>Secure Sharing</h3>
+                </div>
+                <div class="tool-card" onclick="openTool('secure-room', 'Secure Room')">
+                    <div class="icon security"><i class="fas fa-dungeon"></i></div>
+                    <h3>Secure Sharing Rooms</h3>
+                </div>
+            </div>
+        </div>
+
+        <!-- 5. Forms & Automation -->
+        <div class="category-section">
+            <h2 class="category-title">5. Forms & Automation</h2>
+            <div class="tools-grid">
+                <div class="tool-card" onclick="openTool('create-form', 'Create Form')">
+                    <div class="icon forms"><i class="fas fa-wpforms"></i></div>
+                    <h3>Create fillable forms</h3>
+                </div>
+                <div class="tool-card" onclick="openTool('form-data', 'Form Data')">
+                    <div class="icon forms"><i class="fas fa-database"></i></div>
+                    <h3>Form data import/export</h3>
+                </div>
+                <div class="tool-card" onclick="openTool('workflow-automation', 'Workflow Automation')">
+                    <div class="icon forms"><i class="fas fa-cogs"></i></div>
+                    <h3>Workflow Automation (AI)</h3>
+                </div>
+            </div>
+        </div>
+
+        <!-- 6. AI & Recognition -->
+        <div class="category-section">
+            <h2 class="category-title">6. AI & Recognition</h2>
+            <div class="tools-grid">
+                <div class="tool-card" onclick="openTool('ocr-pdf', 'OCR PDF')">
+                    <div class="icon ai"><i class="fas fa-eye"></i></div>
+                    <h3>OCR (searchable text)</h3>
+                </div>
+                <div class="tool-card" onclick="openTool('ask-pdf', 'Ask Your PDF')">
+                    <div class="icon ai"><i class="fas fa-comment-dots"></i></div>
+                    <h3>Ask Your PDF (AI)</h3>
+                </div>
+                <div class="tool-card" onclick="openTool('contract-analysis', 'Contract Analysis')">
+                    <div class="icon ai"><i class="fas fa-file-contract"></i></div>
+                    <h3>AI Contract Analysis</h3>
+                </div>
+                <div class="tool-card" onclick="openTool('table-extraction', 'Table Extraction')">
+                    <div class="icon ai"><i class="fas fa-table"></i></div>
+                    <h3>AI Table Extraction</h3>
+                </div>
+                <div class="tool-card" onclick="openTool('document-insights', 'Document Insights')">
+                    <div class="icon ai"><i class="fas fa-lightbulb"></i></div>
+                    <h3>Document Insights</h3>
+                </div>
+            </div>
+        </div>
+
+        <!-- 7. Cloud & Collaboration -->
+        <div class="category-section">
+            <h2 class="category-title">7. Cloud & Collaboration</h2>
+            <div class="tools-grid">
+                <div class="tool-card" onclick="openTool('cloud-integration', 'Cloud Integration')">
+                    <div class="icon cloud"><i class="fas fa-cloud"></i></div>
+                    <h3>Cloud integration</h3>
+                </div>
+                <div class="tool-card" onclick="openTool('user-accounts', 'User Accounts')">
+                    <div class="icon cloud"><i class="fas fa-user-circle"></i></div>
+                    <h3>User accounts</h3>
+                </div>
+                <div class="tool-card" onclick="openTool('processing-history', 'Processing History')">
+                    <div class="icon cloud"><i class="fas fa-history"></i></div>
+                    <h3>Processing history</h3>
+                </div>
+            </div>
+        </div>
+
+        <!-- 8. File Recovery & Scanning -->
+        <div class="category-section">
+            <h2 class="category-title">8. File Recovery & Scanning</h2>
+            <div class="tools-grid">
+                <div class="tool-card" onclick="openTool('repair-pdf', 'Repair PDF')">
+                    <div class="icon repair"><i class="fas fa-band-aid"></i></div>
+                    <h3>Repair PDF</h3>
+                </div>
+                <div class="tool-card" onclick="openTool('scan-to-pdf', 'Scan to PDF')">
+                    <div class="icon scan"><i class="fas fa-scanner"></i></div>
+                    <h3>Scan to PDF</h3>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal -->
+    <div id="toolModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <h2 id="modalTitle">Tool Name</h2>
+            <div class="upload-area" id="dropZone">
+                <i class="fas fa-cloud-upload-alt"></i>
+                <p>Drag & Drop files here or</p>
+                <button class="btn-select" onclick="document.getElementById('fileInput').click()">Select File</button>
+                <input type="file" id="fileInput" hidden>
+            </div>
+            <div id="fileInfo" class="file-info" style="display: none;">
+                <p id="fileName">filename.pdf</p>
+                <button class="btn-convert" onclick="processFile()">Convert</button>
+            </div>
+            <div id="resultArea" class="result-area" style="display: none;">
+                <p>Conversion Complete!</p>
+                <a href="#" id="downloadLink" class="btn-download">Download File</a>
+            </div>
+            <div id="loading" class="loading" style="display: none;">
+                <div class="spinner"></div>
+                <p>Processing...</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/script.js"></script>
+</body>
+
+</html>
