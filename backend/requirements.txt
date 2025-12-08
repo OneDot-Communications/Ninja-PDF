@@ -1,1 +1,7 @@
 django
+pypdf
+Pillow
+pymupdf
+pdf2docx
+python-pptx
+pikepdf

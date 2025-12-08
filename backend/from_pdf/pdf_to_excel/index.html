@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF to Excel Converter - Ninja PDF</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #ffffff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden; /* Prevent main page scroll */
+        }
+
+        /* Header Section */
+        .header-section {
+            text-align: center;
+            padding: 40px 20px;
+            transition: all 0.3s ease;
+        }
+
+        .header-section.compact {
+            padding: 15px 20px;
+            border-bottom: 1px solid #eee;
+        }
+
+        h1 {
+            color: #333;
+            font-size: 32px;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 18px;
+            margin-bottom: 0;
+        }
+
+        .header-section.compact h1 {
+            font-size: 20px;
+            margin-bottom: 4px;
+        }
+
+        .header-section.compact .subtitle {
+            font-size: 14px;
+            display: none;
+        }
+
+        /* Main Layout */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            width: 100%;
+            max-width: 1400px;
+            margin: 0 auto;
+            height: calc(100vh - 140px); /* Adjust based on header */
+        }
+
+        /* Upload Area - Centered initially */
+        .upload-container {
+            width: 100%;
+            max-width: 600px;
+            transition: all 0.3s ease;
+        }
+
+        .upload-area {
+            border: 2px dashed #ccc;
+            border-radius: 12px;
+            padding: 60px 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: #fafafa;
+        }
+
+        .upload-area:hover {
+            border-color: #007bff;
+            background: #f0f7ff;
+        }
+
+        .upload-area.dragover {
+            border-color: #007bff;
+            background: #e7f3ff;
+            transform: scale(1.02);
+        }
+
+        .upload-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+            color: #007bff;
+        }
+
+        .upload-text {
+            color: #333;
+            font-size: 20px;
+            font-weight: 500;
+            margin-bottom: 10px;
+        }
+
+        /* Split Screen Layout (Hidden initially) */
+        .workspace-container {
+            display: none;
+            width: 100%;
+            height: 100%;
+            gap: 30px;
+            padding: 0 20px;
+        }
+
+        .workspace-container.active {
+            display: flex;
+        }
+
+        /* Left Side - Preview */
+        .preview-section {
+            flex: 1;
+            background: #f8f9fa;
+            border-radius: 12px;
+            border: 1px solid #e0e0e0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .preview-header {
+            padding: 15px 20px;
+            border-bottom: 1px solid #e0e0e0;
+            background: white;
+            font-weight: 600;
+            color: #333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .preview-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .preview-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 20px;
+            justify-content: center;
+        }
+
+        /* Right Side - Controls */
+        .controls-section {
+            width: 350px;
+            background: white;
+            border-radius: 12px;
+            border: 1px solid #e0e0e0;
+            padding: 25px;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            overflow-y: auto;
+        }
+
+        .control-group {
+            margin-bottom: 25px;
+        }
+
+        .control-label {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+            display: block;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Thumbnails */
+        .page-thumb {
+            width: 100%;
+            aspect-ratio: 1/1.4;
+            border: 2px solid transparent;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            background: white;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .page-thumb canvas {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .page-thumb-wrapper {
+            position: relative;
+            transition: transform 0.2s;
+        }
+
+        .page-thumb-wrapper:hover {
+            transform: translateY(-2px);
+        }
+
+        .page-thumb.selected {
+            border-color: #007bff;
+            box-shadow: 0 0 0 4px rgba(0,123,255,0.1);
+        }
+
+        .page-number {
+            position: absolute;
+            bottom: 8px;
+            right: 8px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .check-overlay {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            background: #007bff;
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .page-thumb.selected + .check-overlay {
+            opacity: 1;
+        }
+
+        /* Inputs & Buttons */
+        .range-input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: monospace;
+            margin-bottom: 8px;
+        }
+
+        .quick-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .quick-btn {
+            padding: 8px;
+            border: 1px solid #ddd;
+            background: white;
+            color: #555;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+
+        .quick-btn:hover {
+            background: #f8f9fa;
+            border-color: #007bff;
+            color: #007bff;
+        }
+
+        select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            background: white;
+            cursor: pointer;
+        }
+
+        .convert-btn {
+            width: 100%;
+            padding: 16px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: auto;
+            box-shadow: 0 4px 12px rgba(0,123,255,0.2);
+        }
+
+        .convert-btn:hover:not(:disabled) {
+            background: #0056b3;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(0,123,255,0.3);
+        }
+
+        .convert-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .status {
+            margin-top: 15px;
+            padding: 12px;
+            border-radius: 6px;
+            text-align: center;
+            display: none;
+            font-size: 14px;
+        }
+
+        .status.success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .status.error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .status.processing { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+
+        .loader {
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #007bff;
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .file-info-bar {
+            display: flex;
+            align-items: center;
+            background: #e7f3ff;
+            padding: 10px 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            color: #0056b3;
+            font-size: 14px;
+        }
+
+        .file-icon { margin-right: 10px; }
+        .file-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    </style>
+    <!-- PDF.js from CDN for client-side previews -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.min.mjs" type="module"></script>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header-section" id="headerSection">
+        <h1>PDF to Excel Converter</h1>
+        <p class="subtitle">Convert PDF pages to Excel spreadsheets</p>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        
+        <!-- Initial Upload State -->
+        <div class="upload-container" id="uploadContainer">
+            <div class="upload-area" id="uploadArea">
+                <div class="upload-icon">📊</div>
+                <p class="upload-text">Click to upload or drag and drop your PDF</p>
+                <p class="help-text">Maximum file size: 50MB</p>
+                <input type="file" id="fileInput" class="file-input" accept=".pdf" style="display: none;">
+            </div>
+        </div>
+
+        <!-- Workspace State (Split Screen) -->
+        <div class="workspace-container" id="workspaceContainer">
+            
+            <!-- Left: Preview -->
+            <div class="preview-section">
+                <div class="preview-header">
+                    <span>Page Preview</span>
+                    <span id="pageCountBadge" style="background: #eee; padding: 4px 8px; border-radius: 4px; font-size: 12px;">0 Pages</span>
+                </div>
+                <div class="preview-content">
+                    <div class="preview-grid" id="previewGrid"></div>
+                </div>
+            </div>
+
+            <!-- Right: Controls -->
+            <div class="controls-section">
+                <div class="file-info-bar">
+                    <span class="file-icon">📄</span>
+                    <span class="file-name" id="fileName">filename.pdf</span>
+                </div>
+
+                <div class="control-group">
+                    <label class="control-label">Page Selection</label>
+                    <input type="text" id="pageRange" placeholder="e.g. 1-5, 8, 11-13" class="range-input">
+                    <div class="quick-buttons">
+                        <button type="button" class="quick-btn" id="selectAll">All Pages</button>
+                        <button type="button" class="quick-btn" id="selectNone">Select None</button>
+                        <button type="button" class="quick-btn" id="selectEven">Even Pages</button>
+                        <button type="button" class="quick-btn" id="selectOdd">Odd Pages</button>
+                    </div>
+                    <div style="margin-top: 10px; font-size: 13px; color: #666;">
+                        <span id="selectedCount">0</span> pages selected
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label class="control-label">Output Format</label>
+                    <select id="format">
+                        <option value="xlsx" selected>XLSX (Excel 2007+)</option>
+                        <option value="xls">XLS (Excel 97-2003)</option>
+                        <option value="csv">CSV (Comma Separated)</option>
+                    </select>
+                </div>
+
+                <div class="status" id="status"></div>
+
+                <button class="convert-btn" id="convertBtn" disabled>
+                    Convert to Excel
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const headerSection = document.getElementById('headerSection');
+        const uploadContainer = document.getElementById('uploadContainer');
+        const workspaceContainer = document.getElementById('workspaceContainer');
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const fileName = document.getElementById('fileName');
+        const pageRange = document.getElementById('pageRange');
+        const previewGrid = document.getElementById('previewGrid');
+        const selectedCount = document.getElementById('selectedCount');
+        const convertBtn = document.getElementById('convertBtn');
+        const status = document.getElementById('status');
+        const format = document.getElementById('format');
+        const pageCountBadge = document.getElementById('pageCountBadge');
+
+        // Quick selection buttons
+        const selectAllBtn = document.getElementById('selectAll');
+        const selectNoneBtn = document.getElementById('selectNone');
+        const selectEvenBtn = document.getElementById('selectEven');
+        const selectOddBtn = document.getElementById('selectOdd');
+
+        let selectedFile = null;
+        let totalPages = 0;
+        let selectedPages = new Set();
+
+        // Upload area click handler
+        uploadArea.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        // File selection handler
+        fileInput.addEventListener('change', (e) => {
+            handleFileSelect(e.target.files[0]);
+        });
+
+        // Drag and drop handlers
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            handleFileSelect(e.dataTransfer.files[0]);
+        });
+
+        // Range input handler
+        pageRange.addEventListener('input', () => {
+            updateSelectionFromRange();
+        });
+
+        // Quick selection button handlers
+        selectAllBtn.addEventListener('click', () => {
+            setRangeText(`1-${totalPages}`);
+        });
+
+        selectNoneBtn.addEventListener('click', () => {
+            setRangeText('');
+        });
+
+        selectEvenBtn.addEventListener('click', () => {
+            const evenPages = [];
+            for (let i = 2; i <= totalPages; i += 2) {
+                evenPages.push(i);
+            }
+            setRangeText(evenPages.join(','));
+        });
+
+        selectOddBtn.addEventListener('click', () => {
+            const oddPages = [];
+            for (let i = 1; i <= totalPages; i += 2) {
+                oddPages.push(i);
+            }
+            setRangeText(oddPages.join(','));
+        });
+
+        function setRangeText(rangeText) {
+            pageRange.value = rangeText;
+            updateSelectionFromRange();
+        }
+
+        async function handleFileSelect(file) {
+            if (!file) return;
+
+            if (file.type !== 'application/pdf') {
+                alert('Please select a PDF file');
+                return;
+            }
+
+            if (file.size > 50 * 1024 * 1024) {
+                alert('File size exceeds 50MB limit');
+                return;
+            }
+
+            selectedFile = file;
+            fileName.textContent = file.name;
+            
+            // Transition UI
+            headerSection.classList.add('compact');
+            uploadContainer.style.display = 'none';
+            workspaceContainer.classList.add('active');
+
+            // Analyze PDF
+            await analyzePDF(file);
+        }
+
+        // Use PDF.js for client-side analysis and rendering of previews
+        async function analyzePDF(file) {
+            try {
+                showStatus('processing', 'Analyzing PDF...');
+
+                const arrayBuffer = await file.arrayBuffer();
+
+                // Import PDF.js (ES module)
+                const pdfjsLib = await import('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.min.mjs');
+                pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.worker.min.mjs';
+
+                const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+                const pdf = await loadingTask.promise;
+
+                totalPages = pdf.numPages;
+                pageCountBadge.textContent = `${totalPages} Pages`;
+
+                // Initialize with all pages selected
+                selectedPages = new Set();
+                for (let i = 1; i <= totalPages; i++) selectedPages.add(i);
+
+                // Generate page preview using PDF.js
+                await generatePagePreviewFromPdf(pdf);
+
+                convertBtn.disabled = false;
+                setRangeText(`1-${totalPages}`);
+                hideStatus();
+
+            } catch (error) {
+                showStatus('error', `Analysis failed: ${error.message}`);
+                convertBtn.disabled = true;
+            }
+        }
+
+        async function generatePagePreviewFromPdf(pdf) {
+            previewGrid.innerHTML = '';
+
+            for (let i = 1; i <= pdf.numPages; i++) {
+                try {
+                    const page = await pdf.getPage(i);
+                    const viewport = page.getViewport({ scale: 1 });
+
+                    // Render at reasonable thumbnail size
+                    const thumbWidth = 200; // Higher res for larger thumbnails
+                    const scale = thumbWidth / viewport.width;
+                    const scaledViewport = page.getViewport({ scale });
+
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'page-thumb-wrapper';
+                    wrapper.dataset.page = i;
+                    wrapper.onclick = () => togglePageSelection(i);
+
+                    const thumb = document.createElement('div');
+                    thumb.className = 'page-thumb selected';
+                    
+                    const canvas = document.createElement('canvas');
+                    canvas.width = Math.floor(scaledViewport.width);
+                    canvas.height = Math.floor(scaledViewport.height);
+                    
+                    const ctx = canvas.getContext('2d');
+                    const renderContext = {
+                        canvasContext: ctx,
+                        viewport: scaledViewport,
+                    };
+
+                    await page.render(renderContext).promise;
+
+                    thumb.appendChild(canvas);
+                    
+                    // Overlays
+                    const pageNum = document.createElement('div');
+                    pageNum.className = 'page-number';
+                    pageNum.textContent = i;
+
+                    const checkOverlay = document.createElement('div');
+                    checkOverlay.className = 'check-overlay';
+                    checkOverlay.innerHTML = '✓';
+
+                    wrapper.appendChild(thumb);
+                    wrapper.appendChild(pageNum);
+                    wrapper.appendChild(checkOverlay);
+
+                    previewGrid.appendChild(wrapper);
+
+                } catch (err) {
+                    console.error(err);
+                }
+            }
+        }
+
+        function togglePageSelection(pageNum) {
+            if (selectedPages.has(pageNum)) {
+                selectedPages.delete(pageNum);
+            } else {
+                selectedPages.add(pageNum);
+            }
+            updateUI();
+        }
+
+        function updateSelectionFromRange() {
+            const rangeText = pageRange.value.trim();
+            selectedPages.clear();
+
+            if (!rangeText) {
+                updateUI();
+                return;
+            }
+
+            const ranges = rangeText.split(',').map(r => r.trim());
+
+            for (const range of ranges) {
+                if (range.includes('-')) {
+                    const [start, end] = range.split('-').map(n => parseInt(n.trim()));
+                    if (!isNaN(start) && !isNaN(end) && start <= end) {
+                        for (let i = Math.max(1, start); i <= Math.min(totalPages, end); i++) {
+                            selectedPages.add(i);
+                        }
+                    }
+                } else {
+                    const page = parseInt(range);
+                    if (!isNaN(page) && page >= 1 && page <= totalPages) {
+                        selectedPages.add(page);
+                    }
+                }
+            }
+
+            updateUI();
+        }
+
+        function updateUI() {
+            // Update thumbnails
+            const wrappers = previewGrid.querySelectorAll('.page-thumb-wrapper');
+            wrappers.forEach(wrapper => {
+                const pageNum = parseInt(wrapper.dataset.page);
+                const thumb = wrapper.querySelector('.page-thumb');
+                
+                if (selectedPages.has(pageNum)) {
+                    thumb.classList.add('selected');
+                } else {
+                    thumb.classList.remove('selected');
+                }
+            });
+
+            // Update summary
+            selectedCount.textContent = selectedPages.size;
+            convertBtn.disabled = selectedPages.size === 0;
+        }
+
+        // Convert button handler
+        convertBtn.addEventListener('click', async () => {
+            if (!selectedFile || selectedPages.size === 0) return;
+
+            const pageRangeStr = Array.from(selectedPages).sort((a, b) => a - b).join(',');
+
+            const formData = new FormData();
+            formData.append('pdf_file', selectedFile);
+            formData.append('page_range', pageRangeStr);
+            formData.append('format', format.value);
+
+            convertBtn.disabled = true;
+            showStatus('processing', 'Converting...');
+
+            try {
+                const response = await fetch('/pdf-conversions/api/pdf-to-excel/', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Conversion failed');
+                }
+
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+
+                let filename;
+                if (selectedPages.size === 1) {
+                    filename = `page_${Array.from(selectedPages)[0]}.${format.value}`;
+                } else {
+                    filename = selectedFile.name.replace('.pdf', `_converted.${format.value}`);
+                }
+
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+
+                showStatus('success', 'Done! Download starting...');
+                setTimeout(hideStatus, 3000);
+
+            } catch (error) {
+                showStatus('error', error.message);
+            } finally {
+                convertBtn.disabled = false;
+            }
+        });
+
+        function showStatus(type, message) {
+            status.className = `status ${type}`;
+            if (type === 'processing') {
+                status.innerHTML = `<div class="loader"></div>${message}`;
+            } else {
+                status.textContent = message;
+            }
+            status.style.display = 'block';
+        }
+
+        function hideStatus() {
+            status.style.display = 'none';
+        }
+    </script>
+</body>
+</html>
