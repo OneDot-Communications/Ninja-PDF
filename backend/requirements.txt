@@ -7,3 +7,10 @@ python-pptx
 pikepdf
 openpyxl
 xlwt
+img2pdf
+xhtml2pdf
+markdown
+mammoth
+xlrd
+docx2python
+olefile
