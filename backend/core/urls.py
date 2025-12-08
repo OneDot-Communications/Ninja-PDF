@@ -22,4 +22,5 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', views.home, name='home'),
     path('pdf-conversions/', include('from_pdf.urls')),
+    path('optimizer/', include('optimizer.urls')),
 ]
