@@ -3,11 +3,6 @@ from . import views
 
 urlpatterns = [
     path('', views.index, name='pdf_conversion_index'),
-    path('pdf-to-excel/', views.pdf_to_excel_index, name='pdf_to_excel_index'),
-    path('pdf-to-powerpoint/', views.pdf_to_powerpoint_index, name='pdf_to_powerpoint_index'),
-    path('pdf-to-word/', views.pdf_to_word_index, name='pdf_to_word_index'),
-    path('pdf-to-pdfa/', views.pdf_to_pdfa_index, name='pdf_to_pdfa_index'),
-    path('pdf-to-html/', views.pdf_to_html_index, name='pdf_to_html_index'),
     path('api/analyze-pdf/', views.analyze_pdf, name='analyze_pdf'),
     path('api/pdf-to-jpg/', views.pdf_to_jpg_view, name='pdf_to_jpg_api'),
     path('api/pdf-to-excel/', views.pdf_to_excel_view, name='pdf_to_excel_api'),
