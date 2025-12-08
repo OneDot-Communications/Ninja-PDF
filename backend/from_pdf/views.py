@@ -332,6 +332,7 @@ def pdf_to_pdfa_view(request):
 def pdf_to_html_view(request):
     """
     API endpoint for PDF to HTML conversion.
+    Always returns a single HTML file with embedded images (never a ZIP).
     """
     try:
         if 'pdf_file' not in request.FILES:
@@ -344,23 +345,16 @@ def pdf_to_html_view(request):
         options = {
             'page_range': request.POST.get('page_range', 'all'),
             'format': request.POST.get('format', 'html-single'),
+            'dpi': request.POST.get('dpi', '150'),
         }
 
+        # Always returns a single HTML file
         converted_files = convert_pdf_to_html(pdf_file, options)
-
-        if len(converted_files) == 1:
-            filename, file_bytes = converted_files[0]
-            response = HttpResponse(file_bytes, content_type='text/html')
-            response['Content-Disposition'] = f'attachment; filename="{filename}"'
-        else:
-            zip_buffer = io.BytesIO()
-            with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
-                for filename, file_bytes in converted_files:
-                    zip_file.writestr(filename, file_bytes)
-            zip_buffer.seek(0)
-            response = HttpResponse(zip_buffer.read(), content_type='application/zip')
-            zip_filename = pdf_file.name.replace('.pdf', '_converted.zip')
-            response['Content-Disposition'] = f'attachment; filename="{zip_filename}"'
+        
+        # Always single file (no ZIP)
+        filename, file_bytes = converted_files[0]
+        response = HttpResponse(file_bytes, content_type='text/html')
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
 
         return response
 
