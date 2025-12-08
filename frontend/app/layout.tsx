@@ -12,6 +12,9 @@ const montserrat = Montserrat({
 export const metadata: Metadata = {
   title: "Ninja PDF - Ultimate PDF Tools",
   description: "Merge, Split, Convert, and Edit PDFs with ease. 100% Free and Secure.",
+  icons: {
+    icon: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({
