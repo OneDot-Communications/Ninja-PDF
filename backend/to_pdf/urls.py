@@ -9,4 +9,6 @@ urlpatterns = [
     path('jpg-to-pdf/', views.jpg_to_pdf_view, name='jpg_to_pdf'),
     path('html-to-pdf/', views.html_to_pdf_view, name='html_to_pdf'),
     path('markdown-to-pdf/', views.markdown_to_pdf_view, name='markdown_to_pdf'),
+    path('protect-pdf/', views.protect_pdf_view, name='protect_pdf'),
+    path('unlock-pdf/', views.unlock_pdf_view, name='unlock_pdf'),
 ]
