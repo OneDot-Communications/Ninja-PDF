@@ -112,7 +112,7 @@ const Toaster = forwardRef<ToasterRef, { defaultPosition?: Position }>(
               )}
             >
               <div className="flex items-start gap-2">
-                <Icon className={cn('h-4 w-4 mt-0.5 flex-shrink-0', iconColor[variant])} />
+                <Icon className={cn('h-4 w-4 mt-0.5 shrink-0', iconColor[variant])} />
                 <div className="space-y-0.5">
                   {title && (
                     <h3

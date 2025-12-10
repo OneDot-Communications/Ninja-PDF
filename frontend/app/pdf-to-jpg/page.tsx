@@ -2,7 +2,7 @@ import { ToolShell } from "../components/layout/tool-shell";
 import { PdfToJpgTool } from "../components/tools/pdf-to-jpg";
 
 export const metadata = {
-    title: "PDF to JPG - Ninja PDF",
+    title: "PDF to JPG - 18+ PDF",
     description: "Convert each PDF page into a JPG or extract all images contained in a PDF.",
 };
 
