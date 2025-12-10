@@ -11,4 +11,6 @@ urlpatterns = [
     path('markdown-to-pdf/', views.markdown_to_pdf_view, name='markdown_to_pdf'),
     path('protect-pdf/', views.protect_pdf_view, name='protect_pdf'),
     path('unlock-pdf/', views.unlock_pdf_view, name='unlock_pdf'),
+    path('sign-pdf/', views.sign_pdf_view, name='sign_pdf'),
+    path('sign-pdf/info/', views.sign_pdf_info_view, name='sign_pdf_info'),
 ]
