@@ -6,7 +6,7 @@ import { FileUpload } from "../ui/file-upload";
 import { Button } from "../ui/button";
 import { ArrowRight, CheckCircle2, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { pdfStrategyManager } from "../../lib/pdf-service";
+import { pdfStrategyManager, getPdfJs } from "../../lib/pdf-service";
 import { toast } from "../../lib/use-toast";
 
 export function SplitPdfTool() {
@@ -32,12 +32,9 @@ export function SplitPdfTool() {
     const generateThumbnails = async (file: File) => {
         setLoadingThumbnails(true);
         try {
-            const pdfjsLib = await import("pdfjs-dist");
-            if (typeof window !== "undefined") {
-                pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
-            }
+            const pdfjsLib = await getPdfJs();
             const arrayBuffer = await file.arrayBuffer();
-            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+            const pdf = await (pdfjsLib as any).getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
             setNumPages(pdf.numPages);
             
             const thumbs: string[] = [];
