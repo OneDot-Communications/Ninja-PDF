@@ -3,6 +3,8 @@
 @custom-variant dark (&:is(.dark *));
 @theme {
     --font-sans: 'Montserrat', sans-serif;
+    --font-handwriting: 'Kalam', cursive;
+    --font-caveat: 'Caveat', cursive;
     /* Brand Colors */
     --color-brand-red: #E42527;
     --color-brand-green: #089949;
@@ -78,8 +80,8 @@
 }
 
 :root {
-    /* Primary: Blue (Brand Blue) */
-    --primary: #226DB4;
+    /* Primary: Brand Purple */
+    --primary: #714B67;
     --primary-foreground: #FFFFFF;
     /* Secondary: Green (Brand Green) */
     --secondary: #089949;
@@ -96,7 +98,7 @@
     /* Border/Input/Ring */
     --border: #E5E5E5;
     --input: #E5E5E5;
-    --ring: #226DB4;
+    --ring: #714B67;
     /* Radius */
     --radius: 0.625rem;
     /* Background/Foreground */
@@ -133,7 +135,7 @@
     --card-foreground: #FFFFFF;
     --popover: #333333;
     --popover-foreground: #FFFFFF;
-    --primary: #226DB4;
+    --primary: #714B67;
     --primary-foreground: #FFFFFF;
     --secondary: #089949;
     --secondary-foreground: #FFFFFF;
@@ -145,8 +147,8 @@
     --destructive-foreground: #FFFFFF;
     --border: #333333;
     --input: #333333;
-    --ring: #226DB4;
-    --chart-1: #226DB4;
+    --ring: #714B67;
+    --chart-1: #714B67;
     --chart-2: #089949;
     --chart-3: #F9B21D;
     --chart-4: #E42527;
