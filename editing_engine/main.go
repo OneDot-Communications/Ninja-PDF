@@ -248,41 +248,35 @@ func applyTextEdits(pdfBytes []byte, edits []TextEdit) ([]byte, error) {
 }
 
 func addWhiteRectangle(pdfBytes []byte, pageNum int, x, y, width, height float64) ([]byte, error) {
-    // Use filled rectangle approach with large font block characters
-    fontSize := math.Max(height*1.5, 14)
-    charWidth := fontSize * 0.55
-    numChars := int(math.Ceil(width/charWidth)) + 3
+	// Create a text watermark with a white background that covers the original text
+	// We use a single space with bgcolor to create a solid white rectangle
+	// The margins are set to match the width/height we need to cover
+	
+	// Calculate font size based on height
+	fontSize := math.Max(height, 12)
+	
+	// Create watermark with white background color
+	// The bgcolor parameter creates a filled rectangle behind the text
+	wmDesc := fmt.Sprintf("pos:bl, off:%.2f %.2f, scale:1 abs, rot:0, font:Courier, points:%d, bgcol:#FFFFFF, op:1, ma:%.2f",
+		x, y, int(fontSize), width/2)
 
-    // Create block of white characters
-    whiteText := strings.Repeat("█", numChars)
+	// Use a space character - the bgcolor will create the white rectangle
+	wm, err := pdfapi.TextWatermark(" ", wmDesc, true, false, types.POINTS)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create white rectangle watermark: %w", err)
+	}
 
-    wmDesc := fmt.Sprintf("pos:bl, off:%.2f %.2f, scale:1 abs, rot:0, font:Helvetica, points:%d, fillc:#FFFFFF, op:1",
-        x, y-height*0.1, int(fontSize))
+	wm.OnTop = true
+	pages := []string{fmt.Sprintf("%d", pageNum)}
 
-    wm, err := pdfapi.TextWatermark(whiteText, wmDesc, true, false, types.POINTS)
-    if err != nil {
-        // Fallback to spaces with background
-        log.Printf("Block character approach failed, trying spaces: %v", err)
-        spaces := strings.Repeat(" ", numChars*3)
-        wmDesc2 := fmt.Sprintf("pos:bl, off:%.2f %.2f, scale:1 abs, rot:0, font:Courier, points:%d, bgcol:#FFFFFF, op:1",
-            x, y, int(fontSize))
-        wm, err = pdfapi.TextWatermark(spaces, wmDesc2, true, false, types.POINTS)
-        if err != nil {
-            return nil, fmt.Errorf("failed to create white rectangle: %w", err)
-        }
-    }
+	in := bytes.NewReader(pdfBytes)
+	var out bytes.Buffer
 
-    wm.OnTop = true
-    pages := []string{fmt.Sprintf("%d", pageNum)}
+	if err := pdfapi.AddWatermarks(in, &out, pages, wm, nil); err != nil {
+		return nil, fmt.Errorf("failed to add white rectangle watermark: %w", err)
+	}
 
-    in := bytes.NewReader(pdfBytes)
-    var out bytes.Buffer
-
-    if err := pdfapi.AddWatermarks(in, &out, pages, wm, nil); err != nil {
-        return nil, fmt.Errorf("failed to add white rectangle watermark: %w", err)
-    }
-
-    return out.Bytes(), nil
+	return out.Bytes(), nil
 }
 
 func addTextWatermark(pdfBytes []byte, pageNum int, x, y float64, text string, fontSize float64) ([]byte, error) {
