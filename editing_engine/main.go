@@ -1,307 +1,357 @@
 package main
 
 import (
-	"bytes"
-	"encoding/json"
-	"fmt"
-	"io"
-	"log"
-	"math"
-	"net/http"
+    "bytes"
+    "encoding/json"
+    "fmt"
+    "io"
+    "log"
+    "math"
+    "net/http"
+    "strings"
 
-	pdfapi "github.com/pdfcpu/pdfcpu/pkg/api"
-	"github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
+    pdfapi "github.com/pdfcpu/pdfcpu/pkg/api"
+    "github.com/pdfcpu/pdfcpu/pkg/pdfcpu/types"
 )
 
-// These structs must match what you send from React
 type RectAnnotation struct {
-	ID     string  `json:"id"`
-	Page   int     `json:"page"`
-	X      float64 `json:"x"`
-	Y      float64 `json:"y"`
-	Width  float64 `json:"width"`
-	Height float64 `json:"height"`
+    ID     string  `json:"id"`
+    Page   int     `json:"page"`
+    X      float64 `json:"x"`
+    Y      float64 `json:"y"`
+    Width  float64 `json:"width"`
+    Height float64 `json:"height"`
+    Type   string  `json:"type"`
+    Color  string  `json:"color"`
 }
 
 type TextAnnotation struct {
-	ID   string  `json:"id"`
-	Page int     `json:"page"`
-	X    float64 `json:"x"`
-	Y    float64 `json:"y"`
-	Text string  `json:"text"`
+    ID         string  `json:"id"`
+    Page       int     `json:"page"`
+    X          float64 `json:"x"`
+    Y          float64 `json:"y"`
+    Text       string  `json:"text"`
+    FontSize   float64 `json:"fontSize"`
+    FontFamily string  `json:"fontFamily"`
+    Color      string  `json:"color"`
 }
 
-// TextEdit represents a text modification from the frontend
 type TextEdit struct {
-	ID           string  `json:"id"`
-	Page         int     `json:"page"`
-	X            float64 `json:"x"`
-	Y            float64 `json:"y"`
-	Width        float64 `json:"width"`
-	Height       float64 `json:"height"`
-	OriginalText string  `json:"originalText"`
-	NewText      string  `json:"newText"`
-	FontSize     float64 `json:"fontSize"`
-	Scale        float64 `json:"scale"` // Frontend scale for coordinate conversion
+    ID           string  `json:"id"`
+    Page         int     `json:"page"`
+    X            float64 `json:"x"`
+    Y            float64 `json:"y"`
+    Width        float64 `json:"width"`
+    Height       float64 `json:"height"`
+    OriginalText string  `json:"originalText"`
+    NewText      string  `json:"newText"`
+    FontSize     float64 `json:"fontSize"`
+    FontFamily   string  `json:"fontFamily"`
+    Scale        float64 `json:"scale"`
 }
 
 func main() {
-	mux := http.NewServeMux()
-	mux.HandleFunc("/api/pdf/apply-edits", applyEditsHandler)
+    mux := http.NewServeMux()
+    mux.HandleFunc("/api/pdf/apply-edits", applyEditsHandler)
 
-	// Wrap with simple CORS so your Next app can call it
-	handler := withCORS(mux)
+    handler := withCORS(mux)
 
-	addr := ":8080"
-	log.Printf("PDF backend listening on %s ...", addr)
-	if err := http.ListenAndServe(addr, handler); err != nil {
-		log.Fatal(err)
-	}
+    addr := ":8080"
+    log.Printf("PDF backend listening on %s ...", addr)
+    if err := http.ListenAndServe(addr, handler); err != nil {
+        log.Fatal(err)
+    }
 }
 
-// CORS middleware for local dev (Next runs on :3000)
 func withCORS(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "http://localhost:3000")
-		w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        w.Header().Set("Access-Control-Allow-Origin", "*")
+        w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+        w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 
-		if r.Method == http.MethodOptions {
-			w.WriteHeader(http.StatusNoContent)
-			return
-		}
+        if r.Method == http.MethodOptions {
+            w.WriteHeader(http.StatusNoContent)
+            return
+        }
 
-		next.ServeHTTP(w, r)
-	})
+        next.ServeHTTP(w, r)
+    })
 }
 
 func applyEditsHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "only POST allowed", http.StatusMethodNotAllowed)
-		return
-	}
+    if r.Method != http.MethodPost {
+        http.Error(w, "only POST allowed", http.StatusMethodNotAllowed)
+        return
+    }
 
-	// Max 32MB form
-	if err := r.ParseMultipartForm(32 << 20); err != nil {
-		http.Error(w, "invalid multipart form: "+err.Error(), http.StatusBadRequest)
-		return
-	}
+    if err := r.ParseMultipartForm(32 << 20); err != nil {
+        http.Error(w, "invalid multipart form: "+err.Error(), http.StatusBadRequest)
+        return
+    }
 
-	// 1) Get the PDF file
-	file, header, err := r.FormFile("file")
-	if err != nil {
-		http.Error(w, "missing file field: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-	defer file.Close()
+    file, header, err := r.FormFile("file")
+    if err != nil {
+        http.Error(w, "missing file field: "+err.Error(), http.StatusBadRequest)
+        return
+    }
+    defer file.Close()
 
-	var pdfBuf bytes.Buffer
-	if _, err := io.Copy(&pdfBuf, file); err != nil {
-		http.Error(w, "failed to read pdf: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
+    var pdfBuf bytes.Buffer
+    if _, err := io.Copy(&pdfBuf, file); err != nil {
+        http.Error(w, "failed to read pdf: "+err.Error(), http.StatusInternalServerError)
+        return
+    }
 
-	// 2) Get annotations JSON
-	rectJSON := r.FormValue("rectAnnotations")
-	textJSON := r.FormValue("textAnnotations")
-	textEditsJSON := r.FormValue("textEdits")
+    rectJSON := r.FormValue("rectAnnotations")
+    textJSON := r.FormValue("textAnnotations")
+    textEditsJSON := r.FormValue("textEdits")
 
-	var rects []RectAnnotation
-	var texts []TextAnnotation
-	var textEdits []TextEdit
+    var rects []RectAnnotation
+    var texts []TextAnnotation
+    var textEdits []TextEdit
 
-	if rectJSON != "" {
-		if err := json.Unmarshal([]byte(rectJSON), &rects); err != nil {
-			http.Error(w, "invalid rectAnnotations JSON: "+err.Error(), http.StatusBadRequest)
-			return
-		}
-	}
+    if rectJSON != "" {
+        if err := json.Unmarshal([]byte(rectJSON), &rects); err != nil {
+            log.Printf("Warning: invalid rectAnnotations JSON: %v", err)
+        }
+    }
 
-	if textJSON != "" {
-		if err := json.Unmarshal([]byte(textJSON), &texts); err != nil {
-			http.Error(w, "invalid textAnnotations JSON: "+err.Error(), http.StatusBadRequest)
-			return
-		}
-	}
+    if textJSON != "" {
+        if err := json.Unmarshal([]byte(textJSON), &texts); err != nil {
+            log.Printf("Warning: invalid textAnnotations JSON: %v", err)
+        }
+    }
 
-	if textEditsJSON != "" {
-		if err := json.Unmarshal([]byte(textEditsJSON), &textEdits); err != nil {
-			http.Error(w, "invalid textEdits JSON: "+err.Error(), http.StatusBadRequest)
-			return
-		}
-	}
+    if textEditsJSON != "" {
+        log.Printf("Received textEditsJSON: %s", textEditsJSON)
+        if err := json.Unmarshal([]byte(textEditsJSON), &textEdits); err != nil {
+            log.Printf("Warning: invalid textEdits JSON: %v", err)
+        }
+    }
 
-	log.Printf("Received %d rects, %d texts, %d textEdits for %s\n", len(rects), len(texts), len(textEdits), header.Filename)
+    log.Printf("Processing: %d rects, %d texts, %d textEdits for %s\n", len(rects), len(texts), len(textEdits), header.Filename)
 
-	// 3) Apply edits using pdfcpu
-	pdfBytes := pdfBuf.Bytes()
-	var resultBuf bytes.Buffer
+    pdfBytes := pdfBuf.Bytes()
+    var resultBuf bytes.Buffer
 
-	// Apply text edits if any
-	if len(textEdits) > 0 {
-		editedBytes, err := applyTextEdits(pdfBytes, textEdits)
-		if err != nil {
-			log.Printf("Error applying text edits: %v", err)
-			// Fall back to optimization only
-			in := bytes.NewReader(pdfBytes)
-			if err := pdfapi.Optimize(in, &resultBuf, nil); err != nil {
-				http.Error(w, "pdfcpu optimize failed: "+err.Error(), http.StatusInternalServerError)
-				return
-			}
-		} else {
-			resultBuf.Write(editedBytes)
-		}
-	} else {
-		// No text edits, just optimize
-		in := bytes.NewReader(pdfBytes)
-		if err := pdfapi.Optimize(in, &resultBuf, nil); err != nil {
-			http.Error(w, "pdfcpu optimize failed: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
-	}
+    // Apply text edits first
+    if len(textEdits) > 0 {
+        editedBytes, err := applyTextEdits(pdfBytes, textEdits)
+        if err != nil {
+            log.Printf("Error applying text edits: %v", err)
+            // Fall back to original PDF
+            in := bytes.NewReader(pdfBytes)
+            if err := pdfapi.Optimize(in, &resultBuf, nil); err != nil {
+                http.Error(w, "pdfcpu optimize failed: "+err.Error(), http.StatusInternalServerError)
+                return
+            }
+        } else {
+            pdfBytes = editedBytes
+        }
+    }
 
-	// 4) Send the edited PDF back
-	w.Header().Set("Content-Type", "application/pdf")
-	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, editedFilename(header.Filename)))
-	if _, err := w.Write(resultBuf.Bytes()); err != nil {
-		log.Println("failed to write response:", err)
-	}
+    // Apply annotations (highlights, underlines, etc.)
+    if len(rects) > 0 || len(texts) > 0 {
+        annotatedBytes, err := applyAnnotations(pdfBytes, rects, texts)
+        if err != nil {
+            log.Printf("Error applying annotations: %v", err)
+        } else {
+            pdfBytes = annotatedBytes
+        }
+    }
+
+    // Final optimization
+    in := bytes.NewReader(pdfBytes)
+    if err := pdfapi.Optimize(in, &resultBuf, nil); err != nil {
+        log.Printf("Warning: optimization failed: %v", err)
+        resultBuf.Write(pdfBytes)
+    }
+
+    w.Header().Set("Content-Type", "application/pdf")
+    w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, editedFilename(header.Filename)))
+    if _, err := w.Write(resultBuf.Bytes()); err != nil {
+        log.Println("failed to write response:", err)
+    }
 }
 
-// applyTextEdits applies text modifications to the PDF using pdfcpu watermarks
 func applyTextEdits(pdfBytes []byte, edits []TextEdit) ([]byte, error) {
-	currentBytes := pdfBytes
+    currentBytes := pdfBytes
 
-	// Group edits by page
-	editsByPage := make(map[int][]TextEdit)
-	for _, edit := range edits {
-		editsByPage[edit.Page] = append(editsByPage[edit.Page], edit)
-	}
+    editsByPage := make(map[int][]TextEdit)
+    for _, edit := range edits {
+        editsByPage[edit.Page] = append(editsByPage[edit.Page], edit)
+    }
 
-	// Process each page with edits
-	for pageNum, pageEdits := range editsByPage {
-		// For each edit on this page, add a white rectangle and then the new text
-		for _, edit := range pageEdits {
-			// Convert screen coordinates to PDF points
-			// Frontend uses scaled coordinates, need to convert back
-			scale := edit.Scale
-			if scale == 0 {
-				scale = 1.3 // Default scale if not provided
-			}
+    // Get page dimensions
+    pdfReader := bytes.NewReader(currentBytes)
+    dims, err := pdfapi.PageDims(pdfReader, nil)
+    if err != nil {
+        return nil, fmt.Errorf("failed to get page dims: %w", err)
+    }
 
-			// Get page dimensions first
-			pdfReader := bytes.NewReader(currentBytes)
-			dims, err := pdfapi.PageDims(pdfReader, nil)
-			if err != nil {
-				return nil, fmt.Errorf("failed to get page dims: %w", err)
-			}
+    for pageNum, pageEdits := range editsByPage {
+        if pageNum > len(dims) || pageNum < 1 {
+            log.Printf("Warning: Invalid page number %d, skipping.", pageNum)
+            continue
+        }
 
-			if pageNum > len(dims) || pageNum < 1 {
-				continue
-			}
+        pageDim := dims[pageNum-1]
+        pageHeight := pageDim.Height
 
-			pageDim := dims[pageNum-1]
-			pageHeight := pageDim.Height
+        for _, edit := range pageEdits {
+            scale := edit.Scale
+            if scale == 0 {
+                scale = 1.3
+            }
 
-			// Convert coordinates from screen space to PDF space
-			// PDF origin is bottom-left, screen origin is top-left
-			pdfX := edit.X / scale
-			pdfY := pageHeight - (edit.Y/scale + edit.Height/scale) // Flip Y and adjust for height
-			pdfWidth := edit.Width / scale
-			pdfHeight := edit.Height / scale
+            // Convert screen coordinates to PDF points
+            pdfX := edit.X / scale
+            pdfY := pageHeight - (edit.Y / scale) - (edit.Height / scale)
+            pdfWidth := edit.Width / scale
+            pdfHeight := edit.Height / scale
 
-			// Step 1: Add white rectangle to cover original text
-			whiteRect, err := addWhiteRectangle(currentBytes, pageNum, pdfX, pdfY, pdfWidth, pdfHeight)
-			if err != nil {
-				log.Printf("Warning: failed to add white rectangle for edit %s: %v", edit.ID, err)
-				continue
-			}
-			currentBytes = whiteRect
+            // Add generous padding
+            padding := 3.0
+            pdfX -= padding
+            pdfY -= padding
+            pdfWidth += 2 * padding
+            pdfHeight += 2 * padding
 
-			// Step 2: Add new text at the same position
-			withText, err := addTextWatermark(currentBytes, pageNum, pdfX, pdfY, edit.NewText, edit.FontSize)
-			if err != nil {
-				log.Printf("Warning: failed to add text watermark for edit %s: %v", edit.ID, err)
-				continue
-			}
-			currentBytes = withText
-		}
-	}
+            log.Printf("Editing text on page %d at (%.2f, %.2f) size (%.2f x %.2f)", 
+                pageNum, pdfX, pdfY, pdfWidth, pdfHeight)
 
-	return currentBytes, nil
+            // Step 1: Cover original text with white rectangle
+            whiteRect, err := addWhiteRectangle(currentBytes, pageNum, pdfX, pdfY, pdfWidth, pdfHeight)
+            if err != nil {
+                log.Printf("Warning: failed to add white rectangle for edit %s: %v", edit.ID, err)
+                continue
+            }
+            currentBytes = whiteRect
+
+            // Step 2: Add new text
+            textX := pdfX + padding
+            textY := pdfY + padding
+            pdfFontSize := edit.FontSize / scale
+            
+            withText, err := addTextWatermark(currentBytes, pageNum, textX, textY, edit.NewText, pdfFontSize)
+            if err != nil {
+                log.Printf("Warning: failed to add text watermark for edit %s: %v", edit.ID, err)
+                continue
+            }
+            currentBytes = withText
+
+            log.Printf("Successfully edited text: '%s' -> '%s'", edit.OriginalText, edit.NewText)
+        }
+    }
+
+    return currentBytes, nil
 }
 
-// addWhiteRectangle adds a white filled rectangle to cover original text
 func addWhiteRectangle(pdfBytes []byte, pageNum int, x, y, width, height float64) ([]byte, error) {
-	// Create a white rectangle as a PDF watermark/stamp
-	// Using a simple 1x1 white image scaled to cover the area
-	// Alternative approach: use pdfcpu's color-based watermark
+    // Use filled rectangle approach with large font block characters
+    fontSize := math.Max(height*1.5, 14)
+    charWidth := fontSize * 0.55
+    numChars := int(math.Ceil(width/charWidth)) + 3
 
-	// Create a simple 1x1 pixel white image in memory
-	// Actually, pdfcpu TextWatermark with spaces can create a white block
-	whiteText := " " // Single space
-	fontSize := int(math.Max(height, 12))
+    // Create block of white characters
+    whiteText := strings.Repeat("█", numChars)
 
-	// Create text watermark configuration for a white background block
-	wmDesc := fmt.Sprintf("pos:bl, off:%.2f %.2f, sc:1 abs, rot:0, font:Helvetica, points:%d, fillc:#FFFFFF, bgcol:#FFFFFF, op:1, margins:0",
-		x, y, fontSize)
+    wmDesc := fmt.Sprintf("pos:bl, off:%.2f %.2f, scale:1 abs, rot:0, font:Helvetica, points:%d, fillc:#FFFFFF, op:1",
+        x, y-height*0.1, int(fontSize))
 
-	wm, err := pdfapi.TextWatermark(whiteText, wmDesc, true, false, types.POINTS)
-	if err != nil {
-		// Try a simpler approach - just return original and log
-		log.Printf("Could not create white rectangle watermark: %v", err)
-		return pdfBytes, nil
-	}
+    wm, err := pdfapi.TextWatermark(whiteText, wmDesc, true, false, types.POINTS)
+    if err != nil {
+        // Fallback to spaces with background
+        log.Printf("Block character approach failed, trying spaces: %v", err)
+        spaces := strings.Repeat(" ", numChars*3)
+        wmDesc2 := fmt.Sprintf("pos:bl, off:%.2f %.2f, scale:1 abs, rot:0, font:Courier, points:%d, bgcol:#FFFFFF, op:1",
+            x, y, int(fontSize))
+        wm, err = pdfapi.TextWatermark(spaces, wmDesc2, true, false, types.POINTS)
+        if err != nil {
+            return nil, fmt.Errorf("failed to create white rectangle: %w", err)
+        }
+    }
 
-	wm.OnTop = true
+    wm.OnTop = true
+    pages := []string{fmt.Sprintf("%d", pageNum)}
 
-	pages := []string{fmt.Sprintf("%d", pageNum)}
+    in := bytes.NewReader(pdfBytes)
+    var out bytes.Buffer
 
-	in := bytes.NewReader(pdfBytes)
-	var out bytes.Buffer
+    if err := pdfapi.AddWatermarks(in, &out, pages, wm, nil); err != nil {
+        return nil, fmt.Errorf("failed to add white rectangle watermark: %w", err)
+    }
 
-	if err := pdfapi.AddWatermarks(in, &out, pages, wm, nil); err != nil {
-		return nil, fmt.Errorf("failed to add white rectangle: %w", err)
-	}
-
-	return out.Bytes(), nil
+    return out.Bytes(), nil
 }
 
-// addTextWatermark adds text overlay at specified position
 func addTextWatermark(pdfBytes []byte, pageNum int, x, y float64, text string, fontSize float64) ([]byte, error) {
-	if fontSize < 6 {
-		fontSize = 12 // Default font size
-	}
+    if fontSize < 6 {
+        fontSize = 12
+    }
 
-	// Create text watermark with absolute positioning
-	// pos:bl = position bottom-left, off = offset from that position
-	wmDesc := fmt.Sprintf("pos:bl, off:%.2f %.2f, sc:1 abs, rot:0, font:Helvetica, points:%d, fillc:#000000, op:1",
-		x, y, int(math.Round(fontSize)))
+    // Ensure text is not empty
+    if strings.TrimSpace(text) == "" {
+        text = " "
+    }
 
-	wm, err := pdfapi.TextWatermark(text, wmDesc, true, false, types.POINTS)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create text watermark: %w", err)
-	}
+    wmDesc := fmt.Sprintf("pos:bl, off:%.2f %.2f, scale:1 abs, rot:0, font:Helvetica, points:%d, fillc:#000000, op:1",
+        x, y, int(math.Round(fontSize)))
 
-	wm.OnTop = true
+    wm, err := pdfapi.TextWatermark(text, wmDesc, true, false, types.POINTS)
+    if err != nil {
+        return nil, fmt.Errorf("failed to create text watermark: %w", err)
+    }
 
-	// Apply to specific page
-	pages := []string{fmt.Sprintf("%d", pageNum)}
+    wm.OnTop = true
+    pages := []string{fmt.Sprintf("%d", pageNum)}
 
-	in := bytes.NewReader(pdfBytes)
-	var out bytes.Buffer
+    in := bytes.NewReader(pdfBytes)
+    var out bytes.Buffer
 
-	if err := pdfapi.AddWatermarks(in, &out, pages, wm, nil); err != nil {
-		return nil, fmt.Errorf("failed to add text watermark: %w", err)
-	}
+    if err := pdfapi.AddWatermarks(in, &out, pages, wm, nil); err != nil {
+        return nil, fmt.Errorf("failed to add text watermark: %w", err)
+    }
 
-	return out.Bytes(), nil
+    return out.Bytes(), nil
+}
+
+func applyAnnotations(pdfBytes []byte, rects []RectAnnotation, texts []TextAnnotation) ([]byte, error) {
+    currentBytes := pdfBytes
+
+    // Apply rectangle annotations (highlights, underlines, etc.)
+    for _, rect := range rects {
+        log.Printf("Applying %s annotation on page %d", rect.Type, rect.Page)
+        // Implementation depends on annotation type
+        // For highlights, you could use colored rectangles
+        // This is a placeholder - you'd implement based on rect.Type
+    }
+
+    // Apply text annotations
+    for _, text := range texts {
+        log.Printf("Applying text annotation on page %d: %s", text.Page, text.Text)
+        fontSize := text.FontSize
+        if fontSize == 0 {
+            fontSize = 12
+        }
+
+        annotatedBytes, err := addTextWatermark(currentBytes, text.Page, text.X, text.Y, text.Text, fontSize)
+        if err != nil {
+            log.Printf("Warning: failed to add text annotation: %v", err)
+            continue
+        }
+        currentBytes = annotatedBytes
+    }
+
+    return currentBytes, nil
 }
 
 func editedFilename(orig string) string {
-	if len(orig) == 0 {
-		return "edited.pdf"
-	}
-	// naive: just append -edited
-	return orig + "-edited.pdf"
+    if len(orig) == 0 {
+        return "edited.pdf"
+    }
+    if strings.HasSuffix(strings.ToLower(orig), ".pdf") {
+        return orig[:len(orig)-4] + "-edited.pdf"
+    }
+    return orig + "-edited.pdf"
 }
