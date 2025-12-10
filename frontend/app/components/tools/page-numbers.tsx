@@ -938,7 +938,6 @@ export function PageNumbersTool() {
                                         fontStyle: pageNumberElement.fontStyle,
                                         textDecoration: pageNumberElement.textDecoration,
                                         opacity: pageNumberElement.opacity,
-                                        transform: `rotate(${pageNumberElement.rotation}deg)`,
                                         ...(
                                             pageNumberElement.position === "bottom-center" ? { bottom: `${pageNumberElement.margin}px`, left: "50%", transform: `translateX(-50%) rotate(${pageNumberElement.rotation}deg)` } :
                                             pageNumberElement.position === "bottom-right" ? { bottom: `${pageNumberElement.margin}px`, right: `${pageNumberElement.margin}px`, transform: `rotate(${pageNumberElement.rotation}deg)` } :
@@ -946,7 +945,7 @@ export function PageNumbersTool() {
                                             pageNumberElement.position === "top-center" ? { top: `${pageNumberElement.margin}px`, left: "50%", transform: `translateX(-50%) rotate(${pageNumberElement.rotation}deg)` } :
                                             pageNumberElement.position === "top-right" ? { top: `${pageNumberElement.margin}px`, right: `${pageNumberElement.margin}px`, transform: `rotate(${pageNumberElement.rotation}deg)` } :
                                             pageNumberElement.position === "top-left" ? { top: `${pageNumberElement.margin}px`, left: `${pageNumberElement.margin}px`, transform: `rotate(${pageNumberElement.rotation}deg)` } :
-                                            {}
+                                            { transform: `rotate(${pageNumberElement.rotation}deg)` }
                                         )
                                     }}
                                 >
