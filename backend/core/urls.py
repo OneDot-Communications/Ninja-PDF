@@ -25,4 +25,5 @@ urlpatterns = [
     path('pdf-conversions/', include('from_pdf.urls')),
     path('optimizer/', include('optimizer.urls')),
     path('to_pdf/', include('to_pdf.urls')),
+    path('optimizer/', include('optimizer.urls')),
 ]
