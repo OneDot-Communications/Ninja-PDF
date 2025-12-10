@@ -2,7 +2,7 @@ import { ToolShell } from "../components/layout/tool-shell";
 import { CompressPdfTool } from "../components/tools/compress-pdf";
 
 export const metadata = {
-    title: "Compress PDF - Ninja PDF",
+    title: "Compress PDF - 18+ PDF",
     description: "Reduce file size while optimizing for maximal PDF quality.",
 };
 
