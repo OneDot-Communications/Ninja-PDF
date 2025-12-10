@@ -14,6 +14,7 @@ from .html_pdf.html_to_pdf import convert_html_to_pdf
 from .markdown_pdf.markdown_to_pdf import convert_markdown_to_pdf
 from .protect_pdf.protect_pdf import protect_pdf
 from .unlock_pdf.unlock_pdf import unlock_pdf
+from .sign_pdf.sign_pdf import sign_pdf, sign_pdf_normalized, get_pdf_info
 
 def index_view(request):
     return render(request, 'to_pdf/index.html')
@@ -653,3 +654,114 @@ def unlock_pdf_view(request):
     
     return HttpResponse('Invalid request', status=400)
 
+
+@never_cache
+@csrf_exempt
+def sign_pdf_view(request):
+    """
+    Sign PDF - add signature image to PDF.
+    Serves the custom UI or handles form submission.
+    """
+    if request.method == 'GET':
+        # Serve the custom index.html for sign PDF
+        html_path = os.path.join(os.path.dirname(__file__), 'sign_pdf', 'index.html')
+        with open(html_path, 'r', encoding='utf-8') as f:
+            return HttpResponse(f.read(), content_type='text/html')
+    
+    if request.method == 'POST' and request.FILES.get('file'):
+        uploaded_file = request.FILES['file']
+        signature_file = request.FILES.get('signature')
+        
+        # Validate PDF file
+        original_ext = os.path.splitext(uploaded_file.name)[1].lower()
+        if original_ext != '.pdf':
+            return HttpResponse(f'Invalid file type. Please upload a PDF file. You uploaded: {original_ext or "unknown"}', status=400)
+        
+        # Validate signature file
+        if not signature_file:
+            return HttpResponse('Signature image is required', status=400)
+        
+        # Get options
+        try:
+            page_number = int(request.POST.get('page', 0))
+        except ValueError:
+            return HttpResponse('Invalid page number', status=400)
+
+        position = request.POST.get('position', 'bottom-right')
+
+        # Normalized coordinates (if provided)
+        nx = request.POST.get('nx')
+        ny = request.POST.get('ny')
+        nwidth = request.POST.get('nwidth')
+        nheight = request.POST.get('nheight')
+
+        use_normalized = all(v is not None and v != '' for v in [nx, ny, nwidth])
+
+        try:
+            # Read files
+            pdf_bytes = uploaded_file.read()
+            signature_bytes = signature_file.read()
+
+            if use_normalized:
+                try:
+                    nx_f = float(nx)
+                    ny_f = float(ny)
+                    nwidth_f = float(nwidth)
+                    nheight_f = float(nheight) if nheight not in [None, '', 'null'] else None
+                except ValueError:
+                    return HttpResponse('Invalid normalized coordinates', status=400)
+
+                signed_pdf_bytes = sign_pdf_normalized(
+                    pdf_bytes=pdf_bytes,
+                    signature_bytes=signature_bytes,
+                    page_number=page_number,
+                    nx=nx_f,
+                    ny=ny_f,
+                    nwidth=nwidth_f,
+                    nheight=nheight_f
+                )
+            else:
+                # Sign the PDF using preset position
+                signed_pdf_bytes = sign_pdf(
+                    pdf_bytes=pdf_bytes,
+                    signature_bytes=signature_bytes,
+                    page_number=page_number,
+                    position=position
+                )
+            
+            # Generate output filename
+            output_filename = os.path.splitext(uploaded_file.name)[0] + '_signed.pdf'
+            
+            # Send signed PDF as response
+            response = HttpResponse(signed_pdf_bytes, content_type='application/pdf')
+            response['Content-Disposition'] = f'attachment; filename="{output_filename}"'
+            response['Content-Length'] = len(signed_pdf_bytes)
+            
+            return response
+            
+        except Exception as e:
+            return HttpResponse(str(e), status=500)
+    
+    return HttpResponse('Invalid request', status=400)
+
+
+@never_cache
+@csrf_exempt
+def sign_pdf_info_view(request):
+    """
+    Get PDF info (page count) for the sign PDF UI.
+    """
+    if request.method == 'POST' and request.FILES.get('file'):
+        uploaded_file = request.FILES['file']
+        
+        try:
+            pdf_bytes = uploaded_file.read()
+            info = get_pdf_info(pdf_bytes)
+            
+            from django.http import JsonResponse
+            return JsonResponse(info)
+            
+        except Exception as e:
+            return HttpResponse(str(e), status=500)
+    
+    return HttpResponse('Invalid request', status=400)

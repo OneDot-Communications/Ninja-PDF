@@ -8,7 +8,10 @@ export function Footer() {
                 <div className="grid grid-cols-1 gap-12 md:grid-cols-4">
                     <div className="space-y-4">
                         <Link href="/" className="flex items-center">
-                            <img src="/logo.png" alt="Ninja PDF" className="h-16 w-auto mt-4" />
+                            <span className="text-3xl font-bold">
+                                <span className="text-red-600">18+</span>
+                                <span className="text-slate-800"> PDF</span>
+                            </span>
                         </Link>
                         <p className="text-sm text-muted-foreground">
                             The ultimate PDF toolset for all your document needs. Fast, secure, and easy to use.
@@ -40,7 +43,7 @@ export function Footer() {
                     </div>
                 </div>
                 <div className="mt-16 border-t border-border pt-8 text-center text-sm text-muted-foreground">
-                    <p>&copy; {new Date().getFullYear()} Ninja PDF. All rights reserved.</p>
+                    <p>&copy; {new Date().getFullYear()} 18+ PDF. All rights reserved.</p>
                 </div>
             </div>
         </footer>
