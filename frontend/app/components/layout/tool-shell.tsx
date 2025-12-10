@@ -5,9 +5,21 @@ interface ToolShellProps {
     title: string;
     description: string;
     children: React.ReactNode;
+    variant?: "default" | "editor";
 }
 
-export function ToolShell({ title, description, children }: ToolShellProps) {
+export function ToolShell({ title, description, children, variant = "default" }: ToolShellProps) {
+    if (variant === "editor") {
+        return (
+            <div className="flex min-h-screen flex-col bg-muted/10">
+                <Header />
+                <main className="flex-1 flex flex-col relative">
+                    {children}
+                </main>
+            </div>
+        );
+    }
+
     return (
         <div className="flex min-h-screen flex-col">
             <Header />

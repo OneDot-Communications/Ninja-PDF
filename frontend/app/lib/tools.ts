@@ -99,6 +99,14 @@ export const tools = [
         isNew: true,
     },
     {
+        title: "Live Edit",
+        description: "Advanced real-time PDF editor with layers, rich text, and media support.",
+        icon: Wrench,
+        href: "/live-edit",
+        category: "Edit PDF",
+        isNew: true,
+    },
+    {
         title: "PDF to JPG",
         description: "Convert each PDF page into a JPG or extract all images contained in a PDF.",
         icon: Image,
@@ -226,5 +234,13 @@ export const tools = [
         icon: Workflow,
         href: "/create-workflow",
         category: "Workflows",
+    },
+    {
+        title: "Metadata Cleaner",
+        description: "Remove hidden metadata and personal information from your PDF files.",
+        icon: Eraser,
+        href: "/metadata-cleaner",
+        category: "PDF Security",
+        isNew: true,
     },
 ];
