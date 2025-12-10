@@ -3,10 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Stage, Layer, Rect, Text as KonvaText } from "react-konva";
 
-// Disable worker for Next.js/Turbopack compatibility
-// pdf.js will run in the main thread instead of using a Web Worker.
-
-type Tool = "select" | "rect" | "text";
+type Tool = "select" | "rect" | "text" | "edit";
 
 type RectAnnotation = {
     id: string;
@@ -25,8 +22,35 @@ type TextAnnotation = {
     text: string;
 };
 
+// Extracted text item from PDF with position info
+type ExtractedTextItem = {
+    id: string;
+    page: number;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    originalText: string;
+    fontSize: number;
+    fontFamily: string;
+};
+
+// Text edit representing a modification to original text
+type TextEdit = {
+    id: string;
+    page: number;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    originalText: string;
+    newText: string;
+    fontSize: number;
+};
+
 export const AdvancedPdfEditor: React.FC = () => {
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
+    const renderTaskRef = useRef<any>(null);
 
     const [pdfDoc, setPdfDoc] = useState<any>(null);
     const [numPages, setNumPages] = useState<number>(0);
@@ -46,6 +70,13 @@ export const AdvancedPdfEditor: React.FC = () => {
     const [rectAnnotations, setRectAnnotations] = useState<RectAnnotation[]>([]);
     const [textAnnotations, setTextAnnotations] = useState<TextAnnotation[]>([]);
 
+    // Extracted text items from PDF
+    const [extractedTexts, setExtractedTexts] = useState<ExtractedTextItem[]>([]);
+    // Text edits made by user
+    const [textEdits, setTextEdits] = useState<TextEdit[]>([]);
+    // Currently selected text item for editing
+    const [selectedTextId, setSelectedTextId] = useState<string | null>(null);
+
     // Temporary state for drawing rectangles
     const [isDrawing, setIsDrawing] = useState(false);
     const [drawingRect, setDrawingRect] = useState<RectAnnotation | null>(null);
@@ -53,7 +84,6 @@ export const AdvancedPdfEditor: React.FC = () => {
     // Load PDF when fileUrl changes
     useEffect(() => {
         if (!fileUrl) return;
-
 
         const loadPdf = async () => {
             try {
@@ -66,6 +96,9 @@ export const AdvancedPdfEditor: React.FC = () => {
                 setPdfDoc(pdf);
                 setNumPages(pdf.numPages);
                 setCurrentPage(1);
+                // Clear previous extractions and edits
+                setExtractedTexts([]);
+                setTextEdits([]);
                 renderPage(pdf, 1, scale);
             } catch (error) {
                 console.error("Error loading PDF:", error);
@@ -98,6 +131,11 @@ export const AdvancedPdfEditor: React.FC = () => {
         const context = canvas.getContext("2d");
         if (!context) return;
 
+        // Cancel previous render if it exists
+        if (renderTaskRef.current) {
+            renderTaskRef.current.cancel();
+        }
+
         canvas.height = viewport.height;
         canvas.width = viewport.width;
 
@@ -108,7 +146,63 @@ export const AdvancedPdfEditor: React.FC = () => {
             viewport,
         };
 
-        await page.render(renderContext).promise;
+        const renderTask = page.render(renderContext);
+        renderTaskRef.current = renderTask;
+
+        try {
+            await renderTask.promise;
+        } catch (error: any) {
+            if (error.name === "RenderingCancelledException") {
+                return;
+            }
+            console.error("Render error:", error);
+        }
+
+        // Extract text content with positions
+        await extractTextFromPage(page, pageNum, viewport);
+    };
+
+    const extractTextFromPage = async (page: any, pageNum: number, viewport: any) => {
+        try {
+            const textContent = await page.getTextContent();
+            const items: ExtractedTextItem[] = [];
+
+            for (const item of textContent.items) {
+                if (!item.str || item.str.trim() === "") continue;
+
+                // Transform coordinates from PDF space to screen space
+                const tx = item.transform;
+                // tx = [scaleX, skewX, skewY, scaleY, translateX, translateY]
+                const fontSize = Math.sqrt(tx[0] * tx[0] + tx[1] * tx[1]);
+
+                // Convert PDF coordinates to viewport coordinates
+                const [x, y] = viewport.convertToViewportPoint(tx[4], tx[5]);
+
+                // Approximate width and height
+                const width = item.width * viewport.scale;
+                const height = fontSize * viewport.scale;
+
+                items.push({
+                    id: `text-${pageNum}-${items.length}`,
+                    page: pageNum,
+                    x: x,
+                    y: y - height, // Adjust for baseline
+                    width: width,
+                    height: height,
+                    originalText: item.str,
+                    fontSize: fontSize,
+                    fontFamily: item.fontName || "sans-serif",
+                });
+            }
+
+            // Update extracted texts, removing old items for this page
+            setExtractedTexts((prev) => [
+                ...prev.filter((t) => t.page !== pageNum),
+                ...items,
+            ]);
+        } catch (error) {
+            console.error("Error extracting text:", error);
+        }
     };
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -136,6 +230,44 @@ export const AdvancedPdfEditor: React.FC = () => {
         typeof crypto !== "undefined" && "randomUUID" in crypto
             ? crypto.randomUUID()
             : Math.random().toString(36).slice(2);
+
+    // Handle clicking on extracted text to edit it
+    const handleTextClick = (textItem: ExtractedTextItem) => {
+        if (tool !== "edit") return;
+
+        // Check if already edited
+        const existingEdit = textEdits.find(
+            (e) => e.id === textItem.id
+        );
+
+        const currentText = existingEdit ? existingEdit.newText : textItem.originalText;
+        const newText = window.prompt("Edit text:", currentText);
+
+        if (newText === null) return; // Cancelled
+
+        if (newText === textItem.originalText) {
+            // Reverted to original, remove edit
+            setTextEdits((prev) => prev.filter((e) => e.id !== textItem.id));
+        } else {
+            // Add or update edit
+            const edit: TextEdit = {
+                id: textItem.id,
+                page: textItem.page,
+                x: textItem.x,
+                y: textItem.y,
+                width: textItem.width,
+                height: textItem.height,
+                originalText: textItem.originalText,
+                newText: newText,
+                fontSize: textItem.fontSize,
+            };
+
+            setTextEdits((prev) => {
+                const filtered = prev.filter((e) => e.id !== textItem.id);
+                return [...filtered, edit];
+            });
+        }
+    };
 
     // Konva events
     const handleStageMouseDown = (e: any) => {
@@ -220,8 +352,21 @@ export const AdvancedPdfEditor: React.FC = () => {
     const currentPageTexts = textAnnotations.filter(
         (ann) => ann.page === currentPage
     );
+    const currentPageExtractedTexts = extractedTexts.filter(
+        (t) => t.page === currentPage
+    );
 
-    // TODO later: send `file`, `rectAnnotations`, `textAnnotations` to backend (Go + pdfcpu)
+    // Get display text for an extracted item (shows edited version if exists)
+    const getDisplayText = (item: ExtractedTextItem) => {
+        const edit = textEdits.find((e) => e.id === item.id);
+        return edit ? edit.newText : item.originalText;
+    };
+
+    // Check if text item has been edited
+    const isTextEdited = (item: ExtractedTextItem) => {
+        return textEdits.some((e) => e.id === item.id);
+    };
+
     const handleExport = async () => {
         if (!file) {
             alert("Upload a PDF first.");
@@ -233,6 +378,13 @@ export const AdvancedPdfEditor: React.FC = () => {
             formData.append("file", file);
             formData.append("rectAnnotations", JSON.stringify(rectAnnotations));
             formData.append("textAnnotations", JSON.stringify(textAnnotations));
+
+            // Send text edits with scale info for coordinate conversion
+            const textEditsForExport = textEdits.map((edit) => ({
+                ...edit,
+                scale: scale, // Include current scale for backend coordinate conversion
+            }));
+            formData.append("textEdits", JSON.stringify(textEditsForExport));
 
             const res = await fetch("http://localhost:8080/api/pdf/apply-edits", {
                 method: "POST",
@@ -284,6 +436,13 @@ export const AdvancedPdfEditor: React.FC = () => {
                         Select
                     </button>
                     <button
+                        className={`px-2 py-1 rounded text-sm border ${tool === "edit" ? "bg-black text-white" : "bg-white"
+                            }`}
+                        onClick={() => setTool("edit")}
+                    >
+                        Edit Text
+                    </button>
+                    <button
                         className={`px-2 py-1 rounded text-sm border ${tool === "rect" ? "bg-black text-white" : "bg-white"
                             }`}
                         onClick={() => setTool("rect")}
@@ -295,7 +454,7 @@ export const AdvancedPdfEditor: React.FC = () => {
                             }`}
                         onClick={() => setTool("text")}
                     >
-                        Text
+                        Add Text
                     </button>
                 </div>
 
@@ -345,6 +504,13 @@ export const AdvancedPdfEditor: React.FC = () => {
                 </div>
             </div>
 
+            {/* Edit mode indicator */}
+            {tool === "edit" && (
+                <div className="text-sm text-blue-600 bg-blue-50 px-3 py-2 rounded">
+                    Click on any text in the PDF to edit it. Edited text will be highlighted in yellow.
+                </div>
+            )}
+
             {/* PDF + Overlay */}
             <div className="flex-1 overflow-auto">
                 <div
@@ -356,7 +522,52 @@ export const AdvancedPdfEditor: React.FC = () => {
                 >
                     <canvas ref={canvasRef} />
 
-                    {pageSize.width > 0 && (
+                    {/* Clickable text overlay for edit mode */}
+                    {tool === "edit" && pageSize.width > 0 && (
+                        <div
+                            style={{
+                                position: "absolute",
+                                top: 0,
+                                left: 0,
+                                width: pageSize.width,
+                                height: pageSize.height,
+                                pointerEvents: "auto",
+                            }}
+                        >
+                            {currentPageExtractedTexts.map((item) => (
+                                <div
+                                    key={item.id}
+                                    onClick={() => handleTextClick(item)}
+                                    style={{
+                                        position: "absolute",
+                                        left: item.x,
+                                        top: item.y,
+                                        width: item.width,
+                                        height: item.height,
+                                        cursor: "pointer",
+                                        backgroundColor: isTextEdited(item)
+                                            ? "rgba(255, 255, 0, 0.3)"
+                                            : "transparent",
+                                        border: isTextEdited(item)
+                                            ? "1px solid rgba(255, 200, 0, 0.5)"
+                                            : "none",
+                                        transition: "background-color 0.2s",
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        e.currentTarget.style.backgroundColor = "rgba(0, 100, 255, 0.2)";
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.currentTarget.style.backgroundColor = isTextEdited(item)
+                                            ? "rgba(255, 255, 0, 0.3)"
+                                            : "transparent";
+                                    }}
+                                    title={`Click to edit: "${getDisplayText(item)}"`}
+                                />
+                            ))}
+                        </div>
+                    )}
+
+                    {pageSize.width > 0 && tool !== "edit" && (
                         <Stage
                             width={pageSize.width}
                             height={pageSize.height}
@@ -415,8 +626,50 @@ export const AdvancedPdfEditor: React.FC = () => {
                             </Layer>
                         </Stage>
                     )}
+
+                    {/* Show edited text overlays always */}
+                    {pageSize.width > 0 && textEdits.filter(e => e.page === currentPage).length > 0 && (
+                        <div
+                            style={{
+                                position: "absolute",
+                                top: 0,
+                                left: 0,
+                                width: pageSize.width,
+                                height: pageSize.height,
+                                pointerEvents: "none",
+                            }}
+                        >
+                            {textEdits
+                                .filter((e) => e.page === currentPage)
+                                .map((edit) => (
+                                    <div
+                                        key={edit.id + "-overlay"}
+                                        style={{
+                                            position: "absolute",
+                                            left: edit.x,
+                                            top: edit.y,
+                                            backgroundColor: "rgba(255, 255, 0, 0.3)",
+                                            border: "1px dashed orange",
+                                            padding: "1px 2px",
+                                            fontSize: edit.fontSize * scale,
+                                            lineHeight: 1,
+                                            whiteSpace: "nowrap",
+                                        }}
+                                    >
+                                        {edit.newText}
+                                    </div>
+                                ))}
+                        </div>
+                    )}
                 </div>
             </div>
+
+            {/* Status bar */}
+            {textEdits.length > 0 && (
+                <div className="text-sm text-gray-600 border-t pt-2">
+                    {textEdits.length} text edit(s) pending. Click Export to apply changes.
+                </div>
+            )}
         </div>
     );
 };
