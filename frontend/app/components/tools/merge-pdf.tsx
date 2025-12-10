@@ -81,10 +81,10 @@ export function MergePdfTool() {
         try {
             const ranges = files.map(f => f.range);
             const fileObjects = files.map(f => f.file);
-            
-            const result = await pdfStrategyManager.execute('merge', fileObjects, { 
-                ranges, 
-                flatten 
+
+            const result = await pdfStrategyManager.execute('merge', fileObjects, {
+                ranges,
+                flatten
             });
 
             const url = URL.createObjectURL(result.blob);
@@ -94,7 +94,7 @@ export function MergePdfTool() {
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-            
+
             toast.show({
                 title: "Success",
                 message: "PDFs merged successfully!",
@@ -137,16 +137,18 @@ export function MergePdfTool() {
 
     return (
         <div className="space-y-8">
-            <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-bold">Selected Files ({files.length})</h2>
-                <div className="flex gap-4">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+                <h2 className="text-xl sm:text-2xl font-bold">Selected Files ({files.length})</h2>
+                <div className="flex gap-2">
                     <FileUpload
                         onFilesSelected={handleFilesSelected}
                         maxFiles={20}
                         accept={{ "application/pdf": [".pdf"] }}
                         description="Add more"
+                        variant="compact"
+                        size="sm"
                     />
-                    <Button variant="outline" onClick={() => setFiles([])}>
+                    <Button variant="outline" size="sm" onClick={() => setFiles([])}>
                         Clear All
                     </Button>
                 </div>
@@ -158,7 +160,7 @@ export function MergePdfTool() {
                         <div
                             {...provided.droppableProps}
                             ref={provided.innerRef}
-                            className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
+                            className="grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5"
                         >
                             {files.map((item, index) => (
                                 <Draggable key={item.id} draggableId={item.id} index={index}>
@@ -167,7 +169,7 @@ export function MergePdfTool() {
                                             ref={provided.innerRef}
                                             {...provided.draggableProps}
                                             {...provided.dragHandleProps}
-                                            className="relative flex flex-col items-center rounded-xl border bg-card p-4 shadow-sm transition-shadow hover:shadow-md"
+                                            className="relative flex flex-col items-center rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-all duration-200 hover:border-[#714B67] hover:shadow-md group"
                                         >
                                             <div className="mb-3 flex h-16 w-16 items-center justify-center rounded-lg bg-primary/10 text-primary">
                                                 <FileText className="h-8 w-8" />
@@ -178,11 +180,11 @@ export function MergePdfTool() {
                                             <p className="text-xs text-muted-foreground mb-3">
                                                 {(item.file.size / 1024 / 1024).toFixed(2)} MB
                                             </p>
-                                            
+
                                             <div className="w-full space-y-1">
                                                 <label className="text-[10px] font-medium text-muted-foreground uppercase">Page Range</label>
-                                                <input 
-                                                    type="text" 
+                                                <input
+                                                    type="text"
                                                     value={item.range}
                                                     onChange={(e) => updateRange(index, e.target.value)}
                                                     className="w-full rounded border px-2 py-1 text-xs"
@@ -192,7 +194,7 @@ export function MergePdfTool() {
 
                                             <button
                                                 onClick={() => removeFile(index)}
-                                                className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-destructive text-destructive-foreground shadow-sm transition-transform hover:scale-110"
+                                                className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white shadow-sm opacity-0 group-hover:opacity-100 transition-all duration-200 hover:scale-110 hover:bg-red-600"
                                             >
                                                 <Trash2 className="h-3 w-3" />
                                             </button>
