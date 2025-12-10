@@ -131,7 +131,11 @@ const Toaster = forwardRef<ToasterRef>((props, ref) => {
   useImperativeHandle(ref, () => ({
     show: (data: Omit<ToastData, 'id'>) => {
       const id = Math.random().toString(36).substr(2, 9);
-      const toast: ToastData = { ...data, id };
+      const toast: ToastData = { 
+        ...data, 
+        duration: data.duration || 3000, // Default to 3000ms if not provided or 0
+        id 
+      };
       setToasts((prev) => [...prev, toast]);
     },
   }));

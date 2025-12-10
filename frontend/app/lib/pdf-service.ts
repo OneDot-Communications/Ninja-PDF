@@ -80,6 +80,8 @@ export const pdfStrategyManager = {
                 return await pdfToWord(files[0], options);
             case 'pdf-to-powerpoint':
                 return await pdfToPowerpoint(files[0], options);
+            case 'clean-metadata':
+                return await cleanMetadata(files[0], options);
             default:
                 throw new Error(`Strategy ${strategy} not implemented`);
         }
@@ -582,62 +584,104 @@ async function repairPdf(file: File, options: any): Promise<StrategyResult> {
 }
 
 async function redactPdf(file: File, options: any): Promise<StrategyResult> {
-    const { searchText, useRegex, caseSensitive, redactionColor = '#000000' } = options;
-    if (!searchText) throw new Error("No search text provided");
+    const { searchText, useRegex, caseSensitive, redactionColor = '#000000', redactions } = options;
+    
+    if (!searchText && (!redactions || redactions.length === 0)) {
+        throw new Error("No search text or redaction areas provided");
+    }
 
     const arrayBuffer = await file.arrayBuffer();
     const pdfDoc = await PDFDocument.load(arrayBuffer);
-    const pdfjsLib = await getPdfJs();
-
-    const pdf = await (pdfjsLib as any).getDocument({
-        data: new Uint8Array(arrayBuffer),
-        verbosity: 0
-    }).promise;
-
     const pages = pdfDoc.getPages();
-    const r = parseInt(redactionColor.slice(1, 3), 16) / 255;
-    const g = parseInt(redactionColor.slice(3, 5), 16) / 255;
-    const b = parseInt(redactionColor.slice(5, 7), 16) / 255;
-    const color = rgb(r, g, b);
 
-    for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-        const textContent = await page.getTextContent();
-        const pdfLibPage = pages[i - 1];
+    // Handle Manual Redactions
+    if (redactions && redactions.length > 0) {
+        for (const redaction of redactions) {
+            const pageIndex = redaction.page - 1;
+            if (pageIndex < 0 || pageIndex >= pages.length) continue;
 
-        for (const item of textContent.items) {
-            if (!('str' in item)) continue;
+            const page = pages[pageIndex];
+            const { width, height } = page.getSize();
 
-            const text = item.str;
-            let match = false;
+            // Parse color
+            const rColor = redaction.color || redactionColor;
+            const r = parseInt(rColor.slice(1, 3), 16) / 255;
+            const g = parseInt(rColor.slice(3, 5), 16) / 255;
+            const b = parseInt(rColor.slice(5, 7), 16) / 255;
+            const color = rgb(r, g, b);
 
-            if (useRegex) {
-                try {
-                    const regex = new RegExp(searchText, caseSensitive ? 'g' : 'gi');
-                    match = regex.test(text);
-                } catch (e) {
-                    console.warn("Invalid regex:", searchText);
-                }
-            } else {
-                match = caseSensitive
-                    ? text.includes(searchText)
-                    : text.toLowerCase().includes(searchText.toLowerCase());
-            }
+            if (redaction.type === 'area' || redaction.type === 'text' || redaction.type === 'highlight') {
+                const x = (redaction.x / 100) * width;
+                const w = (redaction.width / 100) * width;
+                const h = (redaction.height / 100) * height;
+                
+                // Convert web coordinates (top-left) to PDF coordinates (bottom-left)
+                const y = height - ((redaction.y + redaction.height) / 100 * height);
 
-            if (match) {
-                const tx = item.transform;
-                const x = tx[4];
-                const y = tx[5];
-                const width = item.width;
-                const height = item.height || Math.abs(tx[3]);
-
-                pdfLibPage.drawRectangle({
+                page.drawRectangle({
                     x,
-                    y: y - (height * 0.2),
-                    width,
-                    height: height * 1.2,
+                    y,
+                    width: w,
+                    height: h,
                     color,
+                    opacity: redaction.type === 'highlight' ? (redaction.opacity || 0.5) : 1,
                 });
+            }
+        }
+    }
+
+    // Handle Search Text Redaction
+    if (searchText) {
+        const pdfjsLib = await getPdfJs();
+        const pdf = await (pdfjsLib as any).getDocument({
+            data: new Uint8Array(arrayBuffer),
+            verbosity: 0
+        }).promise;
+
+        const r = parseInt(redactionColor.slice(1, 3), 16) / 255;
+        const g = parseInt(redactionColor.slice(3, 5), 16) / 255;
+        const b = parseInt(redactionColor.slice(5, 7), 16) / 255;
+        const color = rgb(r, g, b);
+
+        for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            const textContent = await page.getTextContent();
+            const pdfLibPage = pages[i - 1];
+
+            for (const item of textContent.items) {
+                if (!('str' in item)) continue;
+
+                const text = item.str;
+                let match = false;
+
+                if (useRegex) {
+                    try {
+                        const regex = new RegExp(searchText, caseSensitive ? 'g' : 'gi');
+                        match = regex.test(text);
+                    } catch (e) {
+                        console.warn("Invalid regex:", searchText);
+                    }
+                } else {
+                    match = caseSensitive
+                        ? text.includes(searchText)
+                        : text.toLowerCase().includes(searchText.toLowerCase());
+                }
+
+                if (match) {
+                    const tx = item.transform;
+                    const x = tx[4];
+                    const y = tx[5];
+                    const width = item.width;
+                    const height = item.height || Math.abs(tx[3]);
+
+                    pdfLibPage.drawRectangle({
+                        x,
+                        y: y - (height * 0.2),
+                        width,
+                        height: height * 1.2,
+                        color,
+                    });
+                }
             }
         }
     }
@@ -679,8 +723,6 @@ async function protectPdf(file: File, options: any): Promise<StrategyResult> {
 }
 
 async function pdfToPdfa(file: File, options: any): Promise<StrategyResult> {
-    // Basic implementation - just setting metadata to claim PDF/A compliance
-    // True PDF/A conversion is complex and requires verifying/embedding all fonts, colorspaces, etc.
     const arrayBuffer = await file.arrayBuffer();
     const pdfDoc = await PDFDocument.load(arrayBuffer);
 
@@ -1129,12 +1171,84 @@ async function editPdf(file: File, options: any): Promise<StrategyResult> {
 
             page.drawImage(embeddedImage, {
                 x,
-                y: y - dims.height, // Draw upwards from bottom-left of image? No, y is bottom-left corner.
-                // If y is top coordinate in UI, then y_pdf = height - y_ui
-                // If we want image top-left at y_ui, then bottom-left is y_pdf - imgHeight
+                y: y - dims.height,
                 width: dims.width,
                 height: dims.height,
             });
+        } else if (el.type === 'path' && el.pathData) {
+            // Freehand drawing (SVG path)
+            const colorMatch = (el.color || '#000000').match(/^#([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i);
+            const r = colorMatch ? parseInt(colorMatch[1], 16) / 255 : 0;
+            const g = colorMatch ? parseInt(colorMatch[2], 16) / 255 : 0;
+            const b = colorMatch ? parseInt(colorMatch[3], 16) / 255 : 0;
+
+            // pathData is a series of points {x, y} in percentage
+            // We need to construct an SVG path string or draw lines
+            // pdf-lib supports drawSvgPath, but constructing it from points is easier with drawLine for now
+            // OR we can construct a path string "M x y L x y ..."
+            
+            // Let's use drawSvgPath if we can construct the string, but coordinates need scaling
+            // Actually, drawing individual lines might be safer for coordinate transformation
+            
+            if (el.pathData.length > 1) {
+                const pathColor = rgb(r, g, b);
+                const thickness = el.strokeWidth || 2;
+
+                for (let i = 0; i < el.pathData.length - 1; i++) {
+                    const p1 = el.pathData[i];
+                    const p2 = el.pathData[i+1];
+
+                    const x1 = (p1.x / 100) * width;
+                    const y1 = height - (p1.y / 100) * height;
+                    const x2 = (p2.x / 100) * width;
+                    const y2 = height - (p2.y / 100) * height;
+
+                    page.drawLine({
+                        start: { x: x1, y: y1 },
+                        end: { x: x2, y: y2 },
+                        thickness,
+                        color: pathColor,
+                        opacity: el.opacity || 1,
+                    });
+                }
+            }
+        } else if (el.type === 'shape') {
+            const colorMatch = (el.color || '#000000').match(/^#([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i);
+            const r = colorMatch ? parseInt(colorMatch[1], 16) / 255 : 0;
+            const g = colorMatch ? parseInt(colorMatch[2], 16) / 255 : 0;
+            const b = colorMatch ? parseInt(colorMatch[3], 16) / 255 : 0;
+            const shapeColor = rgb(r, g, b);
+
+            const x = (el.x / 100) * width;
+            const w = (el.width / 100) * width;
+            const h = (el.height / 100) * height;
+            const y = height - ((el.y / 100) * height) - h; // Bottom-left y
+
+            if (el.shapeType === 'rectangle') {
+                page.drawRectangle({
+                    x,
+                    y,
+                    width: w,
+                    height: h,
+                    borderColor: shapeColor,
+                    borderWidth: el.strokeWidth || 2,
+                    color: undefined, // Transparent fill for now, or add fill support
+                });
+            } else if (el.shapeType === 'circle') {
+                // pdf-lib drawCircle takes center x,y
+                const cx = x + w / 2;
+                const cy = y + h / 2;
+                const radius = Math.min(w, h) / 2;
+                
+                page.drawCircle({
+                    x: cx,
+                    y: cy,
+                    size: radius,
+                    borderColor: shapeColor,
+                    borderWidth: el.strokeWidth || 2,
+                    color: undefined,
+                });
+            }
         }
     }
 
@@ -1322,3 +1436,27 @@ async function pdfToPowerpoint(file: File, options: any): Promise<StrategyResult
         extension: 'pptx'
     };
 }
+
+async function cleanMetadata(file: File, options: any): Promise<StrategyResult> {
+    const arrayBuffer = await file.arrayBuffer();
+    const pdfDoc = await PDFDocument.load(arrayBuffer);
+
+    // Clear standard metadata
+    pdfDoc.setTitle('');
+    pdfDoc.setAuthor('');
+    pdfDoc.setSubject('');
+    pdfDoc.setKeywords([]);
+    pdfDoc.setProducer('');
+    pdfDoc.setCreator('');
+    pdfDoc.setCreationDate(new Date());
+    pdfDoc.setModificationDate(new Date());
+
+    const pdfBytes = await pdfDoc.save();
+    const blob = new Blob([pdfBytes as any], { type: 'application/pdf' });
+    return {
+        blob,
+        fileName: `clean-${file.name}`,
+        extension: 'pdf'
+    };
+}
+

@@ -11,6 +11,7 @@ export default function EditPdfPage() {
         <ToolShell
             title="Edit PDF"
             description="Add text, images, shapes or freehand annotations to a PDF document."
+            variant="editor"
         >
             <EditPdfTool />
         </ToolShell>

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { cn } from "../../lib/utils";
+import { getPdfJs } from "../../lib/pdf-service";
 
 interface PdfPreviewProps {
     file: File;
@@ -36,14 +37,10 @@ export function PdfPreview({
                     renderTaskRef.current.cancel();
                 }
 
-                const pdfjsLib = await import("pdfjs-dist");
-
-                if (typeof window !== "undefined" && !pdfjsLib.GlobalWorkerOptions.workerSrc) {
-                    pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
-                }
+                const pdfjsLib = await getPdfJs();
 
                 const arrayBuffer = await file.arrayBuffer();
-                const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+                const loadingTask = (pdfjsLib as any).getDocument({ data: new Uint8Array(arrayBuffer) });
                 const pdf = await loadingTask.promise;
 
                 if (onLoadSuccess) {
