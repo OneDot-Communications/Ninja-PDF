@@ -24,6 +24,7 @@ import {
     Workflow,
     Globe,
     Wrench,
+    QrCode,
 } from "lucide-react";
 
 export const tools = [
@@ -186,7 +187,7 @@ export const tools = [
     {
         title: "Scan to PDF",
         description: "Capture document scans from your mobile device and send them instantly to your browser.",
-        icon: ScanLine,
+        icon: QrCode,
         href: "/scan-to-pdf",
         category: "Organize PDF",
     },

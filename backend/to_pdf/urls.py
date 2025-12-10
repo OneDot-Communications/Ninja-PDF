@@ -9,4 +9,5 @@ urlpatterns = [
     path('jpg-to-pdf/', views.jpg_to_pdf_view, name='jpg_to_pdf'),
     path('html-to-pdf/', views.html_to_pdf_view, name='html_to_pdf'),
     path('markdown-to-pdf/', views.markdown_to_pdf_view, name='markdown_to_pdf'),
+    path('clean-pdf-metadata/', views.clean_pdf_metadata_view, name='clean_pdf_metadata'),
 ]

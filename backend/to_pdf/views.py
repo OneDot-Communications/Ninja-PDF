@@ -1,9 +1,10 @@
 from django.shortcuts import render, redirect
-from django.http import HttpResponse, Http404
+from django.http import HttpResponse, Http404, JsonResponse
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
 import os
 import tempfile
 from .word_pdf.word_to_pdf import convert_word_to_pdf
@@ -12,6 +13,7 @@ from .excel_pdf.excel_to_pdf import convert_excel_to_pdf
 from .jpg_pdf.jpg_to_pdf import convert_jpg_to_pdf
 from .html_pdf.html_to_pdf import convert_html_to_pdf
 from .markdown_pdf.markdown_to_pdf import convert_markdown_to_pdf
+from .metadata_cleaner.clean_metadata import clean_pdf_metadata, get_pdf_metadata
 
 def index_view(request):
     return render(request, 'to_pdf/index.html')
@@ -480,3 +482,121 @@ def markdown_to_pdf_view(request):
         'input_type': 'Markdown',
         'accept': '.md,.markdown'
     })
+
+@never_cache
+@csrf_exempt
+def clean_pdf_metadata_view(request):
+    if request.method == 'POST' and request.FILES.get('file'):
+        uploaded_file = request.FILES['file']
+        # Get the original extension
+        original_ext = os.path.splitext(uploaded_file.name)[1].lower()
+        
+        # Validate file extension
+        if original_ext != '.pdf':
+            return render(request, 'to_pdf/convert_form.html', {
+                'title': 'PDF Metadata Cleaner',
+                'input_type': 'PDF',
+                'accept': '.pdf',
+                'error': f'Invalid file type. Please upload a PDF file. You uploaded: {original_ext or "unknown"}'
+            })
+        
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as temp_input:
+            for chunk in uploaded_file.chunks():
+                temp_input.write(chunk)
+            temp_input.flush()
+            os.fsync(temp_input.fileno())
+            input_path = temp_input.name
+        
+        output_path = os.path.splitext(input_path)[0] + '_cleaned.pdf'
+        
+        try:
+            # Clean the metadata
+            result = clean_pdf_metadata(input_path, output_path)
+            
+            # Generate output filename
+            output_filename = os.path.splitext(uploaded_file.name)[0] + '_cleaned.pdf'
+            
+            with open(output_path, 'rb') as pdf_file:
+                response = HttpResponse(pdf_file.read(), content_type='application/pdf')
+                response['Content-Disposition'] = f'attachment; filename="{output_filename}"'
+                response['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+                response['Pragma'] = 'no-cache'
+                response['Expires'] = '0'
+            
+            # Cleanup temp files
+            try:
+                os.unlink(output_path)
+                os.unlink(input_path)
+            except:
+                pass
+            
+            return response
+            
+        except Exception as e:
+            # Cleanup on error
+            if os.path.exists(input_path):
+                os.unlink(input_path)
+            if os.path.exists(output_path):
+                os.unlink(output_path)
+            return render(request, 'to_pdf/convert_form.html', {
+                'title': 'PDF Metadata Cleaner',
+                'input_type': 'PDF',
+                'accept': '.pdf',
+                'error': str(e)
+            })
+    
+    return render(request, 'to_pdf/convert_form.html', {
+        'title': 'PDF Metadata Cleaner',
+        'input_type': 'PDF',
+        'accept': '.pdf'
+    })
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def clean_pdf_metadata_api(request):
+    """
+    API endpoint to clean PDF metadata.
+    """
+    try:
+        if 'file' not in request.FILES:
+            return JsonResponse({'error': 'No file uploaded'}, status=400)
+        
+        uploaded_file = request.FILES['file']
+        if not uploaded_file.name.lower().endswith('.pdf'):
+            return JsonResponse({'error': 'File must be a PDF'}, status=400)
+        
+        # Save uploaded file temporarily
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as temp_input:
+            for chunk in uploaded_file.chunks():
+                temp_input.write(chunk)
+            temp_input.flush()
+            os.fsync(temp_input.fileno())
+            input_path = temp_input.name
+        
+        output_path = os.path.splitext(input_path)[0] + '_cleaned.pdf'
+        
+        try:
+            # Clean the metadata
+            result = clean_pdf_metadata(input_path, output_path)
+            
+            # Generate output filename
+            output_filename = os.path.splitext(uploaded_file.name)[0] + '_cleaned.pdf'
+            
+            # Read and return the cleaned PDF
+            with open(output_path, 'rb') as pdf_file:
+                response = HttpResponse(pdf_file.read(), content_type='application/pdf')
+                response['Content-Disposition'] = f'attachment; filename="{output_filename}"'
+                return response
+        
+        finally:
+            # Cleanup temp files
+            try:
+                if os.path.exists(input_path):
+                    os.unlink(input_path)
+                if os.path.exists(output_path):
+                    os.unlink(output_path)
+            except:
+                pass
+    
+    except Exception as e:
+        return JsonResponse({'error': f"Server error: {str(e)}"}, status=500)

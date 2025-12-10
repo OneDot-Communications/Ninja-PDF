@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Button } from "../ui/button";
-import { Camera, ArrowRight, Trash2, Image as ImageIcon, Settings, X, Check } from "lucide-react";
+import { Camera, ArrowRight, Trash2, Image as ImageIcon, Settings, X, Check, Upload } from "lucide-react";
 import { PDFDocument } from "pdf-lib";
 import { saveAs } from "file-saver";
 import { cn } from "../../lib/utils";
@@ -10,6 +10,7 @@ import { cn } from "../../lib/utils";
 export function ScanToPdfTool() {
     const videoRef = useRef<HTMLVideoElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
     const [isStreaming, setIsStreaming] = useState(false);
     const [capturedImages, setCapturedImages] = useState<string[]>([]);
     const [isProcessing, setIsProcessing] = useState(false);
@@ -88,6 +89,45 @@ export function ScanToPdfTool() {
         }
     };
 
+    const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const files = event.target.files;
+        if (!files) return;
+
+        Array.from(files).forEach((file) => {
+            if (file.type.startsWith("image/")) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const imageData = e.target?.result as string;
+                    
+                    // Apply filter if needed
+                    if (filter !== "original") {
+                        const img = new Image();
+                        img.onload = () => {
+                            const canvas = document.createElement("canvas");
+                            canvas.width = img.width;
+                            canvas.height = img.height;
+                            const context = canvas.getContext("2d");
+                            if (context) {
+                                context.drawImage(img, 0, 0);
+                                applyFilter(context, canvas.width, canvas.height);
+                                setCapturedImages(prev => [...prev, canvas.toDataURL("image/jpeg", 0.8)]);
+                            }
+                        };
+                        img.src = imageData;
+                    } else {
+                        setCapturedImages(prev => [...prev, imageData]);
+                    }
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Reset input
+        if (event.target) {
+            event.target.value = "";
+        }
+    };
+
     const createPdf = async () => {
         if (capturedImages.length === 0) return;
         setIsProcessing(true);
@@ -95,24 +135,64 @@ export function ScanToPdfTool() {
         try {
             const pdfDoc = await PDFDocument.create();
             
-            for (const imageData of capturedImages) {
-                const jpgImage = await pdfDoc.embedJpg(imageData);
-                // A4 size logic or fit to image? Let's fit to image for scans usually
-                const page = pdfDoc.addPage([jpgImage.width, jpgImage.height]);
-                page.drawImage(jpgImage, {
-                    x: 0,
-                    y: 0,
-                    width: jpgImage.width,
-                    height: jpgImage.height,
-                });
+            for (let i = 0; i < capturedImages.length; i++) {
+                const imageData = capturedImages[i];
+                console.log(`Processing image ${i + 1}/${capturedImages.length}`, imageData.substring(0, 50));
+                
+                try {
+                    let embeddedImage;
+                    
+                    // Convert to canvas first to ensure consistent format
+                    const img = new Image();
+                    await new Promise((resolve, reject) => {
+                        img.onload = resolve;
+                        img.onerror = reject;
+                        img.src = imageData;
+                    });
+                    
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    const ctx = canvas.getContext('2d');
+                    
+                    if (!ctx) {
+                        throw new Error('Failed to get canvas context');
+                    }
+                    
+                    ctx.drawImage(img, 0, 0);
+                    
+                    // Always convert to JPEG for consistency
+                    const jpegData = canvas.toDataURL('image/jpeg', 0.92);
+                    embeddedImage = await pdfDoc.embedJpg(jpegData);
+                    
+                    if (embeddedImage) {
+                        const page = pdfDoc.addPage([embeddedImage.width, embeddedImage.height]);
+                        page.drawImage(embeddedImage, {
+                            x: 0,
+                            y: 0,
+                            width: embeddedImage.width,
+                            height: embeddedImage.height,
+                        });
+                        console.log(`Successfully added page ${i + 1}`);
+                    }
+                } catch (imageError) {
+                    console.error(`Failed to process image ${i + 1}:`, imageError);
+                    alert(`Failed to process image ${i + 1}. Skipping...`);
+                }
             }
 
+            if (pdfDoc.getPageCount() === 0) {
+                throw new Error('No pages were successfully added to the PDF');
+            }
+
+            console.log('Saving PDF with', pdfDoc.getPageCount(), 'pages');
             const pdfBytes = await pdfDoc.save();
             const blob = new Blob([pdfBytes as any], { type: "application/pdf" });
             saveAs(blob, "scanned-document.pdf");
-        } catch (error) {
+            console.log('PDF saved successfully');
+        } catch (error: any) {
             console.error("Error creating PDF:", error);
-            alert("Failed to create PDF.");
+            alert(`Failed to create PDF: ${error.message || 'Unknown error'}. Please try again.`);
         } finally {
             setIsProcessing(false);
         }
@@ -138,10 +218,30 @@ export function ScanToPdfTool() {
                 {!isStreaming && (
                     <div className="flex h-full flex-col items-center justify-center gap-4 text-white">
                         <Camera className="h-16 w-16 opacity-50" />
-                        <Button onClick={startCamera} size="lg" className="z-10">
-                            Start Camera
-                        </Button>
-                        <p className="text-sm text-gray-400">Allow camera access to scan documents</p>
+                        <div className="flex flex-col sm:flex-row gap-3 z-10">
+                            <Button onClick={startCamera} size="lg" className="gap-2">
+                                <Camera className="h-5 w-5" />
+                                Start Camera
+                            </Button>
+                            <Button 
+                                onClick={() => fileInputRef.current?.click()} 
+                                size="lg" 
+                                variant="secondary"
+                                className="gap-2"
+                            >
+                                <Upload className="h-5 w-5" />
+                                Upload Images
+                            </Button>
+                        </div>
+                        <p className="text-sm text-gray-400">Scan with camera or upload existing images</p>
+                        <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            onChange={handleFileUpload}
+                            className="hidden"
+                        />
                     </div>
                 )}
                 <canvas ref={canvasRef} className="hidden" />
@@ -187,9 +287,20 @@ export function ScanToPdfTool() {
                 <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
                     <div className="flex items-center justify-between">
                         <h3 className="text-lg font-semibold">Captured Pages ({capturedImages.length})</h3>
-                        <Button onClick={() => setCapturedImages([])} variant="ghost" size="sm" className="text-destructive">
-                            Clear All
-                        </Button>
+                        <div className="flex gap-2">
+                            <Button 
+                                onClick={() => fileInputRef.current?.click()} 
+                                variant="outline" 
+                                size="sm"
+                                className="gap-2"
+                            >
+                                <Upload className="h-4 w-4" />
+                                Add More
+                            </Button>
+                            <Button onClick={() => setCapturedImages([])} variant="ghost" size="sm" className="text-destructive">
+                                Clear All
+                            </Button>
+                        </div>
                     </div>
                     
                     <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">

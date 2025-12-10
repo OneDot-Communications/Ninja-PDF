@@ -14,3 +14,4 @@ mammoth
 xlrd
 docx2python
 olefile
+opencv-python-headless
