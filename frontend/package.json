@@ -29,6 +29,7 @@
     "pdf-lib": "^1.17.1",
     "pdf-password": "^1.0.0",
     "pdfjs-dist": "^5.4.394",
+    "pixelmatch": "^7.1.0",
     "pptxgenjs": "^4.0.1",
     "react": "19.2.1",
     "react-dom": "19.2.1",
