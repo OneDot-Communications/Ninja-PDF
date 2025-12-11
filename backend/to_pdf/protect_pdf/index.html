@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Protect PDF - Ninja PDF</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            max-width: 550px;
+            width: 100%;
+            padding: 40px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            color: #333;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 0;
+        }
+
+        .upload-area {
+            border: 2px dashed #ddd;
+            border-radius: 12px;
+            padding: 40px 20px;
+            text-align: center;
+            margin-bottom: 30px;
+            background: #f9fafb;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .upload-area:hover {
+            border-color: #999;
+            background: #f3f4f6;
+        }
+
+        .upload-area.drag-over {
+            border-color: #333;
+            background: #f0f0f0;
+        }
+
+        .upload-icon {
+            font-size: 48px;
+            color: #999;
+            margin-bottom: 10px;
+        }
+
+        .file-selected {
+            background: #f0f0f0;
+            border-color: #333;
+        }
+
+        .password-section {
+            margin-bottom: 25px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        input[type="password"],
+        input[type="text"] {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #333;
+        }
+
+        .password-help {
+            font-size: 12px;
+            color: #6b7280;
+            margin-top: 4px;
+        }
+
+        .permissions-section {
+            margin: 25px 0;
+            padding: 20px;
+            background: #f9fafb;
+            border-radius: 12px;
+        }
+
+        .permissions-title {
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .permission-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .permission-item:last-child {
+            border-bottom: none;
+        }
+
+        .permission-item input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            margin-right: 12px;
+            cursor: pointer;
+        }
+
+        .permission-label {
+            flex: 1;
+            font-size: 14px;
+            color: #374151;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            background: #000;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .btn:hover {
+            background: #333;
+        }
+
+        .btn:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .alert {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .alert-info {
+            background: #dbeafe;
+            color: #1e40af;
+            border-left: 4px solid #3b82f6;
+        }
+
+        .alert-error {
+            background: #fee2e2;
+            color: #991b1b;
+            border-left: 4px solid #ef4444;
+        }
+
+        .alert-success {
+            background: #d1fae5;
+            color: #065f46;
+            border-left: 4px solid #10b981;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #333;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .back-link {
+            display: inline-block;
+            color: #000;
+            text-decoration: none;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/" class="back-link">← Back to Home</a>
+
+        <div class="header">
+            <h1>Protect PDF</h1>
+            <p class="subtitle">Encrypt your PDF with password and permission controls</p>
+        </div>
+
+        <div id="errorMessage" class="alert alert-error" style="display: none;"></div>
+        <div id="successMessage" class="alert alert-success" style="display: none;"></div>
+
+        <form id="protectForm" enctype="multipart/form-data">
+            <div class="upload-area" id="uploadArea">
+                <div class="upload-icon">📄</div>
+                <p id="uploadText"><strong>Click to upload</strong> or drag and drop your PDF</p>
+                <input type="file" id="fileInput" name="file" accept=".pdf" style="display: none;">
+            </div>
+
+            <div class="password-section">
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" placeholder="Enter password to protect PDF">
+                    <p class="password-help">Set a password to secure your PDF</p>
+                </div>
+            </div>
+
+            <div class="permissions-section">
+                <div class="permissions-title">
+                    <span>⚙️</span>
+                    <span>Document Permissions</span>
+                </div>
+                
+                <div class="permission-item">
+                    <input type="checkbox" id="allowPrinting" name="allow_printing" checked>
+                    <label for="allowPrinting" class="permission-label">Allow Printing</label>
+                </div>
+
+                <div class="permission-item">
+                    <input type="checkbox" id="allowModify" name="allow_modify">
+                    <label for="allowModify" class="permission-label">Allow Content Modification</label>
+                </div>
+
+                <div class="permission-item">
+                    <input type="checkbox" id="allowCopy" name="allow_copy">
+                    <label for="allowCopy" class="permission-label">Allow Copy/Extract Content</label>
+                </div>
+
+                <div class="permission-item">
+                    <input type="checkbox" id="allowAnnotate" name="allow_annotate">
+                    <label for="allowAnnotate" class="permission-label">Allow Annotations & Comments</label>
+                </div>
+
+                <div class="permission-item">
+                    <input type="checkbox" id="allowForms" name="allow_forms">
+                    <label for="allowForms" class="permission-label">Allow Form Filling</label>
+                </div>
+            </div>
+
+            <button type="submit" class="btn" id="submitBtn" disabled>
+                🔐 Protect PDF
+            </button>
+        </form>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Encrypting your PDF with AES-256...</p>
+        </div>
+    </div>
+
+    <script>
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const uploadText = document.getElementById('uploadText');
+        const submitBtn = document.getElementById('submitBtn');
+        const protectForm = document.getElementById('protectForm');
+        const loading = document.getElementById('loading');
+        const errorMessage = document.getElementById('errorMessage');
+        const successMessage = document.getElementById('successMessage');
+
+        let selectedFile = null;
+
+        // Click to upload
+        uploadArea.addEventListener('click', () => fileInput.click());
+
+        // File selection
+        fileInput.addEventListener('change', (e) => {
+            handleFileSelect(e.target.files[0]);
+        });
+
+        // Drag and drop
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('drag-over');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('drag-over');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('drag-over');
+            handleFileSelect(e.dataTransfer.files[0]);
+        });
+
+        function handleFileSelect(file) {
+            if (!file) return;
+
+            if (file.type !== 'application/pdf') {
+                showError('Please select a PDF file');
+                return;
+            }
+
+            selectedFile = file;
+            uploadText.innerHTML = `<strong>✓ ${file.name}</strong><br><small>Click to change file</small>`;
+            uploadArea.classList.add('file-selected');
+            submitBtn.disabled = false;
+            hideMessages();
+        }
+
+        // Form submission
+        protectForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            if (!selectedFile) {
+                showError('Please select a PDF file');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+            formData.append('password', document.getElementById('password').value);
+            formData.append('allow_printing', document.getElementById('allowPrinting').checked ? 'true' : 'false');
+            formData.append('allow_modify', document.getElementById('allowModify').checked ? 'true' : 'false');
+            formData.append('allow_copy', document.getElementById('allowCopy').checked ? 'true' : 'false');
+            formData.append('allow_annotate', document.getElementById('allowAnnotate').checked ? 'true' : 'false');
+            formData.append('allow_forms', document.getElementById('allowForms').checked ? 'true' : 'false');
+
+            try {
+                hideMessages();
+                loading.classList.add('active');
+                submitBtn.disabled = true;
+
+                const response = await fetch('/to_pdf/protect-pdf/', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                loading.classList.remove('active');
+
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = selectedFile.name.replace('.pdf', '_protected.pdf');
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+
+                    showSuccess('PDF protected successfully! Download started.');
+                    resetForm();
+                } else {
+                    const text = await response.text();
+                    showError(text || 'Failed to protect PDF');
+                    submitBtn.disabled = false;
+                }
+            } catch (error) {
+                loading.classList.remove('active');
+                showError('An error occurred. Please try again.');
+                submitBtn.disabled = false;
+            }
+        });
+
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
+            successMessage.style.display = 'none';
+        }
+
+        function showSuccess(message) {
+            successMessage.textContent = message;
+            successMessage.style.display = 'block';
+            errorMessage.style.display = 'none';
+        }
+
+        function hideMessages() {
+            errorMessage.style.display = 'none';
+            successMessage.style.display = 'none';
+        }
+
+        function resetForm() {
+            selectedFile = null;
+            fileInput.value = '';
+            uploadText.innerHTML = '<strong>Click to upload</strong> or drag and drop your PDF';
+            uploadArea.classList.remove('file-selected');
+            submitBtn.disabled = true;
+            protectForm.reset();
+            document.getElementById('allowPrinting').checked = true;
+        }
+    </script>
+</body>
+</html>
