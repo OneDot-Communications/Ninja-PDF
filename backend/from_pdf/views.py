@@ -1,9 +1,11 @@
 from django.shortcuts import render
-from django.http import JsonResponse, HttpResponse
+from django.http import JsonResponse, HttpResponse, FileResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 import io
 import zipfile
+import os
+from django.conf import settings
 from .pdf_to_jpg.pdf_to_jpg import convert_pdf_to_jpg, get_pdf_page_count
 from .pdf_to_excel.pdf_to_excel import convert_pdf_to_excel
 from .pdf_to_powerpoint.pdf_to_powerpoint import convert_pdf_to_powerpoint
@@ -12,22 +14,15 @@ from .pdf_to_pdfa.pdf_to_pdfa import convert_pdf_to_pdfa
 from .pdf_to_html.pdf_to_html import convert_pdf_to_html
 
 
+def render_static_index(request, *args, **kwargs):
+    """Serve the single static landing page for all tools."""
+    static_file = os.path.join(settings.BASE_DIR, 'static', 'index.html')
+    with open(static_file, 'r', encoding='utf-8') as f:
+        return HttpResponse(f.read(), content_type='text/html')
+
+
 def index(request):
-    """
-    Serve the testing UI for PDF conversions.
-    """
-    from django.http import FileResponse
-    import os
-    from django.conf import settings
-    
-    # Serve the HTML file from the new location
-    html_path = os.path.join(settings.BASE_DIR, 'from_pdf', 'pdf_to_jpg', 'index.html')
-    
-    with open(html_path, 'r', encoding='utf-8') as f:
-        html_content = f.read()
-    
-    from django.http import HttpResponse
-    return HttpResponse(html_content, content_type='text/html')
+    return render_static_index(request)
 
 
 def pdf_to_excel_index(request):
@@ -37,12 +32,7 @@ def pdf_to_excel_index(request):
     import os
     from django.conf import settings
     
-    html_path = os.path.join(settings.BASE_DIR, 'from_pdf', 'pdf_to_excel', 'index.html')
-    
-    with open(html_path, 'r', encoding='utf-8') as f:
-        html_content = f.read()
-    
-    return HttpResponse(html_content, content_type='text/html')
+    return render_static_index(request)
 
 
 def pdf_to_powerpoint_index(request):
@@ -52,12 +42,7 @@ def pdf_to_powerpoint_index(request):
     import os
     from django.conf import settings
     
-    html_path = os.path.join(settings.BASE_DIR, 'from_pdf', 'pdf_to_powerpoint', 'index.html')
-    
-    with open(html_path, 'r', encoding='utf-8') as f:
-        html_content = f.read()
-    
-    return HttpResponse(html_content, content_type='text/html')
+    return render_static_index(request)
 
 
 def pdf_to_word_index(request):
@@ -67,12 +52,7 @@ def pdf_to_word_index(request):
     import os
     from django.conf import settings
     
-    html_path = os.path.join(settings.BASE_DIR, 'from_pdf', 'pdf_to_word', 'index.html')
-    
-    with open(html_path, 'r', encoding='utf-8') as f:
-        html_content = f.read()
-    
-    return HttpResponse(html_content, content_type='text/html')
+    return render_static_index(request)
 
 
 def pdf_to_pdfa_index(request):
@@ -82,12 +62,7 @@ def pdf_to_pdfa_index(request):
     import os
     from django.conf import settings
     
-    html_path = os.path.join(settings.BASE_DIR, 'from_pdf', 'pdf_to_pdfa', 'index.html')
-    
-    with open(html_path, 'r', encoding='utf-8') as f:
-        html_content = f.read()
-    
-    return HttpResponse(html_content, content_type='text/html')
+    return render_static_index(request)
 
 
 def pdf_to_html_index(request):
@@ -97,12 +72,7 @@ def pdf_to_html_index(request):
     import os
     from django.conf import settings
     
-    html_path = os.path.join(settings.BASE_DIR, 'from_pdf', 'pdf_to_html', 'index.html')
-    
-    with open(html_path, 'r', encoding='utf-8') as f:
-        html_content = f.read()
-    
-    return HttpResponse(html_content, content_type='text/html')
+    return render_static_index(request)
 
 
 @csrf_exempt
