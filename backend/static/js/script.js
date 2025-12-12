@@ -116,17 +116,17 @@ function handleFile(file) {
 // This defines the contract between Frontend and Backend
 const toolEndpoints = {
     // 1. Converters
-    'pdf-to-word': '/api/v1/convert/pdf-to-word/',
-    'word-to-pdf': '/api/v1/convert/word-to-pdf/',
-    'pdf-to-powerpoint': '/api/v1/convert/pdf-to-powerpoint/',
-    'powerpoint-to-pdf': '/api/v1/convert/powerpoint-to-pdf/',
-    'pdf-to-excel': '/api/v1/convert/pdf-to-excel/',
-    'excel-to-pdf': '/api/v1/convert/excel-to-pdf/',
-    'pdf-to-jpg': '/api/v1/convert/pdf-to-jpg/',
-    'jpg-to-pdf': '/api/v1/convert/jpg-to-pdf/',
-    'html-to-pdf': '/api/v1/convert/html-to-pdf/',
-    'pdf-to-pdfa': '/api/v1/convert/pdf-to-pdfa/',
-    'pdf-to-html': '/api/v1/convert/pdf-to-html/',
+    'pdf-to-word': '/pdf-conversions/api/pdf-to-word/',
+    'word-to-pdf': '/to_pdf/api/word-to-pdf/',
+    'pdf-to-powerpoint': '/pdf-conversions/api/pdf-to-powerpoint/',
+    'powerpoint-to-pdf': '/to_pdf/api/powerpoint-to-pdf/',
+    'pdf-to-excel': '/pdf-conversions/api/pdf-to-excel/',
+    'excel-to-pdf': '/to_pdf/api/excel-to-pdf/',
+    'pdf-to-jpg': '/pdf-conversions/api/pdf-to-jpg/',
+    'jpg-to-pdf': '/to_pdf/api/jpg-to-pdf/',
+    'html-to-pdf': '/to_pdf/api/html-to-pdf/',
+    'pdf-to-pdfa': '/pdf-conversions/api/pdf-to-pdfa/',
+    'pdf-to-html': '/pdf-conversions/api/pdf-to-html/',
 
     // AI Converters
     'pdf-to-presentation-ai': '/api/v1/ai/pdf-to-presentation/',
