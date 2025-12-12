@@ -2,12 +2,6 @@ let currentTool = '';
 let currentFile = null;
 
 function openTool(toolId, toolName) {
-    // Special handling for tools that need custom UI
-    if (toolId === 'compare-pdf') {
-        window.location.href = '/pdf-operations/compare/';
-        return;
-    }
-    
     currentTool = toolId;
     document.getElementById('modalTitle').innerText = toolName;
     document.getElementById('toolModal').style.display = 'flex';
@@ -15,21 +9,15 @@ function openTool(toolId, toolName) {
     // Reset first, then show specific UI
     resetModal();
     
-    // Show scan options for scan-to-pdf tool
-    if (toolId === 'scan-to-pdf') {
-        console.log('Opening scan-to-pdf tool');
-        const scanOptions = document.getElementById('scanOptions');
-        console.log('scanOptions element:', scanOptions);
-        
+    // Show compare options for compare-pdf tool
+    if (toolId === 'compare-pdf') {
         document.getElementById('dropZone').style.display = 'none';
-        document.getElementById('fileInfo').style.display = 'none';
-        
-        if (scanOptions) {
-            scanOptions.style.display = 'block';
-            console.log('scanOptions display set to block');
-        } else {
-            console.error('scanOptions element not found!');
-        }
+        document.getElementById('compareOptions').style.display = 'block';
+    }
+    // Show scan options for scan-to-pdf tool
+    else if (toolId === 'scan-to-pdf') {
+        document.getElementById('dropZone').style.display = 'none';
+        document.getElementById('scanOptions').style.display = 'block';
     }
 }
 
@@ -42,6 +30,7 @@ function resetModal() {
     document.getElementById('fileInput').value = '';
     document.getElementById('dropZone').style.display = 'block';
     document.getElementById('fileInfo').style.display = 'none';
+    document.getElementById('compareOptions').style.display = 'none';
     document.getElementById('redactOptions').style.display = 'none';
     document.getElementById('protectOptions').style.display = 'none';
     document.getElementById('scanOptions').style.display = 'none';
@@ -52,6 +41,8 @@ function resetModal() {
     document.getElementById('searchWord').value = '';
     document.getElementById('caseSensitive').checked = false;
     document.getElementById('protectPassword').value = '';
+    document.getElementById('compareFile1').value = '';
+    document.getElementById('compareFile2').value = '';
 }
 
 // Drag and Drop
@@ -307,6 +298,43 @@ function showResult(url, filename = null) {
         downloadLink.download = `converted_${currentFile.name}`;
     } else {
         downloadLink.download = 'output.pdf';
+    }
+}
+
+async function processComparePdf() {
+    const file1Input = document.getElementById('compareFile1');
+    const file2Input = document.getElementById('compareFile2');
+    
+    if (!file1Input.files[0] || !file2Input.files[0]) {
+        alert('Please select both PDF files');
+        return;
+    }
+    
+    document.getElementById('compareOptions').style.display = 'none';
+    document.getElementById('loading').style.display = 'block';
+    
+    const formData = new FormData();
+    formData.append('file1', file1Input.files[0]);
+    formData.append('file2', file2Input.files[0]);
+    
+    try {
+        const response = await fetch('/api/v1/pdf-operations/compare-pdf/', {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (response.ok) {
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            showResult(url, 'comparison.pdf');
+        } else {
+            const errorText = await response.text();
+            alert(`Error: ${response.status} ${response.statusText}\n${errorText}`);
+            resetModal();
+        }
+    } catch (error) {
+        alert(`Network Error: Could not connect to backend.\nEnsure Django server is running at http://127.0.0.1:8000`);
+        resetModal();
     }
 }
 

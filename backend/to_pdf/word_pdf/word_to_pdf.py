@@ -60,47 +60,11 @@ def convert_word_to_pdf(input_path, output_path):
                     raise RuntimeError(f"Failed to process Word file: {str(e)}")
         elif file_ext == '.doc':
             # True legacy .doc files (binary format)
-            if not OLEFILE_AVAILABLE:
-                raise RuntimeError(
-                    "Sorry, legacy .doc files (Word 97-2003) require additional libraries. "
-                    "Please save your file as .docx format and try again. "
-                    "In Microsoft Word: File → Save As → Word Document (.docx)"
-                )
-            
-            try:
-                # Try to extract text from legacy .doc file using olefile
-                if olefile.isOleFile(input_path):
-                    ole = olefile.OleFileIO(input_path)
-                    # Try to read WordDocument stream
-                    if ole.exists('WordDocument'):
-                        # Extract basic text (this is simplified and won't preserve formatting)
-                        text_data = ole.openstream('WordDocument').read()
-                        # Very basic text extraction - decode and clean
-                        try:
-                            text = text_data.decode('latin-1', errors='ignore')
-                            # Remove control characters and keep readable text
-                            import re
-                            text = re.sub(r'[^\x20-\x7E\n\r\t]', '', text)
-                            text = re.sub(r'\s+', ' ', text).strip()
-                            
-                            if text and len(text) > 10:
-                                # Convert to simple HTML
-                                html_content = f"""<p>{text}</p>"""
-                            else:
-                                raise RuntimeError("Could not extract readable text from .doc file")
-                        except Exception as e:
-                            raise RuntimeError(f"Could not decode .doc file content: {str(e)}")
-                    else:
-                        raise RuntimeError(".doc file structure not recognized")
-                    ole.close()
-                else:
-                    raise RuntimeError("File is not a valid .doc file")
-            except Exception as e:
-                raise RuntimeError(
-                    f"Failed to process .doc file: {str(e)}. "
-                    "For best results, please save as .docx format in Microsoft Word: "
-                    "File → Save As → Word Document (.docx)"
-                )
+            raise RuntimeError(
+                "Sorry, legacy .doc files (Word 97-2003) are not supported. "
+                "Please save your file as .docx format and try again. "
+                "In Microsoft Word: File → Save As → Word Document (.docx)"
+            )
         else:
             raise ValueError(f"Unsupported file format: {file_ext}")
 

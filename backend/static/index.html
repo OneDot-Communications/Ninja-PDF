@@ -334,6 +334,33 @@
                 </div>
             </div>
             
+            <!-- Compare PDF Special UI -->
+            <div id="compareOptions" style="display: none;">
+                <div style="padding: 20px; background: #f8f9fa; border-radius: 8px;">
+                    <h3 style="margin: 0 0 20px 0; color: #333; font-size: 16px;">
+                        <i class="fas fa-columns"></i> Select Two PDFs to Compare:
+                    </h3>
+                    
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #333;">
+                            <i class="fas fa-file-pdf"></i> First PDF:
+                        </label>
+                        <input type="file" id="compareFile1" accept=".pdf" style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 5px; cursor: pointer;">
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #333;">
+                            <i class="fas fa-file-pdf"></i> Second PDF:
+                        </label>
+                        <input type="file" id="compareFile2" accept=".pdf" style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 5px; cursor: pointer;">
+                    </div>
+                    
+                    <button class="btn-convert" onclick="processComparePdf()" style="width: 100%;">
+                        <i class="fas fa-exchange-alt"></i> Compare PDFs
+                    </button>
+                </div>
+            </div>
+            
             <!-- Protect PDF Special UI -->
             <div id="protectOptions" style="display: none;">
                 <div style="padding: 15px; background: #e3f2fd; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #2196f3;">
@@ -425,7 +452,7 @@
         </div>
     </div>
 
-    <script src="/static/js/script.js?v=14"></script>
+    <script src="/static/js/script.js?v=15"></script>
     <script src="/static/js/scan_functions.js?v=1"></script>
 </body>
 
