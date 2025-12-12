@@ -10,6 +10,7 @@ from .pdf_to_powerpoint.pdf_to_powerpoint import convert_pdf_to_powerpoint
 from .pdf_to_word.pdf_to_word import convert_pdf_to_word
 from .pdf_to_pdfa.pdf_to_pdfa import convert_pdf_to_pdfa
 from .pdf_to_html.pdf_to_html import convert_pdf_to_html
+from core.utils import process_from_pdf_request
 
 
 def index(request):
@@ -179,28 +180,12 @@ def pdf_to_excel_view(request):
     """
     API endpoint for PDF to Excel conversion.
     """
-    try:
-        if 'pdf_file' not in request.FILES:
-            return JsonResponse({'error': 'No PDF file uploaded'}, status=400)
-
-        pdf_file = request.FILES['pdf_file']
-        if not pdf_file.name.lower().endswith('.pdf'):
-            return JsonResponse({'error': 'File must be a PDF'}, status=400)
-
-        options = {
-            'page_range': request.POST.get('page_range', 'all'),
-            'format': request.POST.get('format', 'xlsx'),
-        }
-
-        converted_file = convert_pdf_to_excel(pdf_file, options)
-        filename, file_bytes = converted_file
-
-        response = HttpResponse(file_bytes, content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-        response['Content-Disposition'] = f'attachment; filename="{filename}"'
-        return response
-
-    except Exception as e:
-        return JsonResponse({'error': f'Conversion failed: {str(e)}'}, status=500)
+    return process_from_pdf_request(
+        request, 
+        convert_pdf_to_excel, 
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        format='xlsx'
+    )
 
 
 @csrf_exempt
@@ -209,28 +194,12 @@ def pdf_to_powerpoint_view(request):
     """
     API endpoint for PDF to PowerPoint conversion.
     """
-    try:
-        if 'pdf_file' not in request.FILES:
-            return JsonResponse({'error': 'No PDF file uploaded'}, status=400)
-
-        pdf_file = request.FILES['pdf_file']
-        if not pdf_file.name.lower().endswith('.pdf'):
-            return JsonResponse({'error': 'File must be a PDF'}, status=400)
-
-        options = {
-            'page_range': request.POST.get('page_range', 'all'),
-            'format': request.POST.get('format', 'pptx'),
-        }
-
-        converted_file = convert_pdf_to_powerpoint(pdf_file, options)
-        filename, file_bytes = converted_file
-
-        response = HttpResponse(file_bytes, content_type='application/vnd.openxmlformats-officedocument.presentationml.presentation')
-        response['Content-Disposition'] = f'attachment; filename="{filename}"'
-        return response
-
-    except Exception as e:
-        return JsonResponse({'error': f'Conversion failed: {str(e)}'}, status=500)
+    return process_from_pdf_request(
+        request, 
+        convert_pdf_to_powerpoint, 
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+        format='pptx'
+    )
 
 
 @csrf_exempt
@@ -239,28 +208,12 @@ def pdf_to_word_view(request):
     """
     API endpoint for PDF to Word conversion.
     """
-    try:
-        if 'pdf_file' not in request.FILES:
-            return JsonResponse({'error': 'No PDF file uploaded'}, status=400)
-
-        pdf_file = request.FILES['pdf_file']
-        if not pdf_file.name.lower().endswith('.pdf'):
-            return JsonResponse({'error': 'File must be a PDF'}, status=400)
-
-        options = {
-            'page_range': request.POST.get('page_range', 'all'),
-            'format': request.POST.get('format', 'docx'),
-        }
-
-        converted_file = convert_pdf_to_word(pdf_file, options)
-        filename, file_bytes = converted_file
-
-        response = HttpResponse(file_bytes, content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
-        response['Content-Disposition'] = f'attachment; filename="{filename}"'
-        return response
-
-    except Exception as e:
-        return JsonResponse({'error': f'Conversion failed: {str(e)}'}, status=500)
+    return process_from_pdf_request(
+        request, 
+        convert_pdf_to_word, 
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        format='docx'
+    )
 
 
 @csrf_exempt
@@ -269,6 +222,8 @@ def pdf_to_pdfa_view(request):
     """
     API endpoint for PDF to PDF/A conversion.
     """
+    # PDF/A requires specific option mapping (format -> version)
+    # doing it manually for now to avoid breaking utility for others
     try:
         if 'pdf_file' not in request.FILES:
             return JsonResponse({'error': 'No PDF file uploaded'}, status=400)
@@ -300,29 +255,10 @@ def pdf_to_html_view(request):
     API endpoint for PDF to HTML conversion.
     Always returns a single HTML file with embedded images (never a ZIP).
     """
-    try:
-        if 'pdf_file' not in request.FILES:
-            return JsonResponse({'error': 'No PDF file uploaded'}, status=400)
-
-        pdf_file = request.FILES['pdf_file']
-        if not pdf_file.name.lower().endswith('.pdf'):
-            return JsonResponse({'error': 'File must be a PDF'}, status=400)
-
-        options = {
-            'page_range': request.POST.get('page_range', 'all'),
-            'format': request.POST.get('format', 'html-single'),
-            'dpi': request.POST.get('dpi', '150'),
-        }
-
-        # Always returns a single HTML file
-        converted_files = convert_pdf_to_html(pdf_file, options)
-        
-        # Always single file (no ZIP)
-        filename, file_bytes = converted_files[0]
-        response = HttpResponse(file_bytes, content_type='text/html')
-        response['Content-Disposition'] = f'attachment; filename="{filename}"'
-
-        return response
-
-    except Exception as e:
-        return JsonResponse({'error': f'Conversion failed: {str(e)}'}, status=500)
+    return process_from_pdf_request(
+        request,
+        convert_pdf_to_html,
+        'text/html',
+        format='html-single',
+        dpi='150'
+    )

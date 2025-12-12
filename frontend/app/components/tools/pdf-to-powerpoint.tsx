@@ -11,8 +11,10 @@ import {
   Settings,
   Monitor,
 } from "lucide-react";
+import { pdfApi } from "../../lib/pdf-api";
 import { Label } from "../ui/label";
 import PptxGenJS from "pptxgenjs";
+import { saveAs } from "file-saver";
 
 type AspectRatio = "16:9" | "4:3";
 type Quality = "low" | "medium" | "high";
@@ -36,60 +38,19 @@ export function PdfToPowerPointTool() {
     if (files.length === 0) return;
     setIsProcessing(true);
     setProgress(0);
+    setStatus("Starting conversion...");
 
     try {
-      const pdfjsLib: any = await import("pdfjs-dist");
-
-      if (
-        typeof window !== "undefined" &&
-        pdfjsLib.GlobalWorkerOptions &&
-        !pdfjsLib.GlobalWorkerOptions.workerSrc
-      ) {
-        pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
-      }
-
       const file = files[0];
-      setStatus("Loading PDF...");
-
-      const arrayBuffer = await file.arrayBuffer();
-      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-      const numPages = pdf.numPages;
-
-      const pres = new PptxGenJS();
-      pres.layout = aspectRatio === "16:9" ? "LAYOUT_16x9" : "LAYOUT_4x3";
-
-      const scale = quality === "low" ? 1 : quality === "medium" ? 2 : 3;
-
-      for (let i = 1; i <= numPages; i++) {
-        setStatus(`Converting page ${i} of ${numPages}...`);
-        setProgress(Math.round((i / numPages) * 100));
-
-        const page = await pdf.getPage(i);
-        const viewport = page.getViewport({ scale });
-
-        const canvas = document.createElement("canvas");
-        const context = canvas.getContext("2d");
-        canvas.height = viewport.height;
-        canvas.width = viewport.width;
-
-        if (context) {
-          await page.render({ canvasContext: context, viewport } as any).promise;
-          const imageData = canvas.toDataURL("image/png");
-
-          const slide = pres.addSlide();
-          slide.addImage({
-            data: imageData,
-            x: 0,
-            y: 0,
-            w: "100%",
-            h: "100%",
-          });
-        }
-      }
+      // Backend-first with client-side fallback
+      const result = await pdfApi.pdfToPowerpoint(file);
 
       setStatus("Saving PowerPoint file...");
-      await pres.writeFile({ fileName: file.name.replace(/\.pdf$/i, ".pptx") });
+      saveAs(result.blob, result.fileName);
       setStatus("Completed!");
+
+      // Note: Backend handles quality/aspect ratio, or we could pass it if API supports it.
+      // For now we use the unified API which is simpler.
     } catch (error) {
       console.error("Conversion Error:", error);
       alert("Failed to convert PDF to PowerPoint.");

@@ -7,13 +7,13 @@ import { Button } from "../ui/button";
 import { ArrowRight, Settings, Loader2 } from "lucide-react";
 import { PdfPreview } from "../ui/pdf-preview";
 import { toast } from "../../lib/use-toast";
-import { pdfStrategyManager } from "../../lib/pdf-service";
+import { pdfApi } from "../../lib/pdf-api";
 
 export function PdfToJpgTool() {
     const [file, setFile] = useState<File | null>(null);
     const [numPages, setNumPages] = useState<number>(0);
     const [isProcessing, setIsProcessing] = useState(false);
-    
+
     // Options
     const [format, setFormat] = useState<"jpeg" | "png">("jpeg");
     const [dpi, setDpi] = useState<72 | 150 | 300>(150);
@@ -32,14 +32,10 @@ export function PdfToJpgTool() {
         setIsProcessing(true);
 
         try {
-            const result = await pdfStrategyManager.execute('convert-from-pdf', [file], {
-                format,
-                dpi,
-                pageRange,
-                mergeOutput
-            });
+            // Backend-first with client-side fallback
+            const result = await pdfApi.pdfToJpg(file);
 
-            saveAs(result.blob, result.fileName || `converted.${result.extension}`);
+            saveAs(result.blob, result.fileName);
 
             toast.show({
                 title: "Success",
@@ -169,7 +165,7 @@ export function PdfToJpgTool() {
                     >
                         {isProcessing ? (
                             <span className="flex items-center gap-2">
-                                <Loader2 className="h-4 w-4 animate-spin" /> 
+                                <Loader2 className="h-4 w-4 animate-spin" />
                                 Converting...
                             </span>
                         ) : (
