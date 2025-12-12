@@ -3,57 +3,46 @@
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { Button } from "../../components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "../../components/ui/card";
-import { Header } from "../../components/layout/header";
 import { Label } from "../../components/ui/label";
 
 export default function VerifyOtpPage() {
     return (
-        <div className="min-h-screen bg-white">
-            <Header />
-            <main className="container mx-auto px-4 py-20 flex items-center justify-center min-h-[calc(100vh-80px)]">
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5 }}
-                >
-                    <Card className="w-full max-w-xl bg-white shadow-xl border-slate-100 p-8">
-                        <CardHeader className="space-y-6 text-center pb-8">
-                            <CardTitle className="text-4xl font-bold font-caveat text-slate-900">
-                                Check Your Phone
-                            </CardTitle>
-                            <CardDescription className="text-xl">
-                                We sent a magic number. Put it here.
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-8">
-                            <div className="space-y-3">
-                                <Label htmlFor="otp" className="text-base">Enter Magic Number</Label>
-                                <input
-                                    id="otp"
-                                    type="text"
-                                    placeholder="1 2 3 4"
-                                    className="flex h-12 w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-base text-center tracking-[1em] font-bold ring-offset-white file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-slate-300 placeholder:tracking-normal focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#01B0F1] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                    maxLength={6}
-                                />
-                            </div>
-                        </CardContent>
-                        <CardFooter className="flex flex-col gap-6 pt-4">
-                            <Link href="/reset-password" className="w-full">
-                                <Button className="w-full bg-[#01B0F1] hover:bg-[#0091d4] text-white text-xl h-14 rounded-lg">
-                                    Verify It
-                                </Button>
-                            </Link>
-                            <div className="text-center text-base text-slate-500">
-                                Didn't get it?{" "}
-                                <button className="text-[#01B0F1] hover:underline font-semibold bg-transparent border-none cursor-pointer">
-                                    Poke us again
-                                </button>
-                            </div>
-                        </CardFooter>
-                    </Card>
-                </motion.div>
-            </main>
-        </div>
+        <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+            className="w-full"
+        >
+            <div className="text-center mb-8">
+                <h1 className="text-3xl font-bold text-slate-900 mb-2">Check Your Inbox</h1>
+                <p className="text-slate-500">Enter the magic number we sent you.</p>
+            </div>
+
+            <div className="space-y-4">
+                <div className="space-y-2">
+                    <Label htmlFor="otp">Enter Magic Number</Label>
+                    <input
+                        id="otp"
+                        type="text"
+                        placeholder="1 2 3 4"
+                        className="flex h-12 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-center text-2xl tracking-[0.5em] font-bold ring-offset-white file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-slate-300 placeholder:tracking-normal focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#01B0F1] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        maxLength={6}
+                    />
+                </div>
+
+                <Link href="/reset-password" className="w-full block">
+                    <Button className="w-full bg-[#E53935] hover:bg-[#D32F2F] text-white font-semibold h-10 rounded-md mt-2">
+                        Verify Code
+                    </Button>
+                </Link>
+
+                <div className="text-center text-sm text-slate-500 mt-4">
+                    Didn't get it?{" "}
+                    <button className="text-[#01B0F1] hover:underline font-semibold bg-transparent border-none cursor-pointer">
+                        Resend Code
+                    </button>
+                </div>
+            </div>
+        </motion.div>
     );
 }
