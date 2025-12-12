@@ -2,10 +2,35 @@ let currentTool = '';
 let currentFile = null;
 
 function openTool(toolId, toolName) {
+    // Special handling for tools that need custom UI
+    if (toolId === 'compare-pdf') {
+        window.location.href = '/pdf-operations/compare/';
+        return;
+    }
+    
     currentTool = toolId;
     document.getElementById('modalTitle').innerText = toolName;
     document.getElementById('toolModal').style.display = 'flex';
+    
+    // Reset first, then show specific UI
     resetModal();
+    
+    // Show scan options for scan-to-pdf tool
+    if (toolId === 'scan-to-pdf') {
+        console.log('Opening scan-to-pdf tool');
+        const scanOptions = document.getElementById('scanOptions');
+        console.log('scanOptions element:', scanOptions);
+        
+        document.getElementById('dropZone').style.display = 'none';
+        document.getElementById('fileInfo').style.display = 'none';
+        
+        if (scanOptions) {
+            scanOptions.style.display = 'block';
+            console.log('scanOptions display set to block');
+        } else {
+            console.error('scanOptions element not found!');
+        }
+    }
 }
 
 function closeModal() {
@@ -17,8 +42,16 @@ function resetModal() {
     document.getElementById('fileInput').value = '';
     document.getElementById('dropZone').style.display = 'block';
     document.getElementById('fileInfo').style.display = 'none';
+    document.getElementById('redactOptions').style.display = 'none';
+    document.getElementById('protectOptions').style.display = 'none';
+    document.getElementById('scanOptions').style.display = 'none';
+    document.getElementById('cameraView').style.display = 'none';
+    document.getElementById('capturedImagesPreview').style.display = 'none';
     document.getElementById('resultArea').style.display = 'none';
     document.getElementById('loading').style.display = 'none';
+    document.getElementById('searchWord').value = '';
+    document.getElementById('caseSensitive').checked = false;
+    document.getElementById('protectPassword').value = '';
 }
 
 // Drag and Drop
@@ -51,7 +84,41 @@ function handleFile(file) {
     currentFile = file;
     document.getElementById('fileName').innerText = file.name;
     document.getElementById('dropZone').style.display = 'none';
-    document.getElementById('fileInfo').style.display = 'block';
+    
+    // For redact-pdf, show search options
+    if (currentTool === 'redact-pdf') {
+        document.getElementById('redactFileName').innerText = file.name;
+        document.getElementById('fileInfo').style.display = 'none';
+        document.getElementById('redactOptions').style.display = 'block';
+    } 
+    // For protect-pdf or unlock-pdf, show password input
+    else if (currentTool === 'protect-pdf' || currentTool === 'unlock-pdf') {
+        document.getElementById('protectFileName').innerText = file.name;
+        document.getElementById('fileInfo').style.display = 'none';
+        document.getElementById('protectOptions').style.display = 'block';
+        
+        // Update UI text based on tool
+        if (currentTool === 'unlock-pdf') {
+            document.getElementById('protectPasswordLabel').innerHTML = '<i class="fas fa-unlock"></i> Enter Password to Unlock:';
+            document.getElementById('protectPassword').placeholder = 'Enter the PDF password...';
+            document.getElementById('protectPasswordHint').innerHTML = '<i class="fas fa-info-circle"></i> Enter the password used to protect this PDF';
+            document.getElementById('protectActionButton').querySelector('i').className = 'fas fa-unlock-alt';
+            document.getElementById('protectActionText').innerText = 'Unlock PDF';
+            document.getElementById('protectActionButton').style.background = 'linear-gradient(135deg, #4caf50 0%, #388e3c 100%)';
+        } else {
+            document.getElementById('protectPasswordLabel').innerHTML = '<i class="fas fa-lock"></i> Password:';
+            document.getElementById('protectPassword').placeholder = 'Enter password to protect PDF...';
+            document.getElementById('protectPasswordHint').innerHTML = '<i class="fas fa-info-circle"></i> Minimum 4 characters required';
+            document.getElementById('protectActionButton').querySelector('i').className = 'fas fa-shield-alt';
+            document.getElementById('protectActionText').innerText = 'Protect PDF';
+            document.getElementById('protectActionButton').style.background = 'linear-gradient(135deg, #2196f3 0%, #1976d2 100%)';
+        }
+    } 
+    else {
+        document.getElementById('fileInfo').style.display = 'block';
+        document.getElementById('redactOptions').style.display = 'none';
+        document.getElementById('protectOptions').style.display = 'none';
+    }
 }
 
 // Tool ID to API Endpoint Mapping
@@ -97,8 +164,8 @@ const toolEndpoints = {
     'collaborative-edit': '/api/v1/edit/collaborate/', // Likely a WebSocket or different protocol
 
     // 4. Security
-    'protect-pdf': '/api/v1/security/protect/',
-    'unlock-pdf': '/api/v1/security/unlock/',
+    'protect-pdf': '/api/v1/security/protect-pdf/',
+    'unlock-pdf': '/api/v1/security/unlock-pdf/',
     'secure-sharing': '/api/v1/security/share/',
     'secure-room': '/api/v1/security/room/',
 
@@ -120,8 +187,8 @@ const toolEndpoints = {
     'processing-history': '/api/v1/user/history/',
 
     // 8. Recovery
-    'repair-pdf': '/api/v1/recovery/repair/',
-    'scan-to-pdf': '/api/v1/recovery/scan/'
+    'repair-pdf': '/api/v1/recovery/repair-pdf/',
+    'scan-to-pdf': '/api/v1/recovery/batch-scan-to-pdf/'
 };
 
 async function processFile() {
@@ -178,12 +245,117 @@ async function processFile() {
     }
 }
 
-function showResult(url) {
+async function processRedactPdf() {
+    if (!currentFile) {
+        alert('Please select a PDF file');
+        return;
+    }
+
+    const searchWord = document.getElementById('searchWord').value.trim();
+    const caseSensitive = document.getElementById('caseSensitive').checked;
+
+    if (!searchWord) {
+        alert('Please enter a word to redact');
+        return;
+    }
+
+    document.getElementById('redactOptions').style.display = 'none';
+    document.getElementById('loading').style.display = 'block';
+
+    const formData = new FormData();
+    formData.append('file', currentFile);
+    formData.append('search_word', searchWord);
+    formData.append('case_sensitive', caseSensitive ? 'true' : 'false');
+
+    const endpoint = '/api/v1/edit/redact/';
+
+    try {
+        const response = await fetch(endpoint, {
+            method: 'POST',
+            body: formData
+        });
+
+        if (response.ok) {
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            showResult(url);
+        } else {
+            console.error('Backend error:', response.statusText);
+            let errorMessage = `Error: ${response.status} ${response.statusText}\n`;
+            errorMessage += `Endpoint: ${endpoint}\n`;
+            errorMessage += `\nTo fix this, ensure your Django backend has a URL pattern matching this endpoint.`;
+            alert(errorMessage);
+            resetModal();
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert(`Network Error: Could not connect to backend.\nEnsure Django server is running at http://127.0.0.1:8000`);
+        resetModal();
+    }
+}
+
+function showResult(url, filename = null) {
     document.getElementById('loading').style.display = 'none';
     document.getElementById('resultArea').style.display = 'block';
     const downloadLink = document.getElementById('downloadLink');
     downloadLink.href = url;
-    downloadLink.download = `converted_${currentFile.name}`; // Simplified naming
+    
+    // Use provided filename or generate one
+    if (filename) {
+        downloadLink.download = filename;
+    } else if (currentFile) {
+        downloadLink.download = `converted_${currentFile.name}`;
+    } else {
+        downloadLink.download = 'output.pdf';
+    }
+}
+
+async function processProtectPdf() {
+    if (!currentFile) {
+        alert('Please select a PDF file');
+        return;
+    }
+
+    const password = document.getElementById('protectPassword').value.trim();
+
+    if (!password) {
+        alert('Please enter a password');
+        return;
+    }
+    
+    if (password.length < 4) {
+        alert('Password must be at least 4 characters long');
+        return;
+    }
+
+    document.getElementById('protectOptions').style.display = 'none';
+    document.getElementById('loading').style.display = 'block';
+
+    const formData = new FormData();
+    formData.append('file', currentFile);
+    formData.append('password', password);
+
+    const endpoint = toolEndpoints[currentTool];
+
+    try {
+        const response = await fetch(endpoint, {
+            method: 'POST',
+            body: formData
+        });
+
+        if (response.ok) {
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            showResult(url);
+        } else {
+            const errorText = await response.text();
+            alert(`Error: ${response.status} ${response.statusText}\n${errorText}`);
+            resetModal();
+        }
+    } catch (error) {
+        alert(`Network Error: Could not connect to backend.\nEnsure Django server is running at http://127.0.0.1:8000`);
+        resetModal();
+    }
 }
 
 // Close modal when clicking outside

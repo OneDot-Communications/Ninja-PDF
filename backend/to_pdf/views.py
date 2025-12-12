@@ -1,10 +1,11 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render as django_render, redirect
 from django.http import HttpResponse, Http404, JsonResponse
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
+from django.conf import settings
 import os
 import tempfile
 from .word_pdf.word_to_pdf import convert_word_to_pdf
@@ -15,8 +16,21 @@ from .html_pdf.html_to_pdf import convert_html_to_pdf
 from .markdown_pdf.markdown_to_pdf import convert_markdown_to_pdf
 from .metadata_cleaner.clean_metadata import clean_pdf_metadata, get_pdf_metadata
 
+
+def render_static_index(request, *args, **kwargs):
+    """Serve the single static landing page for all tools."""
+    static_file = os.path.join(settings.BASE_DIR, 'static', 'index.html')
+    with open(static_file, 'r', encoding='utf-8') as f:
+        return HttpResponse(f.read(), content_type='text/html')
+
+
+# Override render to always return the static index page
+def render(request, template_name=None, context=None, *args, **kwargs):
+    return render_static_index(request)
+
+
 def index_view(request):
-    return render(request, 'to_pdf/index.html')
+    return render_static_index(request)
 
 @never_cache
 @csrf_exempt

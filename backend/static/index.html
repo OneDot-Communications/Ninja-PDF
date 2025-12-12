@@ -4,8 +4,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>Ninja PDF - Backend Tester</title>
-    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/style.css?v=6">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
@@ -283,20 +286,138 @@
         <div class="modal-content">
             <span class="close" onclick="closeModal()">&times;</span>
             <h2 id="modalTitle">Tool Name</h2>
+            
+            <!-- Default Upload Area -->
             <div class="upload-area" id="dropZone">
                 <i class="fas fa-cloud-upload-alt"></i>
                 <p>Drag & Drop files here or</p>
                 <button class="btn-select" onclick="document.getElementById('fileInput').click()">Select File</button>
-                <input type="file" id="fileInput" hidden>
+                <input type="file" id="fileInput" hidden accept=".pdf"> 
             </div>
+            
+            <!-- File Info (Default) -->
             <div id="fileInfo" class="file-info" style="display: none;">
                 <p id="fileName">filename.pdf</p>
                 <button class="btn-convert" onclick="processFile()">Convert</button>
             </div>
+            
+            <!-- Redact PDF Special UI -->
+            <div id="redactOptions" style="display: none;">
+                <div style="padding: 15px; background: #e8f5e9; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #4caf50;">
+                    <p style="margin: 0; color: #2e7d32; font-weight: 600;">
+                        <i class="fas fa-check-circle"></i> File Selected: <span id="redactFileName">filename.pdf</span>
+                    </p>
+                </div>
+                
+                <div style="padding: 20px; background: #f8f9fa; border-radius: 8px;">
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #333;">
+                            <i class="fas fa-search"></i> Word to Redact:
+                        </label>
+                        <input type="text" id="searchWord" placeholder="Type the word you want to redact (e.g., 'confidential')..." 
+                            style="width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 5px; font-size: 14px; box-sizing: border-box;">
+                        <small style="display: block; margin-top: 5px; color: #666;">
+                            <i class="fas fa-info-circle"></i> All instances of this word will be redacted (blacked out)
+                        </small>
+                    </div>
+                    
+                    <div style="margin-bottom: 20px; display: flex; align-items: center; gap: 8px;">
+                        <input type="checkbox" id="caseSensitive" style="cursor: pointer; width: 18px; height: 18px;">
+                        <label for="caseSensitive" style="cursor: pointer; color: #555; margin: 0;">
+                            <i class="fas fa-font"></i> Case Sensitive
+                        </label>
+                    </div>
+                    
+                    <button class="btn-convert" onclick="processRedactPdf()" style="width: 100%; cursor: pointer; background: linear-gradient(135deg, #d32f2f 0%, #c62828 100%);">
+                        <i class="fas fa-eraser"></i> Redact All Instances
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Protect PDF Special UI -->
+            <div id="protectOptions" style="display: none;">
+                <div style="padding: 15px; background: #e3f2fd; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #2196f3;">
+                    <p style="margin: 0; color: #1565c0; font-weight: 600;">
+                        <i class="fas fa-check-circle"></i> File Selected: <span id="protectFileName">filename.pdf</span>
+                    </p>
+                </div>
+                
+                <div style="padding: 20px; background: #f8f9fa; border-radius: 8px;">
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #333;" id="protectPasswordLabel">
+                            <i class="fas fa-lock"></i> Password:
+                        </label>
+                        <input type="password" id="protectPassword" placeholder="Enter password..." 
+                            style="width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 5px; font-size: 14px; box-sizing: border-box;">
+                        <small style="display: block; margin-top: 5px; color: #666;" id="protectPasswordHint">
+                            <i class="fas fa-info-circle"></i> Minimum 4 characters required
+                        </small>
+                    </div>
+                    
+                    <button id="protectActionButton" class="btn-convert" onclick="processProtectPdf()" style="width: 100%; cursor: pointer; background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);">
+                        <i class="fas fa-shield-alt"></i> <span id="protectActionText">Protect PDF</span>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Scan to PDF Special UI -->
+            <div id="scanOptions" style="display: none;">
+                <div style="padding: 20px; background: #f8f9fa; border-radius: 8px;">
+                    <h3 style="margin: 0 0 20px 0; color: #333; font-size: 18px; font-weight: bold;">
+                        <i class="fas fa-scanner"></i> Choose Scan Method:
+                    </h3>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        <!-- Camera Option -->
+                        <button onclick="openCamera()" style="padding: 20px; background: white; border: 2px solid #2196f3; border-radius: 8px; cursor: pointer; transition: all 0.3s;">
+                            <i class="fas fa-camera" style="font-size: 2rem; color: #2196f3; display: block; margin-bottom: 10px;"></i>
+                            <div style="font-weight: 600; color: #333;">Use Camera</div>
+                            <small style="color: #666;">Scan with webcam</small>
+                        </button>
+                        
+                        <!-- Upload Image Option -->
+                        <button onclick="document.getElementById('scanImageInput').click()" style="padding: 20px; background: white; border: 2px solid #4caf50; border-radius: 8px; cursor: pointer; transition: all 0.3s;">
+                            <i class="fas fa-image" style="font-size: 2rem; color: #4caf50; display: block; margin-bottom: 10px;"></i>
+                            <div style="font-weight: 600; color: #333;">Upload Image</div>
+                            <small style="color: #666;">Select from device</small>
+                        </button>
+                    </div>
+                    
+                    <input type="file" id="scanImageInput" accept="image/*" hidden multiple>
+                </div>
+            </div>
+            
+            <!-- Camera View (outside scanOptions) -->
+            <div id="cameraView" style="display: none;">
+                <video id="cameraStream" autoplay playsinline style="width: 100%; max-height: 400px; border-radius: 8px; background: #000;"></video>
+                <div style="margin-top: 15px; display: flex; gap: 10px; justify-content: center;">
+                    <button onclick="captureImage()" class="btn-convert" style="flex: 1;">
+                        <i class="fas fa-camera"></i> Capture
+                    </button>
+                    <button onclick="stopCamera()" style="flex: 1; padding: 10px 20px; background: #f44336; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                        <i class="fas fa-times"></i> Cancel
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Captured Images Preview (outside scanOptions) -->
+            <div id="capturedImagesPreview" style="display: none;">
+                <h4 style="margin-bottom: 10px; color: #333;">
+                    <i class="fas fa-images"></i> Captured Images:
+                </h4>
+                <div id="imagesList" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; margin-bottom: 15px; max-height: 300px; overflow-y: auto;"></div>
+                <button onclick="processScanToPdf()" class="btn-convert" style="width: 100%;">
+                    <i class="fas fa-file-pdf"></i> Convert to PDF
+                </button>
+            </div>
+            
+            <!-- Result Area -->
             <div id="resultArea" class="result-area" style="display: none;">
-                <p>Conversion Complete!</p>
+                <p>Processing Complete!</p>
                 <a href="#" id="downloadLink" class="btn-download">Download File</a>
             </div>
+            
+            <!-- Loading -->
             <div id="loading" class="loading" style="display: none;">
                 <div class="spinner"></div>
                 <p>Processing...</p>
@@ -304,7 +425,8 @@
         </div>
     </div>
 
-    <script src="/static/js/script.js"></script>
+    <script src="/static/js/script.js?v=14"></script>
+    <script src="/static/js/scan_functions.js?v=1"></script>
 </body>
 
 </html>

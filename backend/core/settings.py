@@ -38,7 +38,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'to_pdf',
-    'from_pdf'
+    'from_pdf',
+    'ocr_pdf'
 ]
 
 MIDDLEWARE = [

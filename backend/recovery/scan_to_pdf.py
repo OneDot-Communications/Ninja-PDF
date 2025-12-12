@@ -38,6 +38,14 @@ def scan_to_pdf(image_path, output_path, enhance=True, deskew=True):
         processing_log.append(f"Loading image: {os.path.basename(image_path)}")
         img = Image.open(image_path)
         
+        # Apply EXIF orientation correction
+        try:
+            from PIL import ImageOps
+            img = ImageOps.exif_transpose(img)
+            processing_log.append("Applied EXIF orientation correction")
+        except Exception:
+            pass
+        
         # Check image properties
         original_size = img.size
         original_mode = img.mode
@@ -229,6 +237,13 @@ def batch_scan_to_pdf(image_paths, output_path):
             
             # Load and enhance image
             img = Image.open(image_path)
+            
+            # Apply EXIF orientation correction
+            try:
+                from PIL import ImageOps
+                img = ImageOps.exif_transpose(img)
+            except Exception:
+                pass
             
             if img.mode != 'RGB':
                 img = img.convert('RGB')
