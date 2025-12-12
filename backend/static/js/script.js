@@ -393,3 +393,26 @@ window.onclick = function(event) {
         closeModal();
     }
 }
+
+// Auto open tool when static index is served directly via route
+document.addEventListener('DOMContentLoaded', () => {
+    const segments = window.location.pathname.split('/').filter(Boolean);
+    if (segments.length === 0) return;
+
+    // Determine the last path segment as a tool identifier
+    const last = segments[segments.length - 1];
+
+    // Known pages that are not tool ids should not trigger modal
+    const ignore = ['pdf-conversions', 'to_pdf', 'optimizer', 'admin', 'api', 'static'];
+    if (ignore.includes(last)) return;
+
+    // Map path segment to tool id
+    const toolId = last;
+
+    // If tool exists in endpoints map or special cases, open modal
+    if (toolEndpoints[toolId] || ['pdf-to-word', 'word-to-pdf', 'pdf-to-excel', 'pdf-to-powerpoint', 'jpg-to-pdf', 'html-to-pdf', 'pdf-to-pdfa', 'pdf-to-html', 'compare-pdf', 'redact-pdf', 'scan-to-pdf', 'protect-pdf', 'unlock-pdf', 'repair-pdf'].includes(toolId)) {
+        // Build a readable title
+        const title = toolId.split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ');
+        openTool(toolId, title);
+    }
+});
