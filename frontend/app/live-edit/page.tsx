@@ -2,7 +2,7 @@ import { ToolShell } from "../components/layout/tool-shell";
 import { AdvancedPdfEditor } from "../components/tools/live-edit";
 
 export const metadata = {
-    title: "Live Edit PDF - Ninja PDF",
+    title: "Live Edit PDF - 18+ PDF",
     description: "Advanced real-time PDF editor with layers, rich text, and media support.",
 };
 

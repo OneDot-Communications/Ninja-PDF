@@ -363,7 +363,7 @@ export function RotatePdfTool() {
     // If no file, show file upload
     if (!file) {
         return (
-            <div className="flex flex-col items-center justify-center h-[calc(100vh-64px)] bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+            <div className="flex flex-col items-center justify-center h-[calc(100vh-64px)] bg-linear-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
                 <div className="max-w-md w-full p-8 bg-white dark:bg-gray-800 rounded-2xl shadow-xl">
                     <div className="flex items-center justify-center mb-6">
                         <div className="p-4 bg-blue-100 dark:bg-blue-900 rounded-full">
@@ -691,7 +691,7 @@ export function RotatePdfTool() {
                                         transform: `scale(${zoom / 100}) rotate(${page.rotation}deg)`
                                     }}
                                 >
-                                    <div className="relative aspect-[3/4] w-full overflow-hidden rounded-lg shadow-md bg-white">
+                                    <div className="relative aspect-3/4 w-full overflow-hidden rounded-lg shadow-md bg-white">
                                         {/* Page Thumbnail */}
                                         <div className="relative h-full w-full">
                                             {loadingThumbnails ? (

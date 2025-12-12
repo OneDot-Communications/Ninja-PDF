@@ -2,7 +2,7 @@ import { ToolShell } from "../components/layout/tool-shell";
 import { EditPdfTool } from "../components/tools/edit-pdf";
 
 export const metadata = {
-    title: "Edit PDF - Ninja PDF",
+    title: "Edit PDF - 18+ PDF",
     description: "Add text, images, shapes or freehand annotations to a PDF document.",
 };
 

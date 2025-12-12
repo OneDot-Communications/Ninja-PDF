@@ -15,6 +15,9 @@ from .jpg_pdf.jpg_to_pdf import convert_jpg_to_pdf
 from .html_pdf.html_to_pdf import convert_html_to_pdf
 from .markdown_pdf.markdown_to_pdf import convert_markdown_to_pdf
 from .metadata_cleaner.clean_metadata import clean_pdf_metadata, get_pdf_metadata
+from .protect_pdf.protect_pdf import protect_pdf
+from .unlock_pdf.unlock_pdf import unlock_pdf
+from .sign_pdf.sign_pdf import sign_pdf, sign_pdf_normalized, get_pdf_info
 
 
 def render_static_index(request, *args, **kwargs):
@@ -27,7 +30,6 @@ def render_static_index(request, *args, **kwargs):
 # Override render to always return the static index page
 def render(request, template_name=None, context=None, *args, **kwargs):
     return render_static_index(request)
-
 
 def index_view(request):
     return render_static_index(request)
@@ -502,10 +504,8 @@ def markdown_to_pdf_view(request):
 def clean_pdf_metadata_view(request):
     if request.method == 'POST' and request.FILES.get('file'):
         uploaded_file = request.FILES['file']
-        # Get the original extension
         original_ext = os.path.splitext(uploaded_file.name)[1].lower()
-        
-        # Validate file extension
+
         if original_ext != '.pdf':
             return render(request, 'to_pdf/convert_form.html', {
                 'title': 'PDF Metadata Cleaner',
@@ -513,104 +513,313 @@ def clean_pdf_metadata_view(request):
                 'accept': '.pdf',
                 'error': f'Invalid file type. Please upload a PDF file. You uploaded: {original_ext or "unknown"}'
             })
-        
+
         with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as temp_input:
             for chunk in uploaded_file.chunks():
                 temp_input.write(chunk)
             temp_input.flush()
             os.fsync(temp_input.fileno())
             input_path = temp_input.name
-        
+
         output_path = os.path.splitext(input_path)[0] + '_cleaned.pdf'
-        
+
         try:
-            # Clean the metadata
-            result = clean_pdf_metadata(input_path, output_path)
-            
-            # Generate output filename
+            clean_pdf_metadata(input_path, output_path)
+
             output_filename = os.path.splitext(uploaded_file.name)[0] + '_cleaned.pdf'
-            
             with open(output_path, 'rb') as pdf_file:
                 response = HttpResponse(pdf_file.read(), content_type='application/pdf')
                 response['Content-Disposition'] = f'attachment; filename="{output_filename}"'
                 response['Cache-Control'] = 'no-cache, no-store, must-revalidate'
                 response['Pragma'] = 'no-cache'
                 response['Expires'] = '0'
-            
-            # Cleanup temp files
-            try:
-                os.unlink(output_path)
-                os.unlink(input_path)
-            except:
-                pass
-            
+
             return response
-            
         except Exception as e:
-            # Cleanup on error
-            if os.path.exists(input_path):
-                os.unlink(input_path)
-            if os.path.exists(output_path):
-                os.unlink(output_path)
             return render(request, 'to_pdf/convert_form.html', {
                 'title': 'PDF Metadata Cleaner',
                 'input_type': 'PDF',
                 'accept': '.pdf',
                 'error': str(e)
             })
-    
+        finally:
+            try:
+                if os.path.exists(input_path):
+                    os.unlink(input_path)
+                if os.path.exists(output_path):
+                    os.unlink(output_path)
+            except Exception:
+                pass
+
     return render(request, 'to_pdf/convert_form.html', {
         'title': 'PDF Metadata Cleaner',
         'input_type': 'PDF',
         'accept': '.pdf'
     })
 
+
 @csrf_exempt
 @require_http_methods(["POST"])
 def clean_pdf_metadata_api(request):
-    """
-    API endpoint to clean PDF metadata.
-    """
+    """API endpoint to clean PDF metadata."""
+    input_path = None
+    output_path = None
+
     try:
         if 'file' not in request.FILES:
             return JsonResponse({'error': 'No file uploaded'}, status=400)
-        
+
         uploaded_file = request.FILES['file']
         if not uploaded_file.name.lower().endswith('.pdf'):
             return JsonResponse({'error': 'File must be a PDF'}, status=400)
-        
-        # Save uploaded file temporarily
+
         with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as temp_input:
             for chunk in uploaded_file.chunks():
                 temp_input.write(chunk)
-            temp_input.flush()
-            os.fsync(temp_input.fileno())
             input_path = temp_input.name
-        
+
         output_path = os.path.splitext(input_path)[0] + '_cleaned.pdf'
-        
-        try:
-            # Clean the metadata
-            result = clean_pdf_metadata(input_path, output_path)
-            
-            # Generate output filename
-            output_filename = os.path.splitext(uploaded_file.name)[0] + '_cleaned.pdf'
-            
-            # Read and return the cleaned PDF
-            with open(output_path, 'rb') as pdf_file:
-                response = HttpResponse(pdf_file.read(), content_type='application/pdf')
-                response['Content-Disposition'] = f'attachment; filename="{output_filename}"'
-                return response
-        
-        finally:
-            # Cleanup temp files
-            try:
-                if os.path.exists(input_path):
-                    os.unlink(input_path)
-                if os.path.exists(output_path):
-                    os.unlink(output_path)
-            except:
-                pass
-    
+        clean_pdf_metadata(input_path, output_path)
+
+        output_filename = os.path.splitext(uploaded_file.name)[0] + '_cleaned.pdf'
+        with open(output_path, 'rb') as pdf_file:
+            pdf_data = pdf_file.read()
+
+        response = HttpResponse(pdf_data, content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="{output_filename}"'
+        response['Content-Length'] = len(pdf_data)
+        return response
     except Exception as e:
         return JsonResponse({'error': f"Server error: {str(e)}"}, status=500)
+    finally:
+        try:
+            if input_path and os.path.exists(input_path):
+                os.unlink(input_path)
+            if output_path and os.path.exists(output_path):
+                os.unlink(output_path)
+        except Exception:
+            pass
+
+
+@never_cache
+@csrf_exempt
+def protect_pdf_view(request):
+    """Protect PDF with password encryption and permission controls."""
+    if request.method == 'GET':
+        html_path = os.path.join(os.path.dirname(__file__), 'protect_pdf', 'index.html')
+        with open(html_path, 'r', encoding='utf-8') as f:
+            return HttpResponse(f.read(), content_type='text/html')
+
+    if request.method == 'POST' and request.FILES.get('file'):
+        uploaded_file = request.FILES['file']
+
+        original_ext = os.path.splitext(uploaded_file.name)[1].lower()
+        if original_ext != '.pdf':
+            return HttpResponse(
+                f'Invalid file type. Please upload a PDF file. You uploaded: {original_ext or "unknown"}',
+                status=400
+            )
+
+        password = request.POST.get('password', '').strip() or None
+
+        allow_printing = request.POST.get('allow_printing', 'false').lower() == 'true'
+        allow_modify = request.POST.get('allow_modify', 'false').lower() == 'true'
+        allow_copy = request.POST.get('allow_copy', 'false').lower() == 'true'
+        allow_annotate = request.POST.get('allow_annotate', 'false').lower() == 'true'
+        allow_forms = request.POST.get('allow_forms', 'false').lower() == 'true'
+
+        input_path = None
+        output_path = None
+        try:
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as temp_input:
+                for chunk in uploaded_file.chunks():
+                    temp_input.write(chunk)
+                input_path = temp_input.name
+
+            output_path = os.path.splitext(input_path)[0] + '_protected.pdf'
+
+            protect_pdf(
+                input_path=input_path,
+                output_path=output_path,
+                user_password=password,
+                owner_password=password,
+                allow_printing=allow_printing,
+                allow_modify=allow_modify,
+                allow_copy=allow_copy,
+                allow_annotate=allow_annotate,
+                allow_forms=allow_forms,
+                allow_extract=allow_copy,
+                allow_assemble=allow_modify,
+                allow_print_highres=allow_printing,
+            )
+
+            output_filename = os.path.splitext(uploaded_file.name)[0] + '_protected.pdf'
+            with open(output_path, 'rb') as pdf_file:
+                pdf_data = pdf_file.read()
+                response = HttpResponse(pdf_data, content_type='application/pdf')
+                response['Content-Disposition'] = f'attachment; filename="{output_filename}"'
+                response['Content-Length'] = len(pdf_data)
+                return response
+        except Exception as e:
+            return HttpResponse(str(e), status=500)
+        finally:
+            password = None
+            try:
+                if input_path and os.path.exists(input_path):
+                    os.unlink(input_path)
+                if output_path and os.path.exists(output_path):
+                    os.unlink(output_path)
+            except Exception:
+                pass
+
+    return HttpResponse('Invalid request', status=400)
+
+
+@never_cache
+@csrf_exempt
+def unlock_pdf_view(request):
+    """Unlock a password-protected PDF."""
+    if request.method == 'GET':
+        html_path = os.path.join(os.path.dirname(__file__), 'unlock_pdf', 'index.html')
+        with open(html_path, 'r', encoding='utf-8') as f:
+            return HttpResponse(f.read(), content_type='text/html')
+
+    if request.method == 'POST' and request.FILES.get('file'):
+        uploaded_file = request.FILES['file']
+
+        original_ext = os.path.splitext(uploaded_file.name)[1].lower()
+        if original_ext != '.pdf':
+            return HttpResponse(
+                f'Invalid file type. Please upload a PDF file. You uploaded: {original_ext or "unknown"}',
+                status=400
+            )
+
+        password = request.POST.get('password', '').strip()
+        if not password:
+            return HttpResponse('Password is required to unlock the PDF', status=400)
+
+        input_path = None
+        output_path = None
+        try:
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as temp_input:
+                for chunk in uploaded_file.chunks():
+                    temp_input.write(chunk)
+                input_path = temp_input.name
+
+            output_path = os.path.splitext(input_path)[0] + '_unlocked.pdf'
+            unlock_pdf(input_path=input_path, output_path=output_path, password=password)
+
+            output_filename = os.path.splitext(uploaded_file.name)[0] + '_unlocked.pdf'
+            with open(output_path, 'rb') as pdf_file:
+                pdf_data = pdf_file.read()
+                response = HttpResponse(pdf_data, content_type='application/pdf')
+                response['Content-Disposition'] = f'attachment; filename="{output_filename}"'
+                response['Content-Length'] = len(pdf_data)
+                return response
+        except Exception as e:
+            return HttpResponse(str(e), status=500)
+        finally:
+            password = None
+            try:
+                if input_path and os.path.exists(input_path):
+                    os.unlink(input_path)
+                if output_path and os.path.exists(output_path):
+                    os.unlink(output_path)
+            except Exception:
+                pass
+
+    return HttpResponse('Invalid request', status=400)
+
+
+@never_cache
+@csrf_exempt
+def sign_pdf_view(request):
+    """Sign PDF - add signature image to a PDF."""
+    if request.method == 'GET':
+        html_path = os.path.join(os.path.dirname(__file__), 'sign_pdf', 'index.html')
+        with open(html_path, 'r', encoding='utf-8') as f:
+            return HttpResponse(f.read(), content_type='text/html')
+
+    if request.method == 'POST' and request.FILES.get('file'):
+        uploaded_file = request.FILES['file']
+        signature_file = request.FILES.get('signature')
+
+        original_ext = os.path.splitext(uploaded_file.name)[1].lower()
+        if original_ext != '.pdf':
+            return HttpResponse(
+                f'Invalid file type. Please upload a PDF file. You uploaded: {original_ext or "unknown"}',
+                status=400
+            )
+
+        if not signature_file:
+            return HttpResponse('Signature image is required', status=400)
+
+        try:
+            page_number = int(request.POST.get('page', 0))
+        except ValueError:
+            return HttpResponse('Invalid page number', status=400)
+
+        position = request.POST.get('position', 'bottom-right')
+
+        nx = request.POST.get('nx')
+        ny = request.POST.get('ny')
+        nwidth = request.POST.get('nwidth')
+        nheight = request.POST.get('nheight')
+        use_normalized = all(v is not None and v != '' for v in [nx, ny, nwidth])
+
+        try:
+            pdf_bytes = uploaded_file.read()
+            signature_bytes = signature_file.read()
+
+            if use_normalized:
+                try:
+                    nx_f = float(nx)
+                    ny_f = float(ny)
+                    nwidth_f = float(nwidth)
+                    nheight_f = float(nheight) if nheight not in [None, '', 'null'] else None
+                except ValueError:
+                    return HttpResponse('Invalid normalized coordinates', status=400)
+
+                signed_pdf_bytes = sign_pdf_normalized(
+                    pdf_bytes=pdf_bytes,
+                    signature_bytes=signature_bytes,
+                    page_number=page_number,
+                    nx=nx_f,
+                    ny=ny_f,
+                    nwidth=nwidth_f,
+                    nheight=nheight_f,
+                )
+            else:
+                signed_pdf_bytes = sign_pdf(
+                    pdf_bytes=pdf_bytes,
+                    signature_bytes=signature_bytes,
+                    page_number=page_number,
+                    position=position,
+                )
+
+            output_filename = os.path.splitext(uploaded_file.name)[0] + '_signed.pdf'
+            response = HttpResponse(signed_pdf_bytes, content_type='application/pdf')
+            response['Content-Disposition'] = f'attachment; filename="{output_filename}"'
+            response['Content-Length'] = len(signed_pdf_bytes)
+            return response
+        except Exception as e:
+            return HttpResponse(str(e), status=500)
+
+    return HttpResponse('Invalid request', status=400)
+
+
+@never_cache
+@csrf_exempt
+def sign_pdf_info_view(request):
+    """Get PDF info (page count) for the sign PDF UI."""
+    if request.method == 'POST' and request.FILES.get('file'):
+        uploaded_file = request.FILES['file']
+
+        try:
+            pdf_bytes = uploaded_file.read()
+            info = get_pdf_info(pdf_bytes)
+            return JsonResponse(info)
+        except Exception as e:
+            return HttpResponse(str(e), status=500)
+
+    return HttpResponse('Invalid request', status=400)
