@@ -117,14 +117,14 @@ function handleFile(file) {
 const toolEndpoints = {
     // 1. Converters
     'pdf-to-word': '/pdf-conversions/api/pdf-to-word/',
-    'word-to-pdf': '/to_pdf/api/word-to-pdf/',
+    'word-to-pdf': '/to_pdf/word-to-pdf/',
     'pdf-to-powerpoint': '/pdf-conversions/api/pdf-to-powerpoint/',
-    'powerpoint-to-pdf': '/to_pdf/api/powerpoint-to-pdf/',
+    'powerpoint-to-pdf': '/to_pdf/powerpoint-to-pdf/',
     'pdf-to-excel': '/pdf-conversions/api/pdf-to-excel/',
-    'excel-to-pdf': '/to_pdf/api/excel-to-pdf/',
+    'excel-to-pdf': '/to_pdf/excel-to-pdf/',
     'pdf-to-jpg': '/pdf-conversions/api/pdf-to-jpg/',
-    'jpg-to-pdf': '/to_pdf/api/jpg-to-pdf/',
-    'html-to-pdf': '/to_pdf/api/html-to-pdf/',
+    'jpg-to-pdf': '/to_pdf/jpg-to-pdf/',
+    'html-to-pdf': '/to_pdf/html-to-pdf/',
     'pdf-to-pdfa': '/pdf-conversions/api/pdf-to-pdfa/',
     'pdf-to-html': '/pdf-conversions/api/pdf-to-html/',
 
