@@ -4,10 +4,10 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { saveAs } from "file-saver";
 import { FileUpload } from "../ui/file-upload";
 import { Button } from "../ui/button";
-import { 
-    FileText, 
-    ChevronLeft, 
-    ChevronRight, 
+import {
+    FileText,
+    ChevronLeft,
+    ChevronRight,
     ZoomIn,
     ZoomOut,
     Maximize,
@@ -44,7 +44,8 @@ import {
     ArrowDown,
     GripVertical
 } from "lucide-react";
-import { pdfStrategyManager, getPdfJs } from "../../lib/pdf-service";
+import { pdfApi } from "../../lib/pdf-api";
+import { getPdfJs } from "../../lib/pdf-service";
 import { toast } from "../../lib/use-toast";
 import { cn } from "../../lib/utils";
 
@@ -71,16 +72,16 @@ export function OrganizePdfTool() {
     const [numPages, setNumPages] = useState(0);
     const [isProcessing, setIsProcessing] = useState(false);
     const [zoom, setZoom] = useState(100);
-    
+
     // Canvas refs
     const canvasRefs = useRef<(HTMLCanvasElement | null)[]>([]);
     const containerRef = useRef<HTMLDivElement>(null);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
-    
+
     // Selection state
     const [selectedPages, setSelectedPages] = useState<Set<string>>(new Set());
     const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-    
+
     // UI state
     const [showToolbar, setShowToolbar] = useState(true);
     const [showProperties, setShowProperties] = useState(true);
@@ -88,7 +89,7 @@ export function OrganizePdfTool() {
     const [deviceView, setDeviceView] = useState<"desktop" | "tablet" | "mobile">("desktop");
     const [showGrid, setShowGrid] = useState(false);
     const [showPageNumbers, setShowPageNumbers] = useState(true);
-    
+
     // History state for undo/redo
     const [history, setHistory] = useState<HistoryState[]>([]);
     const [historyIndex, setHistoryIndex] = useState(-1);
@@ -100,7 +101,7 @@ export function OrganizePdfTool() {
             setPages([]);
             setCurrentPage(1);
             setSelectedPages(new Set());
-            
+
             try {
                 const pdfjsLib = await getPdfJs();
                 const arrayBuffer = await selectedFile.arrayBuffer();
@@ -110,10 +111,10 @@ export function OrganizePdfTool() {
                 }).promise;
                 setPdfProxy(pdf);
                 setNumPages(pdf.numPages);
-                
+
                 // Initialize canvas refs
                 canvasRefs.current = Array(pdf.numPages).fill(null);
-                
+
                 // Create initial page items
                 const newPages: PageItem[] = [];
                 for (let i = 0; i < pdf.numPages; i++) {
@@ -124,7 +125,7 @@ export function OrganizePdfTool() {
                     });
                 }
                 setPages(newPages);
-                
+
                 // Initialize history
                 setHistory([{
                     pages: newPages,
@@ -135,7 +136,7 @@ export function OrganizePdfTool() {
                 console.error("Error loading PDF:", error);
                 setFile(null);
                 setPdfProxy(null);
-                
+
                 let errorMessage = "Failed to load PDF. Please try again.";
                 if (error.message?.includes('Invalid PDF structure') || error.name === 'InvalidPDFException') {
                     errorMessage = "The PDF file appears to be corrupted. Try using the Repair PDF tool first.";
@@ -161,22 +162,22 @@ export function OrganizePdfTool() {
         const renderAllPages = async () => {
             // Apply zoom
             const scale = zoom / 100;
-            
+
             // Render each page
             for (let i = 0; i < pdfProxy.numPages; i++) {
                 const page = await pdfProxy.getPage(i + 1);
                 const viewport = page.getViewport({ scale });
-                
+
                 // Get or create canvas
                 let canvas = canvasRefs.current[i];
-                
+
                 if (!canvas) continue;
-                
+
                 const context = canvas.getContext("2d")!;
-                
+
                 canvas.height = viewport.height;
                 canvas.width = viewport.width;
-                
+
                 await page.render({
                     canvasContext: context,
                     viewport: viewport,
@@ -184,7 +185,7 @@ export function OrganizePdfTool() {
                 }).promise;
             }
         };
-        
+
         renderAllPages();
     }, [file, pdfProxy, zoom]);
 
@@ -194,16 +195,16 @@ export function OrganizePdfTool() {
             pages: [...pages],
             currentPage
         };
-        
+
         // Remove any states after the current index
         const newHistory = history.slice(0, historyIndex + 1);
         newHistory.push(newState);
-        
+
         // Limit history to 20 states
         if (newHistory.length > 20) {
             newHistory.shift();
         }
-        
+
         setHistory(newHistory);
         setHistoryIndex(newHistory.length - 1);
     }, [pages, currentPage, history, historyIndex]);
@@ -247,7 +248,7 @@ export function OrganizePdfTool() {
     // Rotate selected pages
     const rotateSelected = (angle: number) => {
         if (selectedPages.size === 0) return;
-        
+
         saveToHistory();
         setPages(prev => prev.map(p => {
             if (selectedPages.has(p.id)) {
@@ -260,7 +261,7 @@ export function OrganizePdfTool() {
     // Delete selected pages
     const deleteSelected = () => {
         if (selectedPages.size === 0) return;
-        
+
         saveToHistory();
         setPages(prev => prev.filter(p => !selectedPages.has(p.id)));
         setSelectedPages(new Set());
@@ -283,10 +284,10 @@ export function OrganizePdfTool() {
     // Duplicate selected pages
     const duplicateSelected = () => {
         if (selectedPages.size === 0) return;
-        
+
         saveToHistory();
         const newPages: PageItem[] = [];
-        
+
         pages.forEach(p => {
             if (selectedPages.has(p.id)) {
                 newPages.push({
@@ -296,7 +297,7 @@ export function OrganizePdfTool() {
             }
             newPages.push(p);
         });
-        
+
         setPages(newPages);
     };
 
@@ -315,12 +316,12 @@ export function OrganizePdfTool() {
         setIsProcessing(true);
 
         try {
-            const result = await pdfStrategyManager.execute('organize', [file], {
+            const result = await pdfApi.organize(file, {
                 pages
             });
 
             saveAs(result.blob, result.fileName || `organized-${file.name}`);
-            
+
             toast.show({
                 title: "Success",
                 message: "PDF organized successfully!",
@@ -389,11 +390,11 @@ export function OrganizePdfTool() {
                 <div className="flex items-center gap-1">
                     {/* Navigation */}
                     <div className="flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-1 mr-2">
-                        <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8" 
-                            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} 
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                             disabled={currentPage === 1}
                         >
                             <ChevronLeft className="h-4 w-4" />
@@ -401,95 +402,95 @@ export function OrganizePdfTool() {
                         <span className="text-sm font-medium px-2 min-w-20 text-center text-gray-700 dark:text-gray-300">
                             {currentPage} / {numPages}
                         </span>
-                        <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8" 
-                            onClick={() => setCurrentPage(Math.min(numPages, currentPage + 1))} 
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => setCurrentPage(Math.min(numPages, currentPage + 1))}
                             disabled={currentPage === numPages}
                         >
                             <ChevronRight className="h-4 w-4" />
                         </Button>
                     </div>
-                    
+
                     {/* View Mode */}
                     <div className="flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-1 mr-2">
-                        <Button 
-                            variant={viewMode === 'grid' ? 'secondary' : 'ghost'} 
-                            size="icon" 
-                            className="h-8 w-8" 
+                        <Button
+                            variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
+                            size="icon"
+                            className="h-8 w-8"
                             onClick={() => setViewMode('grid')}
                             title="Grid View"
                         >
                             <LayoutGrid className="h-4 w-4" />
                         </Button>
-                        <Button 
-                            variant={viewMode === 'list' ? 'secondary' : 'ghost'} 
-                            size="icon" 
-                            className="h-8 w-8" 
+                        <Button
+                            variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+                            size="icon"
+                            className="h-8 w-8"
                             onClick={() => setViewMode('list')}
                             title="List View"
                         >
                             <List className="h-4 w-4" />
                         </Button>
                     </div>
-                    
+
                     {/* Zoom Controls */}
                     <div className="flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
-                        <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8" 
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
                             onClick={() => setZoom(Math.max(25, zoom - 25))}
                         >
                             <ZoomOut className="h-4 w-4" />
                         </Button>
                         <span className="text-sm font-medium px-2 min-w-[60px] text-center text-gray-700 dark:text-gray-300">{zoom}%</span>
-                        <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8" 
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
                             onClick={() => setZoom(Math.min(200, zoom + 25))}
                         >
                             <ZoomIn className="h-4 w-4" />
                         </Button>
                         <div className="w-px h-4 bg-gray-300 dark:bg-gray-600 mx-1" />
-                        <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8" 
-                            onClick={fitToPage} 
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={fitToPage}
                             title="Fit to Page"
                         >
                             <Maximize className="h-4 w-4" />
                         </Button>
                     </div>
-                    
+
                     {/* Actions */}
                     <div className="flex items-center gap-1 ml-2">
-                        <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8" 
-                            onClick={undo} 
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={undo}
                             disabled={historyIndex <= 0}
                             title="Undo"
                         >
                             <Undo className="h-4 w-4" />
                         </Button>
-                        <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8" 
-                            onClick={redo} 
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={redo}
                             disabled={historyIndex >= history.length - 1}
                             title="Redo"
                         >
                             <Redo className="h-4 w-4" />
                         </Button>
-                        <Button 
-                            onClick={savePdf} 
-                            disabled={isProcessing || pages.length === 0} 
+                        <Button
+                            onClick={savePdf}
+                            disabled={isProcessing || pages.length === 0}
                             className="h-8 px-3 bg-blue-600 hover:bg-blue-700 text-white"
                         >
                             {isProcessing ? "Processing..." : <><Download className="h-4 w-4 mr-1" /> Save</>}
@@ -497,7 +498,7 @@ export function OrganizePdfTool() {
                     </div>
                 </div>
             </div>
-            
+
             {/* Properties Panel */}
             <div className={cn(
                 "fixed right-4 top-20 z-40 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-4 w-80 transition-all duration-300",
@@ -505,16 +506,16 @@ export function OrganizePdfTool() {
             )}>
                 <div className="flex items-center justify-between mb-4">
                     <h3 className="font-semibold text-gray-900 dark:text-white">Page Properties</h3>
-                    <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-6 w-6" 
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
                         onClick={() => setShowProperties(false)}
                     >
                         <X className="h-4 w-4" />
                     </Button>
                 </div>
-                
+
                 {/* Page Info */}
                 <div className="mb-4 p-3 bg-gray-100 dark:bg-gray-700 rounded-lg">
                     <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
@@ -523,7 +524,7 @@ export function OrganizePdfTool() {
                         <div>Current Page: {currentPage}</div>
                     </div>
                 </div>
-                
+
                 {/* Page Options */}
                 <div className="mb-4">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Page Options</label>
@@ -570,7 +571,7 @@ export function OrganizePdfTool() {
                         </Button>
                     </div>
                 </div>
-                
+
                 {/* View Options */}
                 <div className="mb-4">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">View Options</label>
@@ -598,9 +599,9 @@ export function OrganizePdfTool() {
                     </div>
                 </div>
             </div>
-            
+
             {/* Main Canvas Area */}
-            <div 
+            <div
                 ref={scrollContainerRef}
                 className="flex-1 bg-gray-50 dark:bg-gray-900 overflow-auto p-8 relative"
             >
@@ -608,14 +609,14 @@ export function OrganizePdfTool() {
                     {viewMode === 'grid' ? (
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
                             {pages.map((page, index) => (
-                                <div 
-                                    key={page.id} 
+                                <div
+                                    key={page.id}
                                     className={cn(
                                         "relative group cursor-pointer transition-all duration-200",
                                         selectedPages.has(page.id) && "ring-2 ring-blue-500 ring-offset-2"
                                     )}
                                     onClick={() => toggleSelection(page.id)}
-                                    style={{ 
+                                    style={{
                                         transform: `scale(${zoom / 100}) rotate(${page.rotation}deg)`
                                     }}
                                 >
@@ -627,26 +628,26 @@ export function OrganizePdfTool() {
                                                     Blank Page
                                                 </div>
                                             ) : (
-                                                <canvas 
-                                                    ref={el => { canvasRefs.current[index] = el; }} 
-                                                    className="h-full w-full object-contain" 
+                                                <canvas
+                                                    ref={el => { canvasRefs.current[index] = el; }}
+                                                    className="h-full w-full object-contain"
                                                 />
                                             )}
-                                            
+
                                             {/* Page Number */}
                                             {showPageNumbers && (
                                                 <div className="absolute bottom-2 right-2 bg-gray-800 bg-opacity-70 text-white px-2 py-1 rounded text-xs">
                                                     {index + 1}
                                                 </div>
                                             )}
-                                            
+
                                             {/* Selection Indicator */}
                                             {selectedPages.has(page.id) && (
                                                 <div className="absolute top-2 right-2 bg-blue-500 text-white p-1 rounded-full">
                                                     <CheckSquare className="h-3 w-3" />
                                                 </div>
                                             )}
-                                            
+
                                             {/* Rotation Indicator */}
                                             {page.rotation !== 0 && (
                                                 <div className="absolute top-2 left-2 bg-gray-800 bg-opacity-70 text-white p-1 rounded-full">
@@ -655,7 +656,7 @@ export function OrganizePdfTool() {
                                             )}
                                         </div>
                                     </div>
-                                    
+
                                     {/* Page Info */}
                                     <div className="mt-2 text-center">
                                         <div className="text-sm font-medium">
@@ -664,9 +665,9 @@ export function OrganizePdfTool() {
                                     </div>
                                 </div>
                             ))}
-                            
+
                             {/* Add Blank Page Button */}
-                            <div 
+                            <div
                                 className="flex items-center justify-center border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg aspect-[3/4] w-full cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                                 onClick={addBlankPage}
                             >
@@ -677,14 +678,14 @@ export function OrganizePdfTool() {
                     ) : (
                         <div className="w-full max-w-2xl space-y-4">
                             {pages.map((page, index) => (
-                                <div 
-                                    key={page.id} 
+                                <div
+                                    key={page.id}
                                     className={cn(
                                         "flex items-center p-4 bg-white dark:bg-gray-800 rounded-lg shadow-md cursor-pointer transition-all duration-200",
                                         selectedPages.has(page.id) && "ring-2 ring-blue-500 ring-offset-2"
                                     )}
                                     onClick={() => toggleSelection(page.id)}
-                                    style={{ 
+                                    style={{
                                         transform: `scale(${zoom / 100}) rotate(${page.rotation}deg)`
                                     }}
                                 >
@@ -692,7 +693,7 @@ export function OrganizePdfTool() {
                                     <div className="mr-4 text-gray-400">
                                         <GripVertical className="h-5 w-5" />
                                     </div>
-                                    
+
                                     {/* Page Thumbnail */}
                                     <div className="flex-1 relative h-32 w-48 overflow-hidden rounded border border-gray-200 dark:border-gray-700">
                                         {page.isBlank ? (
@@ -700,34 +701,34 @@ export function OrganizePdfTool() {
                                                 Blank Page
                                             </div>
                                         ) : (
-                                            <canvas 
-                                                ref={el => { canvasRefs.current[index] = el; }} 
-                                                className="h-full w-full object-contain" 
+                                            <canvas
+                                                ref={el => { canvasRefs.current[index] = el; }}
+                                                className="h-full w-full object-contain"
                                             />
                                         )}
-                                        
+
                                         {/* Page Number */}
                                         {showPageNumbers && (
                                             <div className="absolute bottom-2 right-2 bg-gray-800 bg-opacity-70 text-white px-2 py-1 rounded text-xs">
-                                                    {index + 1}
-                                                </div>
+                                                {index + 1}
+                                            </div>
                                         )}
-                                        
+
                                         {/* Selection Indicator */}
                                         {selectedPages.has(page.id) && (
                                             <div className="absolute top-2 right-2 bg-blue-500 text-white p-1 rounded-full">
-                                                    <CheckSquare className="h-3 w-3" />
-                                                </div>
+                                                <CheckSquare className="h-3 w-3" />
+                                            </div>
                                         )}
-                                        
+
                                         {/* Rotation Indicator */}
                                         {page.rotation !== 0 && (
                                             <div className="absolute top-2 left-2 bg-gray-800 bg-opacity-70 text-white p-1 rounded-full">
-                                                    <RotateCw className="h-3 w-3" style={{ transform: `rotate(${page.rotation}deg)` }} />
-                                                </div>
+                                                <RotateCw className="h-3 w-3" style={{ transform: `rotate(${page.rotation}deg)` }} />
+                                            </div>
                                         )}
                                     </div>
-                                    
+
                                     {/* Page Info */}
                                     <div className="ml-4 flex-1">
                                         <div className="text-sm font-medium">
@@ -740,7 +741,7 @@ export function OrganizePdfTool() {
                     )}
                 </div>
             </div>
-            
+
             {/* Settings Panel */}
             <div className="fixed bottom-4 left-4 z-40">
                 <div className="flex items-center gap-2 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-2">
@@ -789,7 +790,7 @@ export function OrganizePdfTool() {
                     </Button>
                 </div>
             </div>
-            
+
             {/* Help Button */}
             <div className="fixed bottom-4 right-4 z-40">
                 <Button

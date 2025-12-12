@@ -6,7 +6,7 @@ import { FileUpload } from "../ui/file-upload";
 import { Button } from "../ui/button";
 import { ArrowRight, AlertTriangle, Check } from "lucide-react";
 import { cn } from "../../lib/utils";
-import { pdfStrategyManager } from "../../lib/pdf-service";
+import { pdfApi } from "../../lib/pdf-api";
 import { toast } from "../../lib/use-toast";
 
 export function CompressPdfTool() {
@@ -25,12 +25,11 @@ export function CompressPdfTool() {
         setIsProcessing(true);
 
         try {
-            const result = await pdfStrategyManager.execute('compress', [file], {
-                level: compressionLevel
-            });
+            // Backend-first with client-side fallback
+            const result = await pdfApi.compress(file, compressionLevel);
 
-            saveAs(result.blob, result.fileName || `compressed-${file.name}`);
-            
+            saveAs(result.blob, result.fileName);
+
             toast.show({
                 title: "Success",
                 message: "PDF compressed successfully!",
