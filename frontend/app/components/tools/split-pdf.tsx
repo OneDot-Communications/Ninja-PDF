@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { saveAs } from "file-saver";
 import { FileUpload } from "../ui/file-upload";
 import { Button } from "../ui/button";
 import { ArrowRight, CheckCircle2, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { pdfStrategyManager, getPdfJs } from "../../lib/pdf-service";
+import { pdfApi } from "../../lib/pdf-api";
+import { getPdfJs } from "../../lib/pdf-service";
 import { toast } from "../../lib/use-toast";
 
 export function SplitPdfTool() {
@@ -36,7 +37,7 @@ export function SplitPdfTool() {
             const arrayBuffer = await file.arrayBuffer();
             const pdf = await (pdfjsLib as any).getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
             setNumPages(pdf.numPages);
-            
+
             const thumbs: string[] = [];
             for (let i = 1; i <= pdf.numPages; i++) {
                 const page = await pdf.getPage(i);
@@ -45,7 +46,7 @@ export function SplitPdfTool() {
                 const context = canvas.getContext("2d");
                 canvas.height = viewport.height;
                 canvas.width = viewport.width;
-                
+
                 if (context) {
                     await page.render({
                         canvasContext: context,
@@ -84,13 +85,13 @@ export function SplitPdfTool() {
         setIsProcessing(true);
 
         try {
-            const result = await pdfStrategyManager.execute('split', [file], {
+            const result = await pdfApi.split(file, {
                 selectedPages,
                 splitMode
             });
 
             saveAs(result.blob, result.fileName || `split-${file.name}`);
-            
+
             toast.show({
                 title: "Success",
                 message: "PDF split successfully!",
@@ -170,10 +171,10 @@ export function SplitPdfTool() {
                                 )}
                             >
                                 <div className="aspect-[1/1.4] bg-muted/20">
-                                    <img 
-                                        src={src} 
-                                        alt={`Page ${pageNum}`} 
-                                        className="h-full w-full object-contain" 
+                                    <img
+                                        src={src}
+                                        alt={`Page ${pageNum}`}
+                                        className="h-full w-full object-contain"
                                     />
                                 </div>
                                 <div className="absolute bottom-2 right-2 flex h-6 w-6 items-center justify-center rounded-full bg-background shadow-sm">

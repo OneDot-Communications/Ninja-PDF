@@ -6,7 +6,7 @@ import { FileUpload } from "../ui/file-upload";
 import { Button } from "../ui/button";
 import { Archive, Check, Info } from "lucide-react";
 import { cn } from "../../lib/utils";
-import { pdfStrategyManager } from "../../lib/pdf-service";
+import { pdfApi } from "../../lib/pdf-api";
 import { toast } from "../../lib/use-toast";
 
 export function PdfToPdfATool() {
@@ -25,12 +25,11 @@ export function PdfToPdfATool() {
         setIsProcessing(true);
 
         try {
-            const result = await pdfStrategyManager.execute('pdf-to-pdfa', [file], {
-                conformance
-            });
+            // Backend-first with client-side fallback
+            const result = await pdfApi.pdfToPdfa(file);
 
-            saveAs(result.blob, result.fileName || `archived-${conformance}-${file.name}`);
-            
+            saveAs(result.blob, result.fileName);
+
             toast.show({
                 title: "Success",
                 message: "PDF converted to PDF/A successfully!",
@@ -109,7 +108,7 @@ export function PdfToPdfATool() {
                         <div className="rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground flex gap-2">
                             <Info className="h-4 w-4 shrink-0 mt-0.5" />
                             <p>
-                                Note: This tool updates document metadata and structure for archiving. 
+                                Note: This tool updates document metadata and structure for archiving.
                                 For strict legal compliance, verify the output with a dedicated validator.
                             </p>
                         </div>

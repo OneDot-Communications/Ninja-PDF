@@ -1,7 +1,8 @@
-'use client';
+"use client";
 
-import { useRef } from 'react';
-import Toaster, { ToasterRef } from './components/ui/toast';
+import { useRef } from "react";
+import Toaster, { ToasterRef } from "./components/ui/toast";
+import { AuthProvider } from './context/AuthContext';
 
 export const toast = {
   show: (data: Parameters<ToasterRef['show']>[0]) => {
@@ -16,9 +17,11 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   toast.show = (data) => toasterRef.current?.show(data);
 
   return (
-    <>
-      {children}
-      <Toaster ref={toasterRef} />
-    </>
+    <AuthProvider>
+      <>
+        {children}
+        <Toaster ref={toasterRef} />
+      </>
+    </AuthProvider>
   );
 }

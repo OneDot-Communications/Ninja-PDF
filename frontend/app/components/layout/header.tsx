@@ -7,12 +7,15 @@ import { createPortal } from "react-dom";
 import { Grip, Menu, X, Check } from "lucide-react";
 import { FaFilePdf, FaRobot, FaSignature, FaUserGroup, FaDesktop, FaMobile, FaGithub } from "react-icons/fa6";
 import { motion, AnimatePresence } from "framer-motion";
+import { useAuth } from '@/app/context/AuthContext';
+import { FaUser } from 'react-icons/fa6';
 
 export function Header() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [mounted, setMounted] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
+    const { user } = useAuth();
 
     useEffect(() => {
         setMounted(true);
@@ -39,7 +42,7 @@ export function Header() {
     }, [isMobileMenuOpen]);
 
     return (
-        <header className="sticky top-0 z-50 w-full bg-white/80 backdrop-blur-md shadow-sm supports-[backdrop-filter]:bg-white/60">
+        <header className="sticky top-0 z-50 w-full bg-white/80 backdrop-blur-md shadow-sm supports-backdrop-filter:bg-white/60">
             <div className="container mx-auto flex h-16 items-center justify-between px-4 md:px-6 relative">
                 <Link href="/" className="flex items-center">
                     <span className="text-3xl font-bold font-caveat">
@@ -50,16 +53,36 @@ export function Header() {
 
                 {/* Desktop Actions */}
                 <div className="hidden md:flex items-center gap-4">
-                    <Link href="/login">
-                        <Button variant="ghost" className="text-slate-600 hover:text-[#01B0F1] hover:bg-blue-50">
-                            Login
-                        </Button>
-                    </Link>
-                    <Link href="/signup">
-                        <Button className="bg-[#01B0F1] hover:bg-[#0091d4] text-white shadow-md hover:shadow-lg transition-all">
-                            Sign Up
-                        </Button>
-                    </Link>
+                    {!user && (
+                        <>
+                            <Link href="/login">
+                                <Button variant="ghost" className="text-slate-600 hover:text-[#01B0F1] hover:bg-blue-50">
+                                    Login
+                                </Button>
+                            </Link>
+                            <Link href="/signup">
+                                <Button className="bg-[#01B0F1] hover:bg-[#0091d4] text-white shadow-md hover:shadow-lg transition-all">
+                                    Sign Up
+                                </Button>
+                            </Link>
+                        </>
+                    )}
+                    {user && (
+                        <div className="flex items-center gap-3 mr-2">
+                            <span className="text-sm font-medium text-slate-700 hidden lg:inline-block">
+                                Hello, {user.first_name || user.email?.split('@')[0] || 'User'}
+                            </span>
+                            <Link href={
+                                user.role === 'SUPER_ADMIN' ? "/super-admin/dashboard" :
+                                    user.role === 'ADMIN' ? "/admin/dashboard" :
+                                        "/profile"
+                            }>
+                                <button className="flex items-center justify-center w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 transition-colors border border-slate-200">
+                                    <FaUser className="w-4 h-4 text-slate-600" />
+                                </button>
+                            </Link>
+                        </div>
+                    )}
                     <div ref={menuRef} className="relative">
                         <button
                             onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -99,7 +122,7 @@ export function Header() {
                                                     <div className="text-sm text-slate-500">Talk to your docs</div>
                                                 </div>
                                             </Link>
-                                            <Link href="#" className="flex items-start gap-4 p-2 rounded-lg hover:bg-green-50 transition-colors group">
+                                            <Link href="/features/coming-soon" className="flex items-start gap-4 p-2 rounded-lg hover:bg-green-50 transition-colors group">
                                                 <div className="p-2 bg-green-100 rounded-lg text-green-600 group-hover:bg-green-200">
                                                     <FaSignature className="w-5 h-5" />
                                                 </div>
@@ -133,11 +156,11 @@ export function Header() {
                                         </div>
                                         <div className="space-y-2">
                                             <h4 className="font-semibold text-slate-900">Apps</h4>
-                                            <Link href="#" className="flex items-center gap-2 text-slate-600 hover:text-blue-600 p-2 hover:bg-slate-50 rounded-lg">
+                                            <Link href="/features/coming-soon" className="flex items-center gap-2 text-slate-600 hover:text-blue-600 p-2 hover:bg-slate-50 rounded-lg">
                                                 <FaDesktop className="w-4 h-4" />
                                                 <span>Desktop App</span>
                                             </Link>
-                                            <Link href="#" className="flex items-center gap-2 text-slate-600 hover:text-blue-600 p-2 hover:bg-slate-50 rounded-lg">
+                                            <Link href="/features/coming-soon" className="flex items-center gap-2 text-slate-600 hover:text-blue-600 p-2 hover:bg-slate-50 rounded-lg">
                                                 <FaMobile className="w-4 h-4" />
                                                 <span>Mobile App</span>
                                             </Link>
@@ -182,7 +205,7 @@ export function Header() {
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            className="fixed inset-0 z-[100] bg-white md:hidden overflow-y-auto"
+                            className="fixed inset-0 z-100 bg-white md:hidden overflow-y-auto"
                         >
                             <div className="flex flex-col min-h-screen">
                                 {/* Mobile Menu Header */}
@@ -205,16 +228,41 @@ export function Header() {
                                 <div className="flex-1 p-6 space-y-8">
                                     {/* Actions */}
                                     <div className="grid grid-cols-2 gap-4">
-                                        <Link href="/login" onClick={() => setIsMobileMenuOpen(false)}>
-                                            <Button variant="outline" className="w-full justify-center h-12 text-slate-600 border-slate-200">
-                                                Login
-                                            </Button>
-                                        </Link>
-                                        <Link href="/signup" onClick={() => setIsMobileMenuOpen(false)}>
-                                            <Button className="w-full justify-center h-12 bg-[#01B0F1] hover:bg-[#0091d4] text-white">
-                                                Sign Up
-                                            </Button>
-                                        </Link>
+                                        {!user ? (
+                                            <>
+                                                <Link href="/login" onClick={() => setIsMobileMenuOpen(false)}>
+                                                    <Button variant="outline" className="w-full justify-center h-12 text-slate-600 border-slate-200">
+                                                        Login
+                                                    </Button>
+                                                </Link>
+                                                <Link href="/signup" onClick={() => setIsMobileMenuOpen(false)}>
+                                                    <Button className="w-full justify-center h-12 bg-[#01B0F1] hover:bg-[#0091d4] text-white">
+                                                        Sign Up
+                                                    </Button>
+                                                </Link>
+                                            </>
+                                        ) : (
+                                            <div className="col-span-2 flex items-center justify-between bg-slate-50 p-3 rounded-lg">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-10 h-10 rounded-full bg-[#01B0F1]/10 flex items-center justify-center text-[#01B0F1]">
+                                                        <FaUser className="w-5 h-5" />
+                                                    </div>
+                                                    <div className="flex flex-col">
+                                                        <span className="text-sm font-bold text-slate-900">
+                                                            {user.first_name || 'User'}
+                                                        </span>
+                                                        <span className="text-xs text-slate-500 truncate max-w-[120px]">
+                                                            {user.email}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <Link href={user.role === 'ADMIN' || user.role === 'SUPER_ADMIN' ? "/admin/dashboard" : "/profile"} onClick={() => setIsMobileMenuOpen(false)}>
+                                                    <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700 hover:bg-blue-50">
+                                                        {user.role === 'ADMIN' || user.role === 'SUPER_ADMIN' ? "Dashboard" : "Profile"}
+                                                    </Button>
+                                                </Link>
+                                            </div>
+                                        )}
                                     </div>
 
                                     {/* Menu Sections */}
@@ -261,11 +309,11 @@ export function Header() {
                                         <div className="space-y-4">
                                             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Apps</h3>
                                             <div className="flex gap-4">
-                                                <Link href="#" className="flex-1 flex flex-col items-center gap-2 p-4 rounded-xl border border-slate-100 text-slate-600 hover:border-blue-200 hover:text-blue-600">
+                                                <Link href="/features/coming-soon" className="flex-1 flex flex-col items-center gap-2 p-4 rounded-xl border border-slate-100 text-slate-600 hover:border-blue-200 hover:text-blue-600">
                                                     <FaDesktop className="w-6 h-6" />
                                                     <span className="text-xs font-medium">Desktop</span>
                                                 </Link>
-                                                <Link href="#" className="flex-1 flex flex-col items-center gap-2 p-4 rounded-xl border border-slate-100 text-slate-600 hover:border-blue-200 hover:text-blue-600">
+                                                <Link href="/features/coming-soon" className="flex-1 flex flex-col items-center gap-2 p-4 rounded-xl border border-slate-100 text-slate-600 hover:border-blue-200 hover:text-blue-600">
                                                     <FaMobile className="w-6 h-6" />
                                                     <span className="text-xs font-medium">Mobile</span>
                                                 </Link>

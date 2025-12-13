@@ -5,7 +5,7 @@ import { saveAs } from "file-saver";
 import { FileUpload } from "../ui/file-upload";
 import { Button } from "../ui/button";
 import { Lock, ShieldCheck, Eye, EyeOff } from "lucide-react";
-import { pdfStrategyManager } from "../../lib/pdf-service";
+import { pdfApi } from "../../lib/pdf-api";
 import { toast } from "../../lib/use-toast";
 
 export function ProtectPdfTool() {
@@ -36,21 +36,18 @@ export function ProtectPdfTool() {
         setIsProcessing(true);
 
         try {
-            const result = await pdfStrategyManager.execute('protect', [file], {
-                userPassword,
-                ownerPassword,
-                permissions: {
-                    printing: allowPrinting,
-                    modifying: allowModifying,
-                    copying: allowCopying,
-                    annotating: allowAnnotating,
-                    fillingForms: allowFillingForms,
-                    contentAccessibility: allowAccessibility,
-                    documentAssembly: allowAssembly,
-                }
+            // pdfApi.protect handles both backend and client-side fallback internally
+            const result = await pdfApi.protect(file, userPassword || ownerPassword, {
+                allowPrinting,
+                allowCopying,
+                allowModifying,
+                allowAnnotating,
+                allowFillingForms,
+                allowAccessibility,
+                allowAssembly
             });
 
-            saveAs(result.blob, result.fileName || `protected-${file.name}`);
+            saveAs(result.blob, result.fileName);
 
             toast.show({
                 title: "Success",

@@ -13,4 +13,11 @@ markdown
 mammoth
 xlrd
 docx2python
+psycopg2-binary
+djangorestframework
+djangorestframework-simplejwt
+django-cors-headers
+django-allauth
+dj-rest-auth
+python-dotenv
 olefile
