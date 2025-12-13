@@ -1,11 +1,9 @@
 from django.shortcuts import render
-from django.http import JsonResponse, HttpResponse, FileResponse
+from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 import io
 import zipfile
-import os
-from django.conf import settings
 from .pdf_to_jpg.pdf_to_jpg import convert_pdf_to_jpg, get_pdf_page_count
 from .pdf_to_excel.pdf_to_excel import convert_pdf_to_excel
 from .pdf_to_powerpoint.pdf_to_powerpoint import convert_pdf_to_powerpoint
@@ -14,65 +12,64 @@ from .pdf_to_pdfa.pdf_to_pdfa import convert_pdf_to_pdfa
 from .pdf_to_html.pdf_to_html import convert_pdf_to_html
 
 
-def render_static_index(request, *args, **kwargs):
-    """Serve the single static landing page for all tools."""
-    static_file = os.path.join(settings.BASE_DIR, 'static', 'index.html')
-    with open(static_file, 'r', encoding='utf-8') as f:
-        return HttpResponse(f.read(), content_type='text/html')
-
-
 def index(request):
-    return render_static_index(request)
+    """Serve the single consolidated static index for all tools."""
+    import os
+    from django.conf import settings
+    static_path = os.path.join(settings.BASE_DIR, 'static', 'index.html')
+    with open(static_path, 'r', encoding='utf-8') as f:
+        html_content = f.read()
+    return HttpResponse(html_content, content_type='text/html')
 
 
 def pdf_to_excel_index(request):
-    """
-    Serve the PDF to Excel conversion UI.
-    """
+    """Serve the consolidated static index."""
     import os
     from django.conf import settings
-    
-    return render_static_index(request)
+    static_path = os.path.join(settings.BASE_DIR, 'static', 'index.html')
+    with open(static_path, 'r', encoding='utf-8') as f:
+        html_content = f.read()
+    return HttpResponse(html_content, content_type='text/html')
 
 
 def pdf_to_powerpoint_index(request):
-    """
-    Serve the PDF to PowerPoint conversion UI.
-    """
+    """Serve the consolidated static index."""
     import os
     from django.conf import settings
-    
-    return render_static_index(request)
+    static_path = os.path.join(settings.BASE_DIR, 'static', 'index.html')
+    with open(static_path, 'r', encoding='utf-8') as f:
+        html_content = f.read()
+    return HttpResponse(html_content, content_type='text/html')
 
 
 def pdf_to_word_index(request):
-    """
-    Serve the PDF to Word conversion UI.
-    """
+    """Serve the consolidated static index."""
     import os
     from django.conf import settings
-    
-    return render_static_index(request)
+    static_path = os.path.join(settings.BASE_DIR, 'static', 'index.html')
+    with open(static_path, 'r', encoding='utf-8') as f:
+        html_content = f.read()
+    return HttpResponse(html_content, content_type='text/html')
 
 
 def pdf_to_pdfa_index(request):
-    """
-    Serve the PDF to PDF/A conversion UI.
-    """
+    """Serve the consolidated static index."""
     import os
     from django.conf import settings
-    
-    return render_static_index(request)
+    static_path = os.path.join(settings.BASE_DIR, 'static', 'index.html')
+    with open(static_path, 'r', encoding='utf-8') as f:
+        html_content = f.read()
+    return HttpResponse(html_content, content_type='text/html')
 
 
 def pdf_to_html_index(request):
-    """
-    Serve the PDF to HTML conversion UI.
-    """
+    """Serve the consolidated static index."""
     import os
     from django.conf import settings
-    
-    return render_static_index(request)
+    static_path = os.path.join(settings.BASE_DIR, 'static', 'index.html')
+    with open(static_path, 'r', encoding='utf-8') as f:
+        html_content = f.read()
+    return HttpResponse(html_content, content_type='text/html')
 
 
 @csrf_exempt

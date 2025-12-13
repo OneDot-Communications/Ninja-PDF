@@ -8,7 +8,7 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <title>Ninja PDF - Backend Tester</title>
-    <link rel="stylesheet" href="/static/css/style.css?v=6">
+    <link rel="stylesheet" href="/static/css/style.css?v=21">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
@@ -34,7 +34,7 @@
 
             <h3 class="subcategory-title">Standard Converters</h3>
             <div class="tools-grid">
-                <div class="tool-card" onclick="window.location.href='/pdf-conversions/pdf-to-word/'">
+                <div class="tool-card" onclick="openTool('pdf-to-word', 'PDF to Word')">
                     <div class="icon word"><i class="fas fa-file-word"></i></div>
                     <h3>PDF to Word</h3>
                 </div>
@@ -42,7 +42,7 @@
                     <div class="icon word"><i class="fas fa-file-word"></i></div>
                     <h3>Word to PDF</h3>
                 </div>
-                <div class="tool-card" onclick="window.location.href='/pdf-conversions/pdf-to-powerpoint/'">
+                <div class="tool-card" onclick="openTool('pdf-to-powerpoint', 'PDF to PowerPoint')">
                     <div class="icon ppt"><i class="fas fa-file-powerpoint"></i></div>
                     <h3>PDF to PowerPoint</h3>
                 </div>
@@ -50,7 +50,7 @@
                     <div class="icon ppt"><i class="fas fa-file-powerpoint"></i></div>
                     <h3>PowerPoint to PDF</h3>
                 </div>
-                <div class="tool-card" onclick="window.location.href='/pdf-conversions/pdf-to-excel/'">
+                <div class="tool-card" onclick="openTool('pdf-to-excel', 'PDF to Excel')">
                     <div class="icon excel"><i class="fas fa-file-excel"></i></div>
                     <h3>PDF to Excel</h3>
                 </div>
@@ -58,7 +58,7 @@
                     <div class="icon excel"><i class="fas fa-file-excel"></i></div>
                     <h3>Excel to PDF</h3>
                 </div>
-                <div class="tool-card" onclick="window.location.href='/pdf-conversions/'">
+                <div class="tool-card" onclick="openTool('pdf-to-jpg', 'PDF to JPG')">
                     <div class="icon image"><i class="fas fa-file-image"></i></div>
                     <h3>PDF to JPG</h3>
                 </div>
@@ -70,11 +70,11 @@
                     <div class="icon code"><i class="fas fa-code"></i></div>
                     <h3>HTML to PDF</h3>
                 </div>
-                <div class="tool-card" onclick="window.location.href='/pdf-conversions/pdf-to-pdfa/'">
+                <div class="tool-card" onclick="openTool('pdf-to-pdfa', 'PDF to PDF/A')">
                     <div class="icon pdf"><i class="fas fa-file-pdf"></i></div>
                     <h3>PDF to PDF/A</h3>
                 </div>
-                <div class="tool-card" onclick="window.location.href='/pdf-conversions/pdf-to-html/'">
+                <div class="tool-card" onclick="openTool('pdf-to-html', 'PDF to HTML')">
                     <div class="icon code"><i class="fas fa-code"></i></div>
                     <h3>PDF to HTML</h3>
                 </div>
@@ -101,11 +101,11 @@
         <div class="category-section">
             <h2 class="category-title">2. Compression & Optimization</h2>
             <div class="tools-grid">
-                <div class="tool-card" onclick="window.location.href='/optimizer/compress-pdf-ui/'">
+                <div class="tool-card" onclick="openTool('compress-pdf', 'Compress PDF')">
                     <div class="icon compress"><i class="fas fa-compress-arrows-alt"></i></div>
                     <h3>Compress PDF</h3>
                 </div>
-                <div class="tool-card" onclick="window.location.href='/optimizer/compress-image-ui/'">
+                <div class="tool-card" onclick="openTool('compress-image', 'Image Compression')">
                     <div class="icon compress"><i class="fas fa-compress"></i></div>
                     <h3>Image Compression</h3>
                 </div>
@@ -387,6 +387,283 @@
                 </div>
             </div>
             
+            <!-- Crop PDF Special UI -->
+            <div id="cropOptions" style="display: none;">
+                <div style="padding: 15px; background: #e8f5e9; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #4caf50;">
+                    <p style="margin: 0; color: #2e7d32; font-weight: 600;">
+                        <i class="fas fa-check-circle"></i> File Selected: <span id="cropFileName">filename.pdf</span>
+                    </p>
+                </div>
+                
+                <div style="padding: 15px; background: #e3f2fd; border-radius: 8px; margin-bottom: 15px;">
+                    <p style="margin: 0; color: #1565c0; font-size: 14px;">
+                        <i class="fas fa-info-circle"></i> Click and drag to select the area you want to keep. Resize if needed.
+                    </p>
+                </div>
+                
+                <!-- PDF Preview with Crop Area -->
+                <div id="cropPreviewContainer" style="position: relative; background: #333; border-radius: 8px; overflow: hidden; margin-bottom: 15px; min-height: 400px; display: flex; justify-content: center; align-items: center;">
+                    <canvas id="cropCanvas" style="max-width: 100%; display: block;"></canvas>
+                    
+                    <!-- Crop Selection Box -->
+                    <div id="cropSelection" style="position: absolute; border: 2px dashed #4caf50; background: rgba(76, 175, 80, 0.1); cursor: move; display: none;">
+                        <!-- Resize Handles -->
+                        <div class="crop-handle" data-handle="nw" style="position: absolute; top: -5px; left: -5px; width: 10px; height: 10px; background: #4caf50; border-radius: 50%; cursor: nw-resize;"></div>
+                        <div class="crop-handle" data-handle="n" style="position: absolute; top: -5px; left: 50%; transform: translateX(-50%); width: 10px; height: 10px; background: #4caf50; border-radius: 50%; cursor: n-resize;"></div>
+                        <div class="crop-handle" data-handle="ne" style="position: absolute; top: -5px; right: -5px; width: 10px; height: 10px; background: #4caf50; border-radius: 50%; cursor: ne-resize;"></div>
+                        <div class="crop-handle" data-handle="w" style="position: absolute; top: 50%; left: -5px; transform: translateY(-50%); width: 10px; height: 10px; background: #4caf50; border-radius: 50%; cursor: w-resize;"></div>
+                        <div class="crop-handle" data-handle="e" style="position: absolute; top: 50%; right: -5px; transform: translateY(-50%); width: 10px; height: 10px; background: #4caf50; border-radius: 50%; cursor: e-resize;"></div>
+                        <div class="crop-handle" data-handle="sw" style="position: absolute; bottom: -5px; left: -5px; width: 10px; height: 10px; background: #4caf50; border-radius: 50%; cursor: sw-resize;"></div>
+                        <div class="crop-handle" data-handle="s" style="position: absolute; bottom: -5px; left: 50%; transform: translateX(-50%); width: 10px; height: 10px; background: #4caf50; border-radius: 50%; cursor: s-resize;"></div>
+                        <div class="crop-handle" data-handle="se" style="position: absolute; bottom: -5px; right: -5px; width: 10px; height: 10px; background: #4caf50; border-radius: 50%; cursor: se-resize;"></div>
+                    </div>
+                    
+                    <!-- Dark overlay outside crop area -->
+                    <div id="cropOverlay" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; display: none;"></div>
+                </div>
+                
+                <!-- Page Navigation -->
+                <div style="display: flex; justify-content: center; align-items: center; gap: 15px; margin-bottom: 15px;">
+                    <button onclick="cropPrevPage()" style="padding: 8px 16px; background: #f5f5f5; border: 1px solid #ddd; border-radius: 5px; cursor: pointer;">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <span style="font-weight: 600; color: #333;">
+                        Page <span id="cropCurrentPage">1</span> / <span id="cropTotalPages">1</span>
+                    </span>
+                    <button onclick="cropNextPage()" style="padding: 8px 16px; background: #f5f5f5; border: 1px solid #ddd; border-radius: 5px; cursor: pointer;">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+                
+                <!-- Pages Option -->
+                <div style="display: flex; justify-content: center; gap: 20px; margin-bottom: 15px;">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                        <input type="radio" name="cropPages" value="all" checked style="width: 18px; height: 18px; accent-color: #4caf50;">
+                        <span style="font-weight: 500; color: #333;">All pages</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                        <input type="radio" name="cropPages" value="current" style="width: 18px; height: 18px; accent-color: #4caf50;">
+                        <span style="font-weight: 500; color: #333;">Current page</span>
+                    </label>
+                </div>
+                
+                <!-- Hidden inputs for crop values -->
+                <input type="hidden" id="cropTop" value="0">
+                <input type="hidden" id="cropBottom" value="0">
+                <input type="hidden" id="cropLeft" value="0">
+                <input type="hidden" id="cropRight" value="0">
+                
+                <div style="display: flex; gap: 10px;">
+                    <button onclick="resetCropSelection()" style="flex: 1; padding: 12px; background: #f5f5f5; border: 1px solid #ddd; border-radius: 5px; cursor: pointer; font-weight: 600;">
+                        <i class="fas fa-undo"></i> Reset
+                    </button>
+                    <button class="btn-convert" onclick="applyCrop()" style="flex: 2; cursor: pointer; background: linear-gradient(135deg, #4caf50 0%, #388e3c 100%);">
+                        <i class="fas fa-crop"></i> Crop PDF
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Rotate PDF Special UI -->
+            <div id="rotateOptions" style="display: none;">
+                <div style="padding: 15px; background: #e1f5fe; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #03a9f4;">
+                    <p style="margin: 0; color: #01579b; font-weight: 600;">
+                        <i class="fas fa-check-circle"></i> File Selected: <span id="rotateFileName">filename.pdf</span>
+                    </p>
+                </div>
+                
+                <div style="padding: 20px; background: #f8f9fa; border-radius: 8px;">
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; margin-bottom: 12px; font-weight: 600; color: #333; font-size: 16px;">
+                            <i class="fas fa-sync-alt"></i> Rotation Angle:
+                        </label>
+                        
+                        <!-- Rotation options as visual buttons -->
+                        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;">
+                            <button type="button" class="rotation-option" data-rotation="90" onclick="selectRotation(90)" style="padding: 20px; background: white; border: 2px solid #ddd; border-radius: 8px; cursor: pointer; transition: all 0.3s; display: flex; flex-direction: column; align-items: center; gap: 8px;">
+                                <i class="fas fa-redo" style="font-size: 24px; color: #03a9f4;"></i>
+                                <span style="font-weight: 600; color: #333;">90°</span>
+                                <small style="color: #666;">Clockwise</small>
+                            </button>
+                            
+                            <button type="button" class="rotation-option" data-rotation="180" onclick="selectRotation(180)" style="padding: 20px; background: white; border: 2px solid #ddd; border-radius: 8px; cursor: pointer; transition: all 0.3s; display: flex; flex-direction: column; align-items: center; gap: 8px;">
+                                <i class="fas fa-sync" style="font-size: 24px; color: #03a9f4;"></i>
+                                <span style="font-weight: 600; color: #333;">180°</span>
+                                <small style="color: #666;">Flip</small>
+                            </button>
+                            
+                            <button type="button" class="rotation-option" data-rotation="270" onclick="selectRotation(270)" style="padding: 20px; background: white; border: 2px solid #ddd; border-radius: 8px; cursor: pointer; transition: all 0.3s; display: flex; flex-direction: column; align-items: center; gap: 8px;">
+                                <i class="fas fa-undo" style="font-size: 24px; color: #03a9f4;"></i>
+                                <span style="font-weight: 600; color: #333;">270°</span>
+                                <small style="color: #666;">Counter-CW</small>
+                            </button>
+                            
+                            <button type="button" class="rotation-option" data-rotation="-90" onclick="selectRotation(-90)" style="padding: 20px; background: white; border: 2px solid #ddd; border-radius: 8px; cursor: pointer; transition: all 0.3s; display: flex; flex-direction: column; align-items: center; gap: 8px;">
+                                <i class="fas fa-undo" style="font-size: 24px; color: #03a9f4;"></i>
+                                <span style="font-weight: 600; color: #333;">-90°</span>
+                                <small style="color: #666;">Left</small>
+                            </button>
+                        </div>
+                        
+                        <input type="hidden" id="selectedRotation" value="90">
+                    </div>
+                    
+                    <!-- Pages option -->
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; margin-bottom: 12px; font-weight: 600; color: #333; font-size: 16px;">
+                            <i class="fas fa-file-pdf"></i> Apply to:
+                        </label>
+                        <div style="display: flex; gap: 20px; padding: 15px; background: white; border-radius: 8px; border: 1px solid #ddd;">
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <input type="radio" name="rotatePages" value="all" checked style="width: 18px; height: 18px; accent-color: #03a9f4;">
+                                <span style="font-weight: 500; color: #333;">All pages</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <input type="radio" name="rotatePages" value="custom" style="width: 18px; height: 18px; accent-color: #03a9f4;">
+                                <span style="font-weight: 500; color: #333;">Specific pages</span>
+                            </label>
+                        </div>
+                        
+                        <div id="specificPagesInput" style="display: none; margin-top: 10px;">
+                            <input type="text" id="rotatePageNumbers" placeholder="e.g., 1,3,5-8" style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 5px; box-sizing: border-box;">
+                            <small style="display: block; margin-top: 5px; color: #666;">
+                                <i class="fas fa-info-circle"></i> Enter page numbers separated by commas (e.g., 1,3,5-8)
+                            </small>
+                        </div>
+                    </div>
+                    
+                    <button class="btn-convert" onclick="processFile()" style="width: 100%; cursor: pointer; background: linear-gradient(135deg, #03a9f4 0%, #0288d1 100%);">
+                        <i class="fas fa-sync-alt"></i> Rotate PDF
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Watermark PDF Special UI -->
+            <div id="watermarkOptions" style="display: none;">
+                <div style="padding: 15px; background: #fff3cd; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #ffc107;">
+                    <p style="margin: 0; color: #856404; font-weight: 600;">
+                        <i class="fas fa-check-circle"></i> File Selected: <span id="watermarkFileName">filename.pdf</span>
+                    </p>
+                </div>
+                
+                <div style="padding: 20px; background: #f8f9fa; border-radius: 8px;">
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #333;">
+                            <i class="fas fa-type"></i> Watermark Text:
+                        </label>
+                        <input type="text" id="watermarkText" placeholder="Enter watermark text (e.g., 'CONFIDENTIAL')..." value="WATERMARK"
+                            style="width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 5px; font-size: 14px; box-sizing: border-box;">
+                    </div>
+                    
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #333;">
+                            <i class="fas fa-palette"></i> Color:
+                        </label>
+                        <input type="color" id="watermarkColor" value="#FF0000"
+                            style="width: 100%; padding: 8px; border: 2px solid #ddd; border-radius: 5px; cursor: pointer; height: 44px;">
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                        <div>
+                            <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #333; font-size: 14px;">
+                                <i class="fas fa-eye"></i> Opacity:
+                            </label>
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <input type="range" id="watermarkOpacity" min="0" max="1" step="0.1" value="0.3"
+                                    style="flex: 1; cursor: pointer;">
+                                <span id="opacityValue" style="min-width: 40px; text-align: right; font-weight: 600; color: #555;">0.3</span>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #333; font-size: 14px;">
+                                <i class="fas fa-redo"></i> Rotation:
+                            </label>
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <input type="range" id="watermarkRotation" min="-180" max="180" step="1" value="45"
+                                    style="flex: 1; cursor: pointer;">
+                                <span id="rotationValue" style="min-width: 40px; text-align: right; font-weight: 600; color: #555;">45°</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <button class="btn-convert" onclick="processFile()" style="width: 100%; cursor: pointer; background: linear-gradient(135deg, #ffc107 0%, #ffb300 100%); color: #333;">
+                        <i class="fas fa-stamp"></i> Add Watermark
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Page Numbers Special UI -->
+            <div id="pageNumbersOptions" style="display: none;">
+                <div style="padding: 15px; background: #e8f5e9; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #4caf50;">
+                    <p style="margin: 0; color: #2e7d32; font-weight: 600;">
+                        <i class="fas fa-check-circle"></i> File Selected: <span id="pageNumbersFileName">filename.pdf</span>
+                    </p>
+                </div>
+
+                <div style="padding: 20px; background: #f8f9fa; border-radius: 8px;">
+                    <div style="margin-bottom: 12px; display:flex; gap:10px; align-items:center;">
+                        <label style="min-width:120px; font-weight:600; color:#333;"><i class="fas fa-th-large"></i> Position:</label>
+                        <div style="display:grid; grid-template-columns: repeat(3, 40px); gap:6px;">
+                            <button type="button" class="pn-pos" data-pos="top-left" title="Top left" style="width:40px;height:40px;">TL</button>
+                            <button type="button" class="pn-pos" data-pos="top-center" title="Top center" style="width:40px;height:40px;">TC</button>
+                            <button type="button" class="pn-pos" data-pos="top-right" title="Top right" style="width:40px;height:40px;">TR</button>
+                            <button type="button" class="pn-pos" data-pos="bottom-left" title="Bottom left" style="width:40px;height:40px;">BL</button>
+                            <button type="button" class="pn-pos" data-pos="bottom-center" title="Bottom center" style="width:40px;height:40px;">BC</button>
+                            <button type="button" class="pn-pos" data-pos="bottom-right" title="Bottom right" style="width:40px;height:40px;">BR</button>
+                        </div>
+                        <input type="hidden" id="pnPosition" value="bottom-center">
+                    </div>
+
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:12px;">
+                        <div>
+                            <label style="display:block; font-weight:600; color:#333;">First number</label>
+                            <input type="number" id="pnStartFrom" value="1" min="1" style="width:100%; padding:8px; border:1px solid #ddd; border-radius:6px;">
+                        </div>
+                        <div>
+                            <label style="display:block; font-weight:600; color:#333;">Font size</label>
+                            <input type="number" id="pnFontSize" value="12" min="6" style="width:100%; padding:8px; border:1px solid #ddd; border-radius:6px;">
+                        </div>
+                    </div>
+
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:12px;">
+                        <div>
+                            <label style="display:block; font-weight:600; color:#333;">Pages (from)</label>
+                            <input type="number" id="pnFromPage" min="1" placeholder="1" style="width:100%; padding:8px; border:1px solid #ddd; border-radius:6px;">
+                        </div>
+                        <div>
+                            <label style="display:block; font-weight:600; color:#333;">Pages (to)</label>
+                            <input type="number" id="pnToPage" min="1" placeholder="(last)" style="width:100%; padding:8px; border:1px solid #ddd; border-radius:6px;">
+                        </div>
+                    </div>
+
+                    <div style="display:flex; gap:12px; align-items:center; margin-bottom:12px;">
+                        <div style="flex:1;">
+                            <label style="display:block; font-weight:600; color:#333;">Text format</label>
+                            <select id="pnFormat" style="width:100%; padding:8px; border:1px solid #ddd; border-radius:6px;">
+                                <option value="n">Insert only page number (1)</option>
+                                <option value="page-n">Page 1</option>
+                                <option value="n-of-m">1 of N</option>
+                                <option value="page-n-of-m">Page 1 of N</option>
+                            </select>
+                        </div>
+                        <div style="width:120px;">
+                            <label style="display:block; font-weight:600; color:#333;">Margin</label>
+                            <select id="pnMargin" style="width:100%; padding:8px; border:1px solid #ddd; border-radius:6px;">
+                                <option value="recommended">Recommended</option>
+                                <option value="small">Small</option>
+                                <option value="large">Large</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div style="display:flex; gap:10px;">
+                        <button class="btn-convert" onclick="processFile()" style="flex:1; background: linear-gradient(135deg,#4caf50 0%,#388e3c 100%);">
+                            <i class="fas fa-list-ol"></i> Add page numbers
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
             <!-- Scan to PDF Special UI -->
             <div id="scanOptions" style="display: none;">
                 <div style="padding: 20px; background: #f8f9fa; border-radius: 8px;">
@@ -452,8 +729,35 @@
         </div>
     </div>
 
-    <script src="/static/js/script.js?v=15"></script>
+    <!-- PDF.js library for PDF preview -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        
+        // Event listener for rotate pages radio buttons
+        document.addEventListener('DOMContentLoaded', function() {
+            const rotatePagesRadios = document.querySelectorAll('input[name="rotatePages"]');
+            const specificPagesInput = document.getElementById('specificPagesInput');
+            
+            if (rotatePagesRadios && specificPagesInput) {
+                rotatePagesRadios.forEach(radio => {
+                    radio.addEventListener('change', function() {
+                        if (this.value === 'custom') {
+                            specificPagesInput.style.display = 'block';
+                        } else {
+                            specificPagesInput.style.display = 'none';
+                        }
+                    });
+                });
+            }
+            
+            // Set default rotation selection
+            selectRotation(90);
+        });
+    </script>
+    <script src="/static/js/script.js?v=24"></script>
     <script src="/static/js/scan_functions.js?v=1"></script>
+    <script src="/static/js/crop_functions.js?v=1"></script>
 </body>
 
 </html>

@@ -5,10 +5,10 @@ from pptx.util import Inches
 from PIL import Image, ImageDraw, ImageFont
 import fitz  # PyMuPDF
 
-def extract_slide_as_image(slide, slide_width, slide_height, dpi=150):
+def extract_slide_as_image(slide, slide_width, slide_height, dpi=96):
     """
     Extract slide content and render as an image.
-    Uses high-resolution rendering for better quality.
+    Optimized for speed with balanced quality.
     """
     # Calculate image dimensions based on DPI
     # Standard PowerPoint slide is 10" x 7.5"
@@ -91,8 +91,8 @@ def extract_slide_as_image(slide, slide_width, slide_height, dpi=150):
                         img_w = int((shape.width / slide_width) * width_px)
                         img_h = int((shape.height / slide_height) * height_px)
                         
-                        # Resize and paste the image
-                        slide_image = slide_image.resize((img_w, img_h), Image.Resampling.LANCZOS)
+                        # Resize and paste the image (BILINEAR is faster than LANCZOS)
+                        slide_image = slide_image.resize((img_w, img_h), Image.Resampling.BILINEAR)
                         img.paste(slide_image, (img_x, img_y))
                 except Exception as e:
                     print(f"Warning: Could not process image in shape: {e}")
@@ -142,12 +142,12 @@ def convert_powerpoint_to_pdf(input_path, output_path):
         for idx, slide in enumerate(prs.slides):
             print(f"Processing slide {idx + 1}/{len(prs.slides)}")
             
-            # Render slide as image
-            img = extract_slide_as_image(slide, slide_width, slide_height, dpi=150)
+            # Render slide as image (reduced DPI for speed)
+            img = extract_slide_as_image(slide, slide_width, slide_height, dpi=96)
             
-            # Convert PIL Image to bytes
+            # Convert PIL Image to bytes (JPEG is faster than PNG)
             img_bytes = io.BytesIO()
-            img.save(img_bytes, format='PNG', optimize=True, quality=95)
+            img.save(img_bytes, format='JPEG', quality=85, optimize=False)
             img_bytes.seek(0)
             img_data = img_bytes.read()
             
@@ -165,8 +165,8 @@ def convert_powerpoint_to_pdf(input_path, output_path):
                 keep_proportion=True
             )
         
-        # Save the PDF
-        pdf_doc.save(output_path, garbage=4, deflate=True)
+        # Save the PDF (reduced compression for faster saving)
+        pdf_doc.save(output_path, garbage=1, deflate=False)
         pdf_doc.close()
         
         print(f"Conversion successful: {output_path}")

@@ -83,28 +83,73 @@ def redact_pdf_api(request):
 
 
 def _redact_by_search_word(pdf_path, search_word, case_sensitive=False):
-    """Find all instances of a word in PDF and redact them.
+    """Find all instances of a word in PDF and blur them.
     
     Returns the path to the redacted PDF.
     """
+    from PIL import Image, ImageFilter
+    import io
+    
     # Open PDF with PyMuPDF to search for text
     doc = fitz.open(pdf_path)
     
     # Search flags for case sensitivity
     search_flags = 0 if case_sensitive else fitz.TEXT_PRESERVE_WHITESPACE
     
-    # Find and redact all occurrences page by page
+    # Find and blur all occurrences page by page
     for page_num in range(len(doc)):
         page = doc[page_num]
         
         # Search for all instances of the word on this page
         text_instances = page.search_for(search_word, flags=search_flags)
         
-        # Draw black rectangles over each instance
+        if not text_instances:
+            continue
+            
+        # For each text instance, extract the area, blur it, and paste it back
         for rect in text_instances:
-            # Add some padding to ensure full coverage
-            rect = fitz.Rect(rect.x0 - 1, rect.y0 - 1, rect.x1 + 1, rect.y1 + 1)
-            page.draw_rect(rect, color=(0, 0, 0), fill=(0, 0, 0), width=0)
+            # Add padding to ensure full coverage
+            blur_rect = fitz.Rect(rect.x0 - 2, rect.y0 - 2, rect.x1 + 2, rect.y1 + 2)
+            
+            # Clip to page bounds
+            blur_rect = blur_rect & page.rect
+            
+            if blur_rect.is_empty:
+                continue
+            
+            try:
+                # Extract the area as a pixmap (image)
+                # Use higher resolution for better blur quality
+                mat = fitz.Matrix(3, 3)  # 3x scale for better quality
+                pix = page.get_pixmap(matrix=mat, clip=blur_rect)
+                
+                # Convert to PIL Image
+                img_data = pix.tobytes("png")
+                img = Image.open(io.BytesIO(img_data))
+                
+                # Apply multiple strong Gaussian blur passes for maximum blur
+                blurred_img = img.filter(ImageFilter.GaussianBlur(radius=15))
+                blurred_img = blurred_img.filter(ImageFilter.GaussianBlur(radius=15))
+                blurred_img = blurred_img.filter(ImageFilter.GaussianBlur(radius=10))
+                
+                # Convert back to bytes
+                img_buffer = io.BytesIO()
+                blurred_img.save(img_buffer, format='PNG')
+                img_buffer.seek(0)
+                
+                # Insert the blurred image back onto the page
+                # First, draw a white rectangle to cover the original text
+                page.draw_rect(blur_rect, color=(1, 1, 1), fill=(1, 1, 1), width=0)
+                
+                # Insert the blurred image
+                page.insert_image(blur_rect, stream=img_buffer.getvalue())
+                
+                print(f"✓ Blurred '{search_word}' at page {page_num + 1}, rect {blur_rect}")
+                
+            except Exception as e:
+                print(f"Error blurring text: {e}")
+                # Fallback: draw a semi-transparent gray box
+                page.draw_rect(blur_rect, color=(0.7, 0.7, 0.7), fill=(0.85, 0.85, 0.85), width=0)
     
     # Save redacted PDF
     temp_out = tempfile.NamedTemporaryFile(delete=False, suffix='.pdf')

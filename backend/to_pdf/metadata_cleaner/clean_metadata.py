@@ -1,10 +1,13 @@
 import os
-from pypdf import PdfReader, PdfWriter
+import fitz  # PyMuPDF - more robust metadata handling
 from datetime import datetime
 
 def clean_pdf_metadata(input_path, output_path):
     """
-    Remove all metadata from a PDF file.
+    Remove ALL metadata from a PDF file using PyMuPDF, including:
+    - Document Info dictionary (Title, Author, Subject, Creator, Producer, dates)
+    - XMP metadata stream
+    - Custom metadata properties
     
     Args:
         input_path (str): Path to the input PDF file
@@ -27,33 +30,50 @@ def clean_pdf_metadata(input_path, output_path):
         os.makedirs(output_dir)
     
     try:
-        # Read the PDF
-        reader = PdfReader(input_path)
-        writer = PdfWriter()
-        
-        # Copy all pages to new PDF
-        for page in reader.pages:
-            writer.add_page(page)
+        # Open the PDF with PyMuPDF
+        doc = fitz.open(input_path)
         
         # Get original metadata for reporting
         original_metadata = {}
-        if reader.metadata:
-            original_metadata = {
-                'title': reader.metadata.get('/Title', 'N/A'),
-                'author': reader.metadata.get('/Author', 'N/A'),
-                'subject': reader.metadata.get('/Subject', 'N/A'),
-                'creator': reader.metadata.get('/Creator', 'N/A'),
-                'producer': reader.metadata.get('/Producer', 'N/A'),
-                'creation_date': reader.metadata.get('/CreationDate', 'N/A'),
-                'modification_date': reader.metadata.get('/ModDate', 'N/A'),
-            }
+        try:
+            md = doc.metadata
+            if md:
+                original_metadata = {
+                    'title': md.get('title', 'N/A') or 'N/A',
+                    'author': md.get('author', 'N/A') or 'N/A',
+                    'subject': md.get('subject', 'N/A') or 'N/A',
+                    'creator': md.get('creator', 'N/A') or 'N/A',
+                    'producer': md.get('producer', 'N/A') or 'N/A',
+                    'creation_date': md.get('creationDate', 'N/A') or 'N/A',
+                    'modification_date': md.get('modDate', 'N/A') or 'N/A',
+                    'keywords': md.get('keywords', 'N/A') or 'N/A',
+                }
+        except Exception:
+            pass
         
-        # Clear all metadata by not adding any
-        # pypdf by default doesn't include old metadata in new writer
+        # Clear all standard metadata fields, but set producer to our website
+        doc.set_metadata({
+            'title': '',
+            'author': '',
+            'subject': '',
+            'keywords': '',
+            'creator': '',
+            'producer': '18+PDF',
+            'creationDate': '',
+            'modDate': '',
+            'trapped': '',
+        })
         
-        # Write the cleaned PDF
-        with open(output_path, 'wb') as output_file:
-            writer.write(output_file)
+        # Delete XMP metadata stream if it exists
+        try:
+            doc.del_xml_metadata()
+        except Exception:
+            pass
+        
+        # Save the cleaned PDF
+        # garbage=4 removes unused objects, clean=True sanitizes the file
+        doc.save(output_path, garbage=4, clean=True, deflate=True)
+        doc.close()
         
         return {
             'success': True,
@@ -68,8 +88,7 @@ def clean_pdf_metadata(input_path, output_path):
 
 def get_pdf_metadata(pdf_path):
     """
-    Extract metadata from a PDF file without modifying it.
-    
+    Extract metadata from a PDF file without modifying it using PyMuPDF.
     
     Args:
         pdf_path (str): Path to the PDF file
@@ -82,21 +101,38 @@ def get_pdf_metadata(pdf_path):
         raise FileNotFoundError(f"File not found: {pdf_path}")
     
     try:
-        reader = PdfReader(pdf_path)
+        doc = fitz.open(pdf_path)
+        md = doc.metadata
         
-        if not reader.metadata:
-            return {'message': 'No metadata found in PDF'}
+        if not md:
+            doc.close()
+            return {'message': 'No metadata found in PDF', 'num_pages': len(doc)}
         
-        metadata = {}
-        for key, value in reader.metadata.items():
-            # Remove the leading '/' from keys
-            clean_key = key.lstrip('/')
-            metadata[clean_key] = str(value) if value else 'N/A'
+        metadata = {
+            'title': md.get('title', 'N/A') or 'N/A',
+            'author': md.get('author', 'N/A') or 'N/A',
+            'subject': md.get('subject', 'N/A') or 'N/A',
+            'keywords': md.get('keywords', 'N/A') or 'N/A',
+            'creator': md.get('creator', 'N/A') or 'N/A',
+            'producer': md.get('producer', 'N/A') or 'N/A',
+            'creationDate': md.get('creationDate', 'N/A') or 'N/A',
+            'modDate': md.get('modDate', 'N/A') or 'N/A',
+            'format': md.get('format', 'N/A') or 'N/A',
+            'encryption': md.get('encryption', 'N/A') or 'N/A',
+        }
         
         # Add additional info
-        metadata['num_pages'] = len(reader.pages)
-        metadata['is_encrypted'] = reader.is_encrypted
+        metadata['num_pages'] = len(doc)
+        metadata['is_encrypted'] = doc.is_encrypted
         
+        # Check for XMP metadata
+        try:
+            xmp = doc.get_xml_metadata()
+            metadata['has_xmp_metadata'] = bool(xmp and xmp.strip())
+        except Exception:
+            metadata['has_xmp_metadata'] = False
+        
+        doc.close()
         return metadata
         
     except Exception as e:

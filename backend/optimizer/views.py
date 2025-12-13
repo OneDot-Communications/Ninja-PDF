@@ -67,13 +67,11 @@ def compress_image_view(request):
 
 
 def compress_pdf_index(request):
-    """
-    Serve the Compress PDF UI.
-    """
+    """Serve the consolidated static index."""
     import os
     from django.conf import settings
     
-    html_path = os.path.join(settings.BASE_DIR, 'optimizer', 'compress_pdf', 'index.html')
+    html_path = os.path.join(settings.BASE_DIR, 'static', 'index.html')
     
     with open(html_path, 'r', encoding='utf-8') as f:
         html_content = f.read()
@@ -82,13 +80,11 @@ def compress_pdf_index(request):
 
 
 def compress_image_index(request):
-    """
-    Serve the Image Compression UI.
-    """
+    """Serve the consolidated static index."""
     import os
     from django.conf import settings
     
-    html_path = os.path.join(settings.BASE_DIR, 'optimizer', 'compress_image', 'index.html')
+    html_path = os.path.join(settings.BASE_DIR, 'static', 'index.html')
     
     with open(html_path, 'r', encoding='utf-8') as f:
         html_content = f.read()
