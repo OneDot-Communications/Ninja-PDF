@@ -13,7 +13,7 @@ export function useFabricCanvas(
     const canvasRef = useRef<fabric.Canvas | null>(null);
 
     useEffect(() => {
-        if (canvasRef.current || typeof window === 'undefined') return; // Already initialized
+        if (canvasRef.current || typeof window === 'undefined') return;
 
         const fabricCanvas = new fabric.Canvas(canvasId, {
             backgroundColor: '#ffffff',
@@ -30,7 +30,7 @@ export function useFabricCanvas(
         };
     }, [canvasId]);
 
-    // Set background image (PDF render)
+    // Set background image (PDF render without text)
     useEffect(() => {
         if (!canvas || !backgroundImage) return;
 
@@ -45,7 +45,10 @@ export function useFabricCanvas(
     return canvas;
 }
 
-export function addTextToCanvas(
+/**
+ * Add editable text (no white background needed since original text is not rendered)
+ */
+export function addEditableText(
     canvas: fabric.Canvas,
     textItem: CanvasTextItem
 ) {
@@ -60,10 +63,10 @@ export function addTextToCanvas(
         hasControls: true,
         hasBorders: true,
         lockScalingFlip: true,
-        // Allow rotation and scaling
-        lockRotation: false,
-        lockScalingX: false,
-        lockScalingY: false,
+        splitByGrapheme: false,
+        width: textItem.width > 50 ? textItem.width : undefined,
+        // Transparent background - no need to hide original
+        backgroundColor: 'transparent',
     });
 
     canvas.add(text);

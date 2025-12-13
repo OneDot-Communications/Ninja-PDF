@@ -2,7 +2,7 @@
 'use client';
 
 import { useState } from 'react';
-import { loadPDF, extractTextItems, renderPDFPage } from '@/app/lib/pdf-extractor';
+import { loadPDF, extractTextItems, renderPDFPageWithoutText } from '@/app/lib/pdf-extractor';
 import { PDFTextItem, PDFPageDimensions } from '@/app/types/pdf-editor';
 import { calculateScale } from '@/app/lib/coordinate-transform';
 
@@ -37,15 +37,15 @@ export function usePDFLoader(): UsePDFLoaderReturn {
             const viewport = page.getViewport({ scale: 1 });
             const scale = calculateScale(viewport.width, viewport.height);
 
-            // Render PDF to canvas for background
+            // Render PDF to canvas WITHOUT text (only graphics/images)
             const tempCanvas = document.createElement('canvas');
-            const dimensions = await renderPDFPage(page, tempCanvas, scale);
+            const dimensions = await renderPDFPageWithoutText(page, tempCanvas, scale);
 
-            // Convert to image URL
-            const imageUrl = tempCanvas.toDataURL();
+            // Convert to image URL with high quality PNG
+            const imageUrl = tempCanvas.toDataURL('image/png');
             setBackgroundImageUrl(imageUrl);
 
-            // Extract text items
+            // Extract text items (we'll overlay these as editable elements)
             const items = await extractTextItems(page);
             setTextItems(items);
 
