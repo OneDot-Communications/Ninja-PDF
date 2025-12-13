@@ -25,5 +25,11 @@ urlpatterns = [
     path('pdf-conversions/', include('from_pdf.urls')),
     path('optimizer/', include('optimizer.urls')),
     path('to_pdf/', include('to_pdf.urls')),
-    path('optimizer/', include('optimizer.urls')),
+    path('api/auth/', include('authentication.urls')),
+    path('api/core/', include('core.api_urls')), # New Core/System endpoints
+    path('api/billing/', include('billing.urls')),
+    path('api/signatures/', include('signatures.urls')),
+    path('api/workflows/', include('workflows.urls')),
+    # allauth social login start/callback endpoints (web flow)
+    path('accounts/', include('allauth.urls')),
 ]

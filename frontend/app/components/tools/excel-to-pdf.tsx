@@ -9,12 +9,14 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { Label } from "../ui/label";
 import { Switch } from "../ui/switch";
+import { saveAs } from "file-saver";
+import { pdfApi } from "../../lib/pdf-api";
 
 export function ExcelToPdfTool() {
     const [files, setFiles] = useState<File[]>([]);
     const [isProcessing, setIsProcessing] = useState(false);
     const [status, setStatus] = useState("");
-    
+
     // Options
     const [orientation, setOrientation] = useState<"portrait" | "landscape">("portrait");
     const [fitToWidth, setFitToWidth] = useState(true);
@@ -28,64 +30,15 @@ export function ExcelToPdfTool() {
     const convert = async () => {
         if (files.length === 0) return;
         setIsProcessing(true);
-        setStatus("Reading Excel file...");
+        setStatus("Converting Excel file...");
 
         try {
-            const file = files[0];
-            const arrayBuffer = await file.arrayBuffer();
-            const wb = XLSX.read(arrayBuffer);
-            
-            const doc = new jsPDF({
-                orientation: orientation
-            });
-            
-            const fSize = fontSize === "small" ? 8 : fontSize === "medium" ? 10 : 12;
-            
-            wb.SheetNames.forEach((sheetName, index) => {
-                if (index > 0) doc.addPage();
-                
-                setStatus(`Processing sheet: ${sheetName}...`);
-                const ws = wb.Sheets[sheetName];
-                const data = XLSX.utils.sheet_to_json(ws, { header: 1 });
-                
-                if (data.length > 0) {
-                    doc.setFontSize(14);
-                    doc.text(sheetName, 14, 10);
-                    
-                    // Calculate column styles if fitToWidth is false (default behavior is auto)
-                    // But autoTable handles fitToWidth mostly automatically if we don't specify column widths.
-                    
-                    autoTable(doc, {
-                        head: [data[0] as any],
-                        body: data.slice(1) as any,
-                        startY: 15,
-                        theme: theme,
-                        styles: { 
-                            fontSize: fSize,
-                            cellPadding: 2,
-                            overflow: 'linebreak'
-                        },
-                        headStyles: { 
-                            fillColor: theme === 'plain' ? [255, 255, 255] : [41, 128, 185],
-                            textColor: theme === 'plain' ? [0, 0, 0] : [255, 255, 255],
-                            fontStyle: 'bold'
-                        },
-                        // If fitToWidth is true, we let it auto-scale. 
-                        // If false, we might want to set a fixed table width, but autoTable defaults to page width.
-                        // Actually, "Fit to Width" usually means "Scale down to fit". autoTable does this by default.
-                        // If we wanted "Actual Size", we'd need to calculate column widths based on content.
-                        // For now, we'll just use the default behavior which is "Fit to Width".
-                        // We can toggle "horizontalPageBreak" if we wanted to support multi-page width, but that's complex.
-                    });
-                } else {
-                    doc.text(`${sheetName} (Empty)`, 14, 10);
-                }
-            });
-            
+            // Backend-first with client-side fallback
+            const result = await pdfApi.excelToPdf(files[0]);
+
             setStatus("Saving PDF...");
-            doc.save(file.name.replace(/\.xlsx?$/, ".pdf"));
+            saveAs(result.blob, result.fileName);
             setStatus("Completed!");
-            
         } catch (error) {
             console.error("Conversion Error:", error);
             alert("Failed to convert Excel to PDF.");
@@ -132,20 +85,20 @@ export function ExcelToPdfTool() {
                         <Settings className="h-5 w-5 text-muted-foreground" />
                         <h3 className="font-semibold">PDF Settings</h3>
                     </div>
-                    
+
                     <div className="space-y-4">
                         <div className="space-y-2">
                             <Label>Orientation</Label>
                             <div className="flex gap-2">
-                                <Button 
-                                    variant={orientation === "portrait" ? "default" : "outline"} 
+                                <Button
+                                    variant={orientation === "portrait" ? "default" : "outline"}
                                     onClick={() => setOrientation("portrait")}
                                     className="flex-1"
                                 >
                                     <Layout className="mr-2 h-4 w-4 rotate-90" /> Portrait
                                 </Button>
-                                <Button 
-                                    variant={orientation === "landscape" ? "default" : "outline"} 
+                                <Button
+                                    variant={orientation === "landscape" ? "default" : "outline"}
                                     onClick={() => setOrientation("landscape")}
                                     className="flex-1"
                                 >
@@ -153,7 +106,7 @@ export function ExcelToPdfTool() {
                                 </Button>
                             </div>
                         </div>
-                        
+
                         <div className="space-y-2">
                             <Label>Theme</Label>
                             <div className="flex gap-2">

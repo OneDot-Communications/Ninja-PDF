@@ -6,13 +6,15 @@ import { Button } from "../ui/button";
 import { ArrowRight, FileText, Settings, Layout, Type } from "lucide-react";
 import mammoth from "mammoth";
 import jsPDF from "jspdf";
+import { saveAs } from "file-saver";
+import { pdfApi } from "../../lib/pdf-api";
 
 export function WordToPdfTool() {
     const [file, setFile] = useState<File | null>(null);
     const [isProcessing, setIsProcessing] = useState(false);
     const [htmlContent, setHtmlContent] = useState<string | null>(null);
     const previewRef = useRef<HTMLDivElement>(null);
-    
+
     // Options
     const [pageSize, setPageSize] = useState<"a4" | "letter">("a4");
     const [margin, setMargin] = useState<"small" | "medium" | "large">("medium");
@@ -35,39 +37,17 @@ export function WordToPdfTool() {
     };
 
     const convertToPdf = async () => {
-        if (!previewRef.current || !htmlContent) return;
+        if (!file) return;
         setIsProcessing(true);
 
         try {
-            const doc = new jsPDF({
-                unit: "pt",
-                format: pageSize,
-                orientation: "portrait"
-            });
-
-            const marginSize = margin === "small" ? 36 : margin === "medium" ? 54 : 72; // 72pt = 1 inch
-            const pageWidth = pageSize === "a4" ? 595.28 : 612;
-            const contentWidth = pageWidth - (marginSize * 2);
-
-            // We need to temporarily make the preview visible and styled for PDF generation if it isn't already
-            // But here we are using the visible previewRef.
-            
-            await doc.html(previewRef.current, {
-                callback: function (doc) {
-                    doc.save(`${file?.name.replace(/\.docx?$/, "") || "converted"}.pdf`);
-                    setIsProcessing(false);
-                },
-                x: marginSize,
-                y: marginSize,
-                width: contentWidth,
-                windowWidth: 650, // Force a specific window width for consistent rendering
-                autoPaging: "text",
-                margin: [marginSize, marginSize, marginSize, marginSize]
-            });
-
+            // Backend-first with client-side fallback
+            const result = await pdfApi.wordToPdf(file);
+            saveAs(result.blob, result.fileName);
         } catch (error) {
             console.error("Error converting to PDF:", error);
             alert("Failed to convert to PDF. Please try again.");
+        } finally {
             setIsProcessing(false);
         }
     };
@@ -178,9 +158,8 @@ export function WordToPdfTool() {
                         {htmlContent ? (
                             <div
                                 ref={previewRef}
-                                className={`bg-white shadow-lg p-8 ${
-                                    fontSize === "small" ? "prose-sm" : fontSize === "large" ? "prose-lg" : "prose"
-                                } max-w-none`}
+                                className={`bg-white shadow-lg p-8 ${fontSize === "small" ? "prose-sm" : fontSize === "large" ? "prose-lg" : "prose"
+                                    } max-w-none`}
                                 style={{
                                     width: "100%",
                                     maxWidth: "650px", // Approximate A4 width for screen
