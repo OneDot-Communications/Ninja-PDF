@@ -41,15 +41,16 @@ export function pdfToCanvas(
 }
 
 /**
- * Get optimal scale to fit PDF page in viewport
+ * Get optimal scale to fit PDF page in viewport with high quality
  */
 export function calculateScale(
     pdfWidth: number,
     pdfHeight: number,
-    maxWidth: number = 800,
-    maxHeight: number = 1000
+    maxWidth: number = 1200,
+    maxHeight: number = 1600
 ): number {
     const scaleX = maxWidth / pdfWidth;
     const scaleY = maxHeight / pdfHeight;
-    return Math.min(scaleX, scaleY, 2); // Max 2x scale
+    // Increase max scale to 4x for better quality
+    return Math.min(scaleX, scaleY, 4);
 }

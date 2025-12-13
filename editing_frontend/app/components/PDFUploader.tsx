@@ -23,7 +23,7 @@ export default function PDFUploader({ onFileSelect, isLoading }: PDFUploaderProp
     };
 
     return (
-        <div className="flex items-center gap-4">
+        <div className="flex flex-col items-center gap-4">
             <input
                 ref={inputRef}
                 type="file"
@@ -34,13 +34,20 @@ export default function PDFUploader({ onFileSelect, isLoading }: PDFUploaderProp
             <button
                 onClick={handleClick}
                 disabled={isLoading}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition"
+                className="px-6 py-3 bg-black text-white rounded-xl font-medium 
+                    hover:bg-gray-800 
+                    disabled:bg-gray-400 disabled:cursor-not-allowed 
+                    transition-all duration-200 shadow-lg
+                    flex items-center gap-2"
             >
-                {isLoading ? 'Loading...' : 'Upload PDF'}
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                </svg>
+                {isLoading ? 'Loading...' : 'Choose PDF File'}
             </button>
-            <span className="text-sm text-gray-600">
-                Upload a PDF to start editing
-            </span>
+            <p className="text-sm text-gray-500">
+                or drag and drop your file here
+            </p>
         </div>
     );
 }

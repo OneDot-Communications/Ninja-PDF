@@ -50,6 +50,48 @@ export async function extractTextItems(
     return items;
 }
 
+/**
+ * Render PDF page WITHOUT text - only graphics, images, shapes
+ * This is achieved by temporarily overriding fillText and strokeText
+ */
+export async function renderPDFPageWithoutText(
+    page: pdfjsLib.PDFPageProxy,
+    canvas: HTMLCanvasElement,
+    scale: number
+) {
+    const viewport = page.getViewport({ scale });
+    const context = canvas.getContext('2d');
+
+    if (!context) throw new Error('Canvas context not available');
+
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+
+    // Store original methods
+    const originalFillText = context.fillText.bind(context);
+    const originalStrokeText = context.strokeText.bind(context);
+
+    // Override text rendering methods to do nothing
+    context.fillText = () => { };
+    context.strokeText = () => { };
+
+    const renderContext: any = {
+        canvasContext: context,
+        viewport,
+    };
+
+    await page.render(renderContext).promise;
+
+    // Restore original methods
+    context.fillText = originalFillText;
+    context.strokeText = originalStrokeText;
+
+    return { width: viewport.width, height: viewport.height };
+}
+
+/**
+ * Original render with text (for reference/fallback)
+ */
 export async function renderPDFPage(
     page: pdfjsLib.PDFPageProxy,
     canvas: HTMLCanvasElement,
