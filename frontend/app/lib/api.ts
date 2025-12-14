@@ -28,7 +28,8 @@ const pollTask = async (taskId: string): Promise<any> => {
     }
 
     const data = await response.json();
-    if (data.status === 'SUCCESS') {
+    // OS State Machine support: 'COMPLETED' is the new 'SUCCESS'
+    if (data.status === 'SUCCESS' || data.status === 'COMPLETED') {
       // Task Done!
       if (data.result && data.result.output_url) {
         // Fetch the actual file
@@ -36,9 +37,11 @@ const pollTask = async (taskId: string): Promise<any> => {
         return fileRes.blob();
       }
       return data.result;
-    } else if (data.status === 'FAILURE') {
+    } else if (data.status === 'FAILURE' || data.status === 'FAILED') {
       throw new Error(data.error || "Task failed");
     }
+    // Continue polling if PENDING, STARTED, QUEUED, PROCESSING, VALIDATED
+    // ...
 
     // Wait
     await new Promise(r => setTimeout(r, interval));
@@ -120,15 +123,19 @@ export const api = {
     if (!response.ok) {
       const errorBody = await response.text();
       let errorMessage = errorBody;
+      let parsedBody: any = null;
       try {
         const jsonError = JSON.parse(errorBody);
+        parsedBody = jsonError;
         // Handle Django Rest Framework standard error format
         if (jsonError.non_field_errors && Array.isArray(jsonError.non_field_errors)) {
           errorMessage = jsonError.non_field_errors.join(' ');
         } else if (jsonError.detail) {
           errorMessage = jsonError.detail;
-        } else if (jsonError.error) {
+        } else if (jsonError.error && typeof jsonError.error === 'string') {
           errorMessage = jsonError.error;
+        } else if (jsonError.error && typeof jsonError.error === 'object' && jsonError.error.message) {
+          errorMessage = jsonError.error.message;
         } else if (typeof jsonError === 'object') {
           // Fallback for object errors (values)
           errorMessage = Object.values(jsonError).flat().join(' ');
@@ -136,7 +143,58 @@ export const api = {
       } catch (e) {
         // Not JSON, keep text
       }
-      throw new Error(errorMessage || `API error ${response.status}`);
+      const err = new Error(errorMessage || `API error ${response.status}`) as any;
+      err.status = response.status;
+      err.body = parsedBody || errorBody;
+      throw err;
+    }
+    const contentType = response.headers.get("content-type");
+    if (contentType && contentType.includes("application/json")) {
+      return response.json();
+    }
+    return response.text();
+  },
+
+  /**
+   * Generic request helper for public JSON endpoints (no credentials).
+   */
+  publicRequest: async (method: string, endpoint: string, data?: any): Promise<any> => {
+    const url = `${getBaseUrl()}${endpoint}`;
+    const options: RequestInit = {
+      method,
+      headers: { "Content-Type": "application/json" },
+    };
+    if (data) {
+      options.body = JSON.stringify(data);
+    }
+    const response = await fetch(url, options);
+    if (!response.ok) {
+      const errorBody = await response.text();
+      let errorMessage = errorBody;
+      let parsedBody: any = null;
+      try {
+        const jsonError = JSON.parse(errorBody);
+        parsedBody = jsonError;
+        // Handle Django Rest Framework standard error format
+        if (jsonError.non_field_errors && Array.isArray(jsonError.non_field_errors)) {
+          errorMessage = jsonError.non_field_errors.join(' ');
+        } else if (jsonError.detail) {
+          errorMessage = jsonError.detail;
+        } else if (jsonError.error && typeof jsonError.error === 'string') {
+          errorMessage = jsonError.error;
+        } else if (jsonError.error && typeof jsonError.error === 'object' && jsonError.error.message) {
+          errorMessage = jsonError.error.message;
+        } else if (typeof jsonError === 'object') {
+          // Fallback for object errors (values)
+          errorMessage = Object.values(jsonError).flat().join(' ');
+        }
+      } catch (e) {
+        // Not JSON, keep text
+      }
+      const err = new Error(errorMessage || `API error ${response.status}`) as any;
+      err.status = response.status;
+      err.body = parsedBody || errorBody;
+      throw err;
     }
     const contentType = response.headers.get("content-type");
     if (contentType && contentType.includes("application/json")) {
@@ -154,8 +212,9 @@ export const api = {
     api.request("POST", "/api/auth/registration/verify-email/", { key }),
   googleLogin: (code: string) =>
     api.request("POST", "/api/auth/google/token/", { code }),
-  login: (email: string, password: string) =>
-    api.request("POST", "/api/auth/login/", { email, password }),
+  // otp_token is optional: include it when completing 2FA
+  login: (email: string, password: string, otp_token?: string) =>
+    api.request("POST", "/api/auth/login/", otp_token ? { email, password, otp_token } : { email, password }),
   logout: () => api.request("POST", "/api/auth/logout/"),
   getUser: () => api.request("GET", "/api/auth/user/"),
   updateCurrentUser: (data: any) => api.request("PATCH", "/api/auth/user/", data),
@@ -169,22 +228,26 @@ export const api = {
 
   refreshToken: () => api.request("POST", "/api/auth/token/refresh/"),
 
-  // User management (admin)
-  // User management (admin) - moved to bottom
-  // createUser: (data: any) => api.request("POST", "/api/auth/users/", data),
-
-
   // Session management
   getSessions: () => api.request("GET", "/api/auth/sessions/"),
   revokeSession: (sessionId: string) => api.request("DELETE", `/api/auth/sessions/${sessionId}/`),
 
+  // 2FA
+  getTwoFactorStatus: () => api.request("GET", "/api/auth/2fa/status/"),
+  setupTwoFactor: () => api.request("GET", "/api/auth/2fa/setup/"),
+  enableTwoFactor: (token: string) => api.request("POST", "/api/auth/2fa/enable/", { token }),
+  disableTwoFactor: () => api.request("POST", "/api/auth/2fa/disable/"),
+  verifyTwoFactor: (token: string, backup_code?: string) => api.request("POST", "/api/auth/2fa/verify/", backup_code ? { backup_code } : { token }),
+  getTwoFactorBackupCodes: () => api.request("GET", "/api/auth/2fa/backup_codes/"),
+  regenerateTwoFactorBackupCodes: (password: string) => api.request("POST", "/api/auth/2fa/backup_codes/regenerate/", { password }),
+
   // ─────────────────────────────────────────────────────────────────────────────
   // BILLING ENDPOINTS (/api/billing/)
   // ─────────────────────────────────────────────────────────────────────────────
-  getPlans: () => api.request("GET", "/api/billing/plans/"),
+  getPlans: () => api.publicRequest("GET", "/api/billing/plans/"),
   updatePlan: (id: number, data: any) => api.request("PATCH", `/api/billing/plans/${id}/`, data),
   getSubscription: async () => {
-    const res = await api.request("GET", "/api/billing/subscriptions/"); // Fixed plural
+    const res = await api.request("GET", "/api/billing/subscriptions/");
     // If result is array, take first (assuming user has one active subscription)
     return Array.isArray(res) ? res[0] : res;
   },
@@ -200,47 +263,39 @@ export const api = {
   // SIGNATURE ENDPOINTS (/api/signatures/)
   // ─────────────────────────────────────────────────────────────────────────────
   getSignatureStats: () => api.request("GET", "/api/signatures/requests/stats/"),
-  getTrash: () => api.request("GET", "/api/signatures/requests/?mode=trash"), // Explicitly map getTrash here if not already
+  getTrash: () => api.request("GET", "/api/signatures/requests/?mode=trash"),
   restoreSignature: (id: number) => api.request("POST", `/api/signatures/requests/${id}/restore/`),
   getSignatureRequests: (mode: string = "") => api.request("GET", `/api/signatures/requests/?mode=${mode}`),
   getSignatureTemplates: () => api.request("GET", "/api/signatures/templates/"),
   getSignatureContacts: () => api.request("GET", "/api/signatures/contacts/"),
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // PDF CONVERSIONS - FROM PDF (/pdf-conversions/api/)
+  // PDF TOOLS - CONVERSION TO PDF (/api/tools/)
   // ─────────────────────────────────────────────────────────────────────────────
-  pdfToJpg: (file: File) => uploadFile("/pdf-conversions/api/pdf-to-jpg/", file),
-  pdfToExcel: (file: File) => uploadFile("/pdf-conversions/api/pdf-to-excel/", file),
-  pdfToPowerpoint: (file: File) => uploadFile("/pdf-conversions/api/pdf-to-powerpoint/", file),
-  pdfToWord: (file: File) => uploadFile("/pdf-conversions/api/pdf-to-word/", file),
-  pdfToPdfa: (file: File) => uploadFile("/pdf-conversions/api/pdf-to-pdfa/", file),
-  pdfToHtml: (file: File) => uploadFile("/pdf-conversions/api/pdf-to-html/", file),
+  wordToPdf: (file: File) => uploadFile("/api/tools/word-to-pdf/", file),
+  powerpointToPdf: (file: File) => uploadFile("/api/tools/powerpoint-to-pdf/", file),
+  excelToPdf: (file: File) => uploadFile("/api/tools/excel-to-pdf/", file),
+  jpgToPdf: (file: File) => uploadFile("/api/tools/jpg-to-pdf/", file),
+  htmlToPdf: (file: File) => uploadFile("/api/tools/html-to-pdf/", file),
+  markdownToPdf: (file: File) => uploadFile("/api/tools/markdown-to-pdf/", file),
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // PDF CONVERSIONS - TO PDF (/to_pdf/)
+  // PDF TOOLS - CONVERSION FROM PDF (/api/tools/)
   // ─────────────────────────────────────────────────────────────────────────────
-  wordToPdf: (file: File) => uploadFile("/to_pdf/word-to-pdf/", file),
-  powerpointToPdf: (file: File) => uploadFile("/to_pdf/powerpoint-to-pdf/", file),
-  excelToPdf: (file: File) => uploadFile("/to_pdf/excel-to-pdf/", file),
-  jpgToPdf: (file: File) => uploadFile("/to_pdf/jpg-to-pdf/", file),
-  htmlToPdf: (file: File) => uploadFile("/to_pdf/html-to-pdf/", file),
-  markdownToPdf: (file: File) => uploadFile("/to_pdf/markdown-to-pdf/", file),
+  pdfToJpg: (file: File) => uploadFile("/api/tools/pdf-to-jpg/", file),
+  pdfToExcel: (file: File) => uploadFile("/api/tools/pdf-to-excel/", file),
+  pdfToPowerpoint: (file: File) => uploadFile("/api/tools/pdf-to-powerpoint/", file),
+  pdfToWord: (file: File) => uploadFile("/api/tools/pdf-to-word/", file),
+  pdfToPdfa: (file: File) => uploadFile("/api/tools/pdf-to-pdfa/", file),
+  pdfToHtml: (file: File) => uploadFile("/api/tools/pdf-to-html/", file),
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // PDF SECURITY (/to_pdf/)
-  // ─────────────────────────────────────────────────────────────────────────────
-  protectPdf: (file: File, password: string, permissions: Record<string, boolean> = {}) =>
-    uploadFile("/to_pdf/protect-pdf/", file, { password, ...Object.fromEntries(Object.entries(permissions).map(([k, v]) => [k, String(v)])) }),
-  unlockPdf: (file: File, password: string) =>
-    uploadFile("/to_pdf/unlock-pdf/", file, { password }),
-
-  // ─────────────────────────────────────────────────────────────────────────────
-  // PDF OPTIMIZER (/optimizer/)
+  // PDF TOOLS - OPTIMIZATION (/api/tools/)
   // ─────────────────────────────────────────────────────────────────────────────
   mergePdfs: (files: File[]) => {
     const formData = new FormData();
     files.forEach((file) => formData.append("files", file));
-    return fetch(`${getBaseUrl()}/optimizer/merge/`, { method: "POST", body: formData }).then(async res => {
+    return fetch(`${getBaseUrl()}/api/tools/merge/`, { method: "POST", body: formData, credentials: "include" }).then(async res => {
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || "Merge failed");
       return res.blob();
     });
@@ -250,7 +305,7 @@ export const api = {
     formData.append("file", file);
     formData.append("selectedPages", JSON.stringify(selectedPages));
     formData.append("splitMode", splitMode);
-    return fetch(`${getBaseUrl()}/optimizer/split/`, { method: "POST", body: formData }).then(async res => {
+    return fetch(`${getBaseUrl()}/api/tools/split/`, { method: "POST", body: formData, credentials: "include" }).then(async res => {
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || "Split failed");
       return res.blob();
     });
@@ -259,18 +314,28 @@ export const api = {
     const formData = new FormData();
     formData.append("file", file);
     formData.append("pages", JSON.stringify(pages));
-    return fetch(`${getBaseUrl()}/optimizer/organize/`, { method: "POST", body: formData }).then(async res => {
+    return fetch(`${getBaseUrl()}/api/tools/organize/`, { method: "POST", body: formData, credentials: "include" }).then(async res => {
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || "Organize failed");
       return res.blob();
     });
   },
-  flattenPdf: (file: File) => uploadFile("/optimizer/flatten/", file),
-
+  flattenPdf: (file: File) => uploadFile("/api/tools/flatten/", file),
   compressPdf: (file: File, level: string = "recommended") =>
-    uploadFile("/optimizer/compress-pdf/", file, { level }),
+    uploadFile("/api/tools/compress-pdf/", file, { level }),
   compressImage: (file: File, level: string = "recommended") =>
-    uploadFile("/optimizer/compress-image/", file, { level }),
-  // --- ADMIN ENDPOINTS ---
+    uploadFile("/api/tools/compress-image/", file, { level }),
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // PDF TOOLS - SECURITY (/api/tools/)
+  // ─────────────────────────────────────────────────────────────────────────────
+  protectPdf: (file: File, password: string, permissions: Record<string, boolean> = {}) =>
+    uploadFile("/api/tools/protect-pdf/", file, { password, ...Object.fromEntries(Object.entries(permissions).map(([k, v]) => [k, String(v)])) }),
+  unlockPdf: (file: File, password: string) =>
+    uploadFile("/api/tools/unlock-pdf/", file, { password }),
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // ADMIN ENDPOINTS
+  // ─────────────────────────────────────────────────────────────────────────────
   getAdminStats: async () => {
     return api.request("GET", "/api/auth/admin/stats/");
   },
@@ -295,7 +360,9 @@ export const api = {
     return api.request("POST", "/api/billing/admin/subscriptions/assign_plan/", { user_id: userId, plan_slug: planSlug });
   },
 
-  // --- Core / Admin Logic ---
+  // ─────────────────────────────────────────────────────────────────────────────
+  // CORE / SYSTEM ENDPOINTS
+  // ─────────────────────────────────────────────────────────────────────────────
   getPublicSettings: () => api.request("GET", "/api/core/settings/public/"),
   getAdminBranding: () => api.request("GET", "/api/core/settings/branding/"),
   updateAdminBranding: (data: FormData) => api.request("PATCH", "/api/core/settings/branding/", data),
@@ -323,10 +390,6 @@ export const api = {
   verifyPayment: (data: any) => api.request("POST", "/api/billing/payments/verify_payment/", data),
   getPayments: () => api.request("GET", "/api/billing/payments/"),
   getAdminPayments: () => api.request("GET", "/api/billing/payments/"), // Super admin sees all by default via same endpoint
-
-  // Trash (Signatures for now)
-
-
 
   getSystemSettings: () => api.request("GET", "/api/core/settings/"), // Legacy fallback
   createSystemSetting: (key: string, value: any, file?: File) => {
@@ -362,7 +425,7 @@ export const api = {
   rejectRequest: (id: number, note: string) => api.request("POST", `/api/core/admin-requests/${id}/reject/`, { note }),
 
   // --- Features ---
-  getFeatures: () => api.request("GET", "/api/billing/features/"),
+  getFeatures: () => api.publicRequest("GET", "/api/billing/features/"),
   createFeature: (data: any) => {
     // If data contains an 'icon' file, use uploadFile/FormData
     if (data.icon && data.icon instanceof File) {
@@ -406,5 +469,5 @@ export const api = {
   getFeatureOverrides: () => api.request("GET", "/api/billing/feature-overrides/"),
   setFeatureOverride: (userId: number, featureId: number, isEnabled: boolean) =>
     api.request("POST", "/api/billing/feature-overrides/", { user: userId, feature: featureId, is_enabled: isEnabled }),
+  getHistory: () => api.request("GET", "/api/core/history/"),
 };
-

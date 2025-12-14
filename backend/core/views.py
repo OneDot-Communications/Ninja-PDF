@@ -5,7 +5,7 @@ from rest_framework.decorators import action
 from django.shortcuts import get_object_or_404
 from .models import SystemSetting, AdminActionRequest, PlatformBranding
 from .serializers import SystemSettingSerializer, AdminActionRequestSerializer, PlatformBrandingSerializer
-from authentication.models import User
+from apps.accounts.models import User
 
 class IsSuperAdmin(permissions.BasePermission):
     def has_permission(self, request, view):
@@ -36,7 +36,7 @@ class AdminBrandingView(APIView):
         
         # Create Version Snapshot before saving
         from .models import ContentVersion
-        from .serializers import PlatformBrandingSerializer as PBS
+        from apps.accounts.api.serializers import PlatformBrandingSerializer as PBS
         snapshot_data = PBS(branding).data
         ContentVersion.objects.create(
             snapshot=snapshot_data,
@@ -110,7 +110,7 @@ class AdminActionRequestViewSet(viewsets.ModelViewSet):
                 return True
             
             elif req.action_type == 'CHANGE_USER_PLAN':
-                from billing.models import Plan, Subscription
+                from apps.subscriptions.models.subscription import Plan, Subscription
                 user_id = payload.get('user_id')
                 plan_slug = payload.get('plan_slug')
                 user = User.objects.get(id=user_id)
@@ -172,3 +172,18 @@ class TaskStatusView(APIView):
         
         # If State is standard (PENDING, STARTED, RETRY), just return status
         return Response(status_data)
+
+class UserTaskViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    List user's own tasks history.
+    """
+    from .models import TaskLog
+    from .serializers import TaskLogSerializer
+    
+    serializer_class = TaskLogSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        from .models import TaskLog
+        return TaskLog.objects.filter(user=self.request.user).order_by('-created_at')
+

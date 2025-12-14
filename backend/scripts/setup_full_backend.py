@@ -7,9 +7,9 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
 django.setup()
 
-from authentication.models import User
+from apps.accounts.api.models import User
 from core.models import PlatformBranding
-from billing.models import Plan, Subscription
+from apps.subscriptions.models.subscription import Plan, Subscription
 
 def setup_full():
     print("--- Starting Full Backend Setup ---")
@@ -27,8 +27,9 @@ def setup_full():
     print("-> Configuring Users...")
     
     # Admin
-    admin_email = "admin@admin.com"
-    admin_pass = "admin123" # Simple password for testing as requested
+    admin_email = os.getenv('SETUP_ADMIN_EMAIL', 'admin@admin.com')
+    # Use provided password via env or generate a strong random one for security
+    admin_pass = os.getenv('SETUP_ADMIN_PASSWORD') or __import__('secrets').token_urlsafe(16)
     user, created = User.objects.get_or_create(email=admin_email)
     user.first_name = "Divith"
     user.last_name = "Super"
@@ -43,8 +44,8 @@ def setup_full():
     from allauth.account.models import EmailAddress
 
     # User
-    user_email = "user@user.com"
-    user_pass = "user123"
+    user_email = os.getenv('SETUP_USER_EMAIL', 'user@user.com')
+    user_pass = os.getenv('SETUP_USER_PASSWORD') or __import__('secrets').token_urlsafe(16)
     u2, created2 = User.objects.get_or_create(email=user_email)
     u2.first_name = "Divith" 
     u2.last_name = "User"

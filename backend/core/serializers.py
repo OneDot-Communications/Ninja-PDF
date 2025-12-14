@@ -28,7 +28,7 @@ class AdminActionRequestSerializer(serializers.ModelSerializer):
             payload = obj.payload
             
             if obj.action_type == 'CHANGE_USER_PLAN':
-                from billing.models import Plan
+                from apps.subscriptions.models.subscription import Plan
                 user_id = payload.get('user_id')
                 plan_slug = payload.get('plan_slug')
                 
@@ -62,3 +62,22 @@ class ContentVersionSerializer(serializers.ModelSerializer):
     class Meta:
         model = ContentVersion
         fields = '__all__'
+
+class TaskLogSerializer(serializers.ModelSerializer):
+    result_url = serializers.SerializerMethodField()
+
+    class Meta:
+        from .models import TaskLog
+        model = TaskLog
+        fields = '__all__'
+    
+    def get_result_url(self, obj):
+        # Generate fresh signed URL if path exists (handles S3 expiry)
+        if obj.metadata and 'output_path' in obj.metadata:
+            try:
+                from django.core.files.storage import default_storage
+                return default_storage.url(obj.metadata['output_path'])
+            except:
+                pass
+        return obj.result_url
+

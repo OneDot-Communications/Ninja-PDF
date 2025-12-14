@@ -1,50 +1,61 @@
-// frontend/app/context/AuthContext.tsx
+'use client';
 
-"use client";
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { api } from '../lib/api';
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { api } from "../lib/api";
-
-interface User {
+export interface User {
     id: number;
     email: string;
-    is_verified: boolean;
-    first_name?: string | null;
-    last_name?: string | null;
-    role?: 'SUPER_ADMIN' | 'ADMIN' | 'USER';
-    // add any other fields you expose via the backend user serializer
+    first_name: string;
+    last_name: string;
+    role: 'USER' | 'ADMIN' | 'SUPER_ADMIN';
+    subscription_tier: 'FREE' | 'PRO' | 'PREMIUM' | 'ENTERPRISE';
+    avatar?: string;
 }
 
-interface AuthContextProps {
+export interface Subscription {
+    status: 'ACTIVE' | 'CANCELED' | 'PAST_DUE' | 'TRIALING' | 'PENDING_PAYMENT' | 'GRACE_PERIOD' | 'SUSPENDED' | 'FREE';
+    plan?: { name: string; slug: string; };
+    current_period_end: string;
+}
+
+interface AuthContextType {
     user: User | null;
-    loading: boolean;
-    signup: (email: string, password: string, first_name?: string, last_name?: string) => Promise<any>;
-    login: (email: string, password: string) => Promise<void>;
-    logout: () => Promise<void>;
-    verifyEmail: (key: string) => Promise<void>;
+    subscription: Subscription | null;
+    isLoading: boolean;
+    loading: boolean; // Alias for compatibility
+    // Returns `{ requires_2fa: true }` if backend requires OTP; otherwise resolves when logged in
+    login: (email: string, password: string, otp_token?: string) => Promise<any>;
+    signup: (email: string, password: string, first_name?: string, last_name?: string) => Promise<void>;
     googleLogin: (code: string) => Promise<void>;
-    refreshUser: () => Promise<User | null>;
+    logout: () => Promise<void>;
+    refreshUser: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextProps | undefined>(undefined);
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const [user, setUser] = useState<User | null>(null);
-    const [loading, setLoading] = useState<boolean>(true);
+    const [subscription, setSubscription] = useState<Subscription | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
 
-    const refreshUser = async (): Promise<User | null> => {
+    const refreshUser = async () => {
         try {
-            // Correct path: /api/auth/user/ as per backend authentication/urls.py
-            const data = await api.getUser();
-            console.debug("refreshUser: fetched user", data);
-            setUser(data);
-            return data;
-        } catch (e) {
-            console.warn("refreshUser: no user or failed fetch", e);
+            const userData = await api.getUser();
+            setUser(userData);
+
+            // Allow failing silently if no sub
+            try {
+                const subData = await api.getSubscription();
+                setSubscription(subData);
+            } catch (e) {
+                setSubscription(null);
+            }
+        } catch (error) {
             setUser(null);
-            return null;
+            setSubscription(null);
         } finally {
-            setLoading(false);
+            setIsLoading(false);
         }
     };
 
@@ -52,45 +63,71 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         refreshUser();
     }, []);
 
-    const signup = async (email: string, password: string, first_name?: string, last_name?: string) => {
-        return await api.signup(email, password, first_name, last_name);
-    };
-
-    const login = async (email: string, password: string) => {
+    const login = async (email: string, password: string, otp_token?: string) => {
+        setIsLoading(true);
         try {
-            const res = await api.login(email, password);
-            console.debug("login: login response", res);
-        } catch (err) {
-            console.warn("login: login failed", err);
-            throw err;
-        }
-        await refreshUser();
-    };
+            const res = await api.login(email, password, otp_token);
+            // If backend indicates 2FA is required, propagate that to the caller
+            if (res && (res as any).requires_2fa) {
+                setIsLoading(false);
+                return { requires_2fa: true };
+            }
 
-    const googleLogin = async (code: string) => {
-        try {
-            const res = await api.googleLogin(code);
-            console.debug("googleLogin: response", res);
-        } catch (err) {
-            console.error("googleLogin failed", err);
-            throw err;
+            await refreshUser();
+        } catch (e) {
+            setIsLoading(false);
+            throw e;
         }
-        await refreshUser();
     };
 
     const logout = async () => {
-        await api.logout();
-        setUser(null);
+        setIsLoading(true);
+        try {
+            await api.logout();
+            setUser(null);
+            setSubscription(null);
+        } finally {
+            setIsLoading(false);
+        }
     };
 
-    const verifyEmail = async (key: string) => {
-        await api.verifyEmail(key);
+    const googleLogin = async (code: string) => {
+        setIsLoading(true);
+        try {
+            // Exchange code with backend
+            await api.googleLogin(code);
+            await refreshUser();
+        } catch (e) {
+            setIsLoading(false);
+            throw e;
+        }
+    };
+
+    const signup = async (email: string, password: string, first_name?: string, last_name?: string) => {
+        setIsLoading(true);
+        try {
+            await api.signup(email, password, first_name, last_name);
+            // After signup, user may need to verify email - let caller handle redirect
+        } catch (e) {
+            setIsLoading(false);
+            throw e;
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
-        <AuthContext.Provider
-            value={{ user, loading, signup, login, logout, verifyEmail, googleLogin, refreshUser }}
-        >
+        <AuthContext.Provider value={{
+            user,
+            subscription,
+            isLoading,
+            loading: isLoading, // Alias
+            login,
+            signup,
+            googleLogin,
+            logout,
+            refreshUser
+        }}>
             {children}
         </AuthContext.Provider>
     );
@@ -99,19 +136,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 export const useAuth = () => {
     const context = useContext(AuthContext);
     if (!context) {
-        if (typeof window !== 'undefined') {
-            throw new Error("useAuth must be used within an AuthProvider");
-        }
-        return {
-            user: null,
-            loading: true,
-            signup: async () => { },
-            login: async () => { },
-            logout: async () => { },
-            verifyEmail: async () => { },
-            googleLogin: async () => { },
-            refreshUser: async () => null
-        } as AuthContextProps;
+        throw new Error('useAuth must be used within an AuthProvider');
     }
     return context;
 };

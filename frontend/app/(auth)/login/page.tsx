@@ -18,6 +18,10 @@ const LoginPage = () => {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState<string | null>(null);
+    const [requires2fa, setRequires2fa] = useState(false);
+    const [otpToken, setOtpToken] = useState('');
+    const [failureCount, setFailureCount] = useState(0);
+    const [cooldown, setCooldown] = useState<number | null>(null);
     const [loading, setLoading] = useState(false);
 
     // Redirect if already logged in
@@ -32,16 +36,62 @@ const LoginPage = () => {
         setError(null);
         setLoading(true);
         try {
-            await login(email, password);
-            // Ensure we have the latest user object
-            const refreshed = await refreshUser();
-            if (refreshed && (!refreshed.first_name || refreshed.first_name.trim() === '')) {
-                router.push('/profile/complete');
-            } else {
-                router.push('/');
+            const res: any = await login(email, password);
+            if (res && res.requires_2fa) {
+                setRequires2fa(true);
+                setLoading(false);
+                return;
             }
+            // Refresh user and redirect - login already refreshes user
+            router.push('/');
         } catch (err: any) {
             setError(err.message || "Login failed");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleSubmitOtp = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setError(null);
+        if (cooldown && cooldown > Date.now()) {
+            setError('Too many attempts. Please wait before retrying.');
+            return;
+        }
+        setLoading(true);
+        try {
+            const res: any = await login(email, password, otpToken);
+            if (res && res.requires_2fa) {
+                setError('2FA verification failed');
+                // increment failure count and apply cooldown if needed
+                const fc = failureCount + 1;
+                setFailureCount(fc);
+                if (fc >= 5) {
+                    const wait = Math.min(300, (fc - 4) * 30); // escalate to max 5 minutes
+                    const until = Date.now() + wait * 1000;
+                    setCooldown(until);
+                    setTimeout(() => setCooldown(null), wait * 1000);
+                }
+                return;
+            }
+            router.push('/');
+        } catch (err: any) {
+            // Structured error parsing
+            if (err && err.body && err.body.error && err.body.error.code === 'invalid_2fa') {
+                setError(err.body.error.message || 'Invalid 2FA token');
+                const fc = failureCount + 1;
+                setFailureCount(fc);
+                if (fc >= 5) {
+                    const wait = Math.min(300, (fc - 4) * 30);
+                    const until = Date.now() + wait * 1000;
+                    setCooldown(until);
+                    setTimeout(() => setCooldown(null), wait * 1000);
+                }
+            } else if (err && err.status === 423) {
+                setError(err.body?.error?.message || 'Account locked due to suspicious activity. Contact support.');
+            } else {
+                setError(err.message || 'OTP verification failed');
+            }
         } finally {
             setLoading(false);
         }
@@ -99,6 +149,29 @@ const LoginPage = () => {
                             {loading ? "Signing in..." : "Sign In"}
                         </Button>
                     </form>
+
+                    {requires2fa && (
+                        <form onSubmit={handleSubmitOtp} className="mt-4 space-y-2">
+                            <div className="mb-2 text-sm text-yellow-700 bg-yellow-50 border border-yellow-200 p-2 rounded">Two-factor authentication is required for this account. Enter your authentication token below.</div>
+                            {cooldown && (
+                                <div className="mb-2 text-sm text-red-700 bg-red-50 border border-red-200 p-2 rounded">Too many attempts. Please wait {(Math.ceil(((cooldown || 0) - Date.now())/1000))}s before retrying.</div>
+                            )}
+                            <Label htmlFor="otp">Two-factor token</Label>
+                            <input
+                                id="otp"
+                                inputMode="numeric"
+                                pattern="[0-9]*"
+                                value={otpToken}
+                                onChange={(e) => setOtpToken(e.target.value.replace(/\D/g, '').slice(0,6))}
+                                className="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm" 
+                                placeholder="123456"
+                                maxLength={6}
+                            />
+                            <Button type="submit" className="w-full bg-[#E53935] hover:bg-[#D32F2F] text-white font-semibold h-10 rounded-md">
+                                Verify 2FA
+                            </Button>
+                        </form>
+                    )}
 
                     <div className="my-6 mb-6">
                         <div className="w-full">
