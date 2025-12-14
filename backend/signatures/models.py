@@ -9,6 +9,7 @@ class SignatureRequest(models.Model):
         COMPLETED = 'COMPLETED', _('Completed')
         DECLINED = 'DECLINED', _('Declined')
         EXPIRED = 'EXPIRED', _('Expired')
+        TRASH = 'TRASH', _('Trash')
 
     requester = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='signature_requests_sent')
     title = models.CharField(max_length=200)

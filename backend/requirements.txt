@@ -21,3 +21,8 @@ django-allauth
 dj-rest-auth
 python-dotenv
 olefile
+redis
+celery
+django-redis
+django-storages[boto3]
+flower

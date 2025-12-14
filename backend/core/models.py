@@ -14,6 +14,31 @@ class SystemSetting(models.Model):
     def __str__(self):
         return self.key
 
+class PlatformBranding(models.Model):
+    """
+    Singleton model for platform branding and configuration.
+    Strictly enforce one instance.
+    """
+    platform_name = models.CharField(max_length=100, default="Ninja PDF")
+    logo = models.ImageField(upload_to='branding/', blank=True, null=True)
+    hero_title = models.TextField(default="All your PDF headache in one place.")
+    hero_subtitle = models.TextField(default="Simple, super, and totally free!")
+    primary_color = models.CharField(max_length=20, default="#01B0F1")
+    is_active = models.BooleanField(default=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def save(self, *args, **kwargs):
+        self.pk = 1 # Force singleton
+        super(PlatformBranding, self).save(*args, **kwargs)
+
+    @classmethod
+    def load(cls):
+        obj, created = cls.objects.get_or_create(pk=1)
+        return obj
+
+    def __str__(self):
+        return self.platform_name
+
 class AdminActionRequest(models.Model):
     """
     Queue for sensitive actions requiring Super Admin approval.
@@ -36,3 +61,15 @@ class AdminActionRequest(models.Model):
 
     def __str__(self):
         return f"{self.action_type} by {self.requester.email} ({self.status})"
+
+class ContentVersion(models.Model):
+    """
+    Version history for PlatformBranding using snapshots.
+    """
+    snapshot = models.JSONField(help_text="Snapshot of PlatformBranding data")
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    note = models.CharField(max_length=255, blank=True, null=True)
+
+    def __str__(self):
+        return f"Version {self.id} ({self.created_at})"

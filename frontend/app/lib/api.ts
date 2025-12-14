@@ -14,8 +14,42 @@ const getBaseUrl = (): string => {
   return envUrl ? envUrl.replace(/\/+$/, "") : DEFAULT_BACKEND_URL;
 };
 
+const pollTask = async (taskId: string): Promise<any> => {
+  const maxAttempts = 60; // 2 minutes (assuming 2s interval)
+  const interval = 2000;
+
+  for (let i = 0; i < maxAttempts; i++) {
+    const response = await fetch(`${getBaseUrl()}/api/core/tasks/${taskId}/`, {
+      headers: { "Content-Type": "application/json" }
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to poll task status");
+    }
+
+    const data = await response.json();
+    if (data.status === 'SUCCESS') {
+      // Task Done!
+      if (data.result && data.result.output_url) {
+        // Fetch the actual file
+        const fileRes = await fetch(data.result.output_url);
+        return fileRes.blob();
+      }
+      return data.result;
+    } else if (data.status === 'FAILURE') {
+      throw new Error(data.error || "Task failed");
+    }
+
+    // Wait
+    await new Promise(r => setTimeout(r, interval));
+  }
+  throw new Error("Task timed out");
+};
+
+
 /**
  * Helper for file upload requests (multipart/form-data)
+ * Automatically handles Async Task Polling if backend returns task_id
  */
 const uploadFile = async (endpoint: string, file: File, additionalData?: Record<string, string>): Promise<any> => {
   const formData = new FormData();
@@ -34,13 +68,33 @@ const uploadFile = async (endpoint: string, file: File, additionalData?: Record<
 
   if (!response.ok) {
     const errorBody = await response.text();
+    // Handle Specific Quota Error Codes
+    if (response.status === 403) {
+      try {
+        const jsonError = JSON.parse(errorBody);
+        // Standardize Quota Error for UI
+        if (jsonError.error && (jsonError.error.includes("limit reached") || jsonError.error.includes("Upgrade"))) {
+          throw new Error(`QUOTA_EXCEEDED: ${jsonError.error}`);
+        }
+      } catch (e) { }
+    }
     throw new Error(`API error ${response.status}: ${errorBody}`);
   }
 
   const contentType = response.headers.get("content-type");
+
+  // If JSON, might be a TASK ID
   if (contentType && contentType.includes("application/json")) {
-    return response.json();
+    const data = await response.json();
+
+    if (data.task_id && (data.status === 'processing' || data.status === 'pending' || data.status === 'queued')) {
+      // Enter Polling Loop
+      return pollTask(data.task_id);
+    }
+
+    return data;
   }
+
   // For file downloads, return blob
   if (contentType && (contentType.includes("application/pdf") || contentType.includes("application/octet-stream"))) {
     return response.blob();
@@ -96,14 +150,23 @@ export const api = {
   // ─────────────────────────────────────────────────────────────────────────────
   signup: (email: string, password: string, first_name?: string, last_name?: string) =>
     api.request("POST", "/api/auth/signup/", { email, password, first_name, last_name }),
-  verifyOtp: (email: string, otp: string) =>
-    api.request("POST", "/api/auth/verify-otp/", { email, otp }),
+  verifyEmail: (key: string) =>
+    api.request("POST", "/api/auth/registration/verify-email/", { key }),
+  googleLogin: (code: string) =>
+    api.request("POST", "/api/auth/google/token/", { code }),
   login: (email: string, password: string) =>
     api.request("POST", "/api/auth/login/", { email, password }),
   logout: () => api.request("POST", "/api/auth/logout/"),
   getUser: () => api.request("GET", "/api/auth/user/"),
   updateCurrentUser: (data: any) => api.request("PATCH", "/api/auth/user/", data),
   startGoogleLogin: () => `${getBaseUrl()}/api/auth/google/`,
+  requestPasswordReset: (email: string) =>
+    api.request("POST", "/api/auth/password/reset/", { email }),
+  resetPasswordConfirm: (uid: string, token: string, new_password1: string, new_password2: string) =>
+    api.request("POST", "/api/auth/password/reset/confirm/", { uid, token, new_password1, new_password2 }),
+  changePassword: (data: any) =>
+    api.request("POST", "/api/auth/password/change/", data),
+
   refreshToken: () => api.request("POST", "/api/auth/token/refresh/"),
 
   // User management (admin)
@@ -113,15 +176,23 @@ export const api = {
 
   // Session management
   getSessions: () => api.request("GET", "/api/auth/sessions/"),
-  revokeSession: (sessionId: number) => api.request("DELETE", `/api/auth/sessions/${sessionId}/`),
+  revokeSession: (sessionId: string) => api.request("DELETE", `/api/auth/sessions/${sessionId}/`),
 
   // ─────────────────────────────────────────────────────────────────────────────
   // BILLING ENDPOINTS (/api/billing/)
   // ─────────────────────────────────────────────────────────────────────────────
   getPlans: () => api.request("GET", "/api/billing/plans/"),
-  getSubscription: () => api.request("GET", "/api/billing/subscription/"),
-  updateSubscription: (planSlug: string) => api.request("POST", "/api/billing/subscription/", { plan_slug: planSlug }),
-  getBusinessDetails: () => api.request("GET", "/api/billing/business-details/"),
+  updatePlan: (id: number, data: any) => api.request("PATCH", `/api/billing/plans/${id}/`, data),
+  getSubscription: async () => {
+    const res = await api.request("GET", "/api/billing/subscriptions/"); // Fixed plural
+    // If result is array, take first (assuming user has one active subscription)
+    return Array.isArray(res) ? res[0] : res;
+  },
+  updateSubscription: (planSlug: string) => api.request("POST", "/api/billing/subscriptions/assign_plan/", { plan_slug: planSlug }),
+  getBusinessDetails: async () => {
+    const res = await api.request("GET", "/api/billing/business-details/");
+    return Array.isArray(res) ? res[0] : res;
+  },
   updateBusinessDetails: (data: any) => api.request("PUT", "/api/billing/business-details/", data),
   getInvoices: () => api.request("GET", "/api/billing/invoices/"),
 
@@ -129,16 +200,11 @@ export const api = {
   // SIGNATURE ENDPOINTS (/api/signatures/)
   // ─────────────────────────────────────────────────────────────────────────────
   getSignatureStats: () => api.request("GET", "/api/signatures/requests/stats/"),
+  getTrash: () => api.request("GET", "/api/signatures/requests/?mode=trash"), // Explicitly map getTrash here if not already
+  restoreSignature: (id: number) => api.request("POST", `/api/signatures/requests/${id}/restore/`),
   getSignatureRequests: (mode: string = "") => api.request("GET", `/api/signatures/requests/?mode=${mode}`),
   getSignatureTemplates: () => api.request("GET", "/api/signatures/templates/"),
   getSignatureContacts: () => api.request("GET", "/api/signatures/contacts/"),
-
-  // ─────────────────────────────────────────────────────────────────────────────
-  // WORKFLOW & TASKS ENDPOINTS (/api/workflows/)
-  // ─────────────────────────────────────────────────────────────────────────────
-  getWorkflows: () => api.request("GET", "/api/workflows/workflows/"),
-  createWorkflow: (data: any) => api.request("POST", "/api/workflows/workflows/", data),
-  getTasks: () => api.request("GET", "/api/workflows/tasks/"),
 
   // ─────────────────────────────────────────────────────────────────────────────
   // PDF CONVERSIONS - FROM PDF (/pdf-conversions/api/)
@@ -208,9 +274,15 @@ export const api = {
   getAdminStats: async () => {
     return api.request("GET", "/api/auth/admin/stats/");
   },
-  getUsers: async (search?: string) => {
-    let url = "/api/auth/admin/users/";
-    if (search) url += `?search=${search}`;
+  getAdminActivity: async () => {
+    return api.request("GET", "/api/auth/admin/activity/");
+  },
+  getAdminDatabase: async () => {
+    return api.request("GET", "/api/auth/admin/database/");
+  },
+  getUsers: async (search?: string, page: number = 1) => {
+    let url = `/api/auth/admin/users/?page=${page}`;
+    if (search) url += `&search=${search}`;
     return api.request("GET", url);
   },
   updateUserRole: async (id: number, role: string) => {
@@ -219,16 +291,71 @@ export const api = {
   deleteUser: async (id: number) => {
     return api.request("DELETE", `/api/auth/admin/users/${id}/`);
   },
+  assignUserPlan: async (userId: number, planSlug: string) => {
+    return api.request("POST", "/api/billing/admin/subscriptions/assign_plan/", { user_id: userId, plan_slug: planSlug });
+  },
 
   // --- Core / Admin Logic ---
-  getSystemSettings: () => api.request("GET", "/api/core/settings/"),
-  updateSystemSetting: (key: string, value: any, file?: File) => {
+  getPublicSettings: () => api.request("GET", "/api/core/settings/public/"),
+  getAdminBranding: () => api.request("GET", "/api/core/settings/branding/"),
+  updateAdminBranding: (data: FormData) => api.request("PATCH", "/api/core/settings/branding/", data),
+  getContentVersions: () => api.request("GET", "/api/core/content-versions/"),
+  revertContent: (versionId: number) => api.request("POST", `/api/core/content-versions/${versionId}/revert/`),
+
+  // Teams
+  getTeams: () => api.request("GET", "/api/teams/"),
+  createTeam: (data: { name: string }) => api.request("POST", "/api/teams/", data),
+  inviteTeamMember: (teamId: number, email: string, role: string = 'MEMBER') =>
+    api.request("POST", `/api/teams/${teamId}/invite/`, { email, role }),
+
+  // Workflows
+  getWorkflows: () => api.request("GET", "/api/workflows/workflows/"),
+  createWorkflow: (data: any) => api.request("POST", "/api/workflows/workflows/", data),
+
+  // Tasks
+  getTasks: () => api.request("GET", "/api/workflows/tasks/"),
+
+  // Referrals
+  getReferralStats: () => api.request("GET", "/api/billing/referrals/stats/"),
+
+  // Payments
+  createOrder: (planSlug: string) => api.request("POST", "/api/billing/payments/create_order/", { plan_slug: planSlug }),
+  verifyPayment: (data: any) => api.request("POST", "/api/billing/payments/verify_payment/", data),
+  getPayments: () => api.request("GET", "/api/billing/payments/"),
+  getAdminPayments: () => api.request("GET", "/api/billing/payments/"), // Super admin sees all by default via same endpoint
+
+  // Trash (Signatures for now)
+
+
+
+  getSystemSettings: () => api.request("GET", "/api/core/settings/"), // Legacy fallback
+  createSystemSetting: (key: string, value: any, file?: File) => {
     const formData = new FormData();
     formData.append('key', key);
     if (value) formData.append('value', value);
     if (file) formData.append('file', file);
+    return fetch(`${getBaseUrl()}/api/core/settings/`, {
+      method: "POST",
+      body: formData,
+      credentials: "include"
+    }).then(async res => {
+      if (!res.ok) throw new Error("Failed to create setting");
+      return res.json();
+    });
+  },
+  updateSystemSetting: (key: string, value: any, file?: File) => {
+    const formData = new FormData();
+    if (value) formData.append('value', value);
+    if (file) formData.append('file', file);
     // Using generic update since we don't have key-specific endpoint, or assume PATCH on detail
-    return api.request("PATCH", `/api/core/settings/${key}/`, formData);
+    return fetch(`${getBaseUrl()}/api/core/settings/${key}/`, {
+      method: "PATCH",
+      body: formData,
+      credentials: "include"
+    }).then(async res => {
+      if (!res.ok) throw new Error("Failed to update setting");
+      return res.json();
+    });
   },
   getAdminRequests: () => api.request("GET", "/api/core/admin-requests/"),
   approveRequest: (id: number) => api.request("POST", `/api/core/admin-requests/${id}/approve/`),
@@ -236,7 +363,46 @@ export const api = {
 
   // --- Features ---
   getFeatures: () => api.request("GET", "/api/billing/features/"),
-  createFeature: (data: any) => api.request("POST", "/api/billing/features/", data),
+  createFeature: (data: any) => {
+    // If data contains an 'icon' file, use uploadFile/FormData
+    if (data.icon && data.icon instanceof File) {
+      const formData = new FormData();
+      Object.keys(data).forEach(key => {
+        formData.append(key, data[key]);
+      });
+      return fetch(`${getBaseUrl()}/api/billing/features/`, {
+        method: "POST",
+        headers: {
+          // Content-Type is handled automatically by browser for FormData
+        },
+        body: formData,
+        credentials: "include"
+      }).then(async res => {
+        if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || "Feature creation failed");
+        return res.json();
+      });
+    }
+    // Fallback to JSON
+    return api.request("POST", "/api/billing/features/", data);
+  },
+  updateFeature: (id: number, data: any) => {
+    // Check if data contains file
+    if (data.icon && data.icon instanceof File) {
+      const formData = new FormData();
+      Object.keys(data).forEach(key => {
+        formData.append(key, data[key]);
+      });
+      return fetch(`${getBaseUrl()}/api/billing/features/${id}/`, {
+        method: "PATCH",
+        body: formData,
+        credentials: "include"
+      }).then(async res => {
+        if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || "Update failed");
+        return res.json();
+      });
+    }
+    return api.request("PATCH", `/api/billing/features/${id}/`, data);
+  },
   getFeatureOverrides: () => api.request("GET", "/api/billing/feature-overrides/"),
   setFeatureOverride: (userId: number, featureId: number, isEnabled: boolean) =>
     api.request("POST", "/api/billing/feature-overrides/", { user: userId, feature: featureId, is_enabled: isEnabled }),

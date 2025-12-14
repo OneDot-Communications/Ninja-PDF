@@ -34,3 +34,12 @@ class BusinessDetailsSerializer(serializers.ModelSerializer):
     class Meta:
         model = BusinessDetails
         fields = '__all__'
+
+from .models import Payment
+class PaymentSerializer(serializers.ModelSerializer):
+    user_email = serializers.EmailField(source='user.email', read_only=True)
+    plan_name = serializers.CharField(source='plan.name', read_only=True)
+    
+    class Meta:
+        model = Payment
+        fields = '__all__'

@@ -1,8 +1,9 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from .session_models import UserSession
 from django.utils.translation import gettext_lazy as _
 from .managers import CustomUserManager
-from .session_models import UserSession # Import the new model
+
 
 class User(AbstractUser):
     username = None # Remove username field
@@ -62,6 +63,18 @@ class User(AbstractUser):
     @property
     def is_admin(self):
         return self.role in [self.Roles.SUPER_ADMIN, self.Roles.ADMIN]
+
+    @property
+    def is_free(self):
+        return self.subscription_tier == self.SubscriptionTiers.FREE
+
+    @property
+    def is_premium(self):
+        return self.subscription_tier in [
+            self.SubscriptionTiers.PRO,
+            self.SubscriptionTiers.PREMIUM,
+            self.SubscriptionTiers.ENTERPRISE
+        ]
 
 class OTP(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='otps')

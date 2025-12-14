@@ -34,7 +34,7 @@ export default function SignaturesOverviewPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => window.location.href = '/profile/signatures/sent'}>
+                <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => window.location.href = '/signatures/sent'}>
                     <CardHeader className="flex flex-row items-center justify-between pb-2">
                         <CardTitle className="text-sm font-medium text-muted-foreground">Sent Requests</CardTitle>
                         <Send className="w-4 h-4 text-blue-500" />
@@ -45,7 +45,7 @@ export default function SignaturesOverviewPage() {
                     </CardContent>
                 </Card>
 
-                <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => window.location.href = '/profile/signatures/inbox'}>
+                <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => window.location.href = '/signatures/inbox'}>
                     <CardHeader className="flex flex-row items-center justify-between pb-2">
                         <CardTitle className="text-sm font-medium text-muted-foreground">Inbox</CardTitle>
                         <Inbox className="w-4 h-4 text-orange-500" />
@@ -56,7 +56,7 @@ export default function SignaturesOverviewPage() {
                     </CardContent>
                 </Card>
 
-                <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => window.location.href = '/profile/signatures/signed'}>
+                <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => window.location.href = '/signatures/signed'}>
                     <CardHeader className="flex flex-row items-center justify-between pb-2">
                         <CardTitle className="text-sm font-medium text-muted-foreground">Completed</CardTitle>
                         <CheckCircle className="w-4 h-4 text-green-500" />

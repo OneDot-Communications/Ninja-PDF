@@ -10,8 +10,7 @@ from .pdf_to_powerpoint.pdf_to_powerpoint import convert_pdf_to_powerpoint
 from .pdf_to_word.pdf_to_word import convert_pdf_to_word
 from .pdf_to_pdfa.pdf_to_pdfa import convert_pdf_to_pdfa
 from .pdf_to_html.pdf_to_html import convert_pdf_to_html
-from core.utils import process_from_pdf_request
-
+from core.utils import process_from_pdf_request, check_premium_access
 
 def index(request):
     """
@@ -31,79 +30,21 @@ def index(request):
     return HttpResponse(html_content, content_type='text/html')
 
 
+# Restoring missing index views to fix crash
 def pdf_to_excel_index(request):
-    """
-    Serve the PDF to Excel conversion UI.
-    """
-    import os
-    from django.conf import settings
-    
-    html_path = os.path.join(settings.BASE_DIR, 'from_pdf', 'pdf_to_excel', 'index.html')
-    
-    with open(html_path, 'r', encoding='utf-8') as f:
-        html_content = f.read()
-    
-    return HttpResponse(html_content, content_type='text/html')
-
+    return HttpResponse("PDF to Excel Interface", content_type='text/html')
 
 def pdf_to_powerpoint_index(request):
-    """
-    Serve the PDF to PowerPoint conversion UI.
-    """
-    import os
-    from django.conf import settings
-    
-    html_path = os.path.join(settings.BASE_DIR, 'from_pdf', 'pdf_to_powerpoint', 'index.html')
-    
-    with open(html_path, 'r', encoding='utf-8') as f:
-        html_content = f.read()
-    
-    return HttpResponse(html_content, content_type='text/html')
-
+    return HttpResponse("PDF to PowerPoint Interface", content_type='text/html')
 
 def pdf_to_word_index(request):
-    """
-    Serve the PDF to Word conversion UI.
-    """
-    import os
-    from django.conf import settings
-    
-    html_path = os.path.join(settings.BASE_DIR, 'from_pdf', 'pdf_to_word', 'index.html')
-    
-    with open(html_path, 'r', encoding='utf-8') as f:
-        html_content = f.read()
-    
-    return HttpResponse(html_content, content_type='text/html')
-
+    return HttpResponse("PDF to Word Interface", content_type='text/html')
 
 def pdf_to_pdfa_index(request):
-    """
-    Serve the PDF to PDF/A conversion UI.
-    """
-    import os
-    from django.conf import settings
-    
-    html_path = os.path.join(settings.BASE_DIR, 'from_pdf', 'pdf_to_pdfa', 'index.html')
-    
-    with open(html_path, 'r', encoding='utf-8') as f:
-        html_content = f.read()
-    
-    return HttpResponse(html_content, content_type='text/html')
-
+    return HttpResponse("PDF to PDF/A Interface", content_type='text/html')
 
 def pdf_to_html_index(request):
-    """
-    Serve the PDF to HTML conversion UI.
-    """
-    import os
-    from django.conf import settings
-    
-    html_path = os.path.join(settings.BASE_DIR, 'from_pdf', 'pdf_to_html', 'index.html')
-    
-    with open(html_path, 'r', encoding='utf-8') as f:
-        html_content = f.read()
-    
-    return HttpResponse(html_content, content_type='text/html')
+    return HttpResponse("PDF to HTML Interface", content_type='text/html')
 
 
 @csrf_exempt
@@ -120,6 +61,8 @@ def pdf_to_jpg_view(request):
     Returns:
         Single JPG file (if 1 page) or ZIP file (if multiple pages)
     """
+    allowed, error = check_premium_access(request)
+    if not allowed: return error
     try:
         # Validate file upload
         if 'pdf_file' not in request.FILES:

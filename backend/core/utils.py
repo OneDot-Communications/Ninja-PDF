@@ -21,11 +21,56 @@ def cleanup_files(paths, retries=3, delay=0.1):
         except Exception:
             pass
 
-def process_to_pdf_request(request, accepted_extensions, conversion_func, input_type_name, template_name='to_pdf/convert_form.html', default_ext=None):
+def check_premium_access(request):
+    """
+    Helper to check Authentication and Premium status.
+    Returns (True, None) if allowed.
+    Returns (False, JsonResponse) if denied.
+    """
+    if not request.user.is_authenticated:
+        return False, JsonResponse({'error': 'Authentication required'}, status=401)
+    
+    is_premium = False
+    if request.user.role == 'SUPER_ADMIN':
+        is_premium = True
+    elif hasattr(request.user, 'subscription'):
+        if request.user.subscription.status == 'ACTIVE':
+            is_premium = True
+            
+    if not is_premium:
+        return False, JsonResponse({'error': 'This feature is available for Premium users only.'}, status=403)
+        
+    return True, None
+
+def process_to_pdf_request(request, accepted_extensions, conversion_func, input_type_name, template_name='to_pdf/convert_form.html', default_ext=None, premium_required=True):
     """
     Handles the common logic for 'To PDF' conversions (e.g. Word -> PDF).
     Returns an HttpResponse or renders a template on error.
     """
+    # 1. Enforce Authentication
+    if not request.user.is_authenticated:
+        if request.user.is_anonymous:
+             from django.shortcuts import redirect
+             return redirect('/login')
+
+    # 2. Enforce Premium
+    if premium_required:
+         is_premium = False
+         if request.user.role == 'SUPER_ADMIN':
+             is_premium = True
+         elif hasattr(request.user, 'subscription'):
+             if request.user.subscription.status == 'ACTIVE':
+                 # Add expiry check logic here if needed
+                 is_premium = True
+         
+         if not is_premium:
+             return render(request, template_name, {
+                'title': f'{input_type_name} to PDF Converter',
+                'input_type': input_type_name,
+                'accept': ','.join(accepted_extensions),
+                'error': 'This feature is available for Premium users only. Please upgrade your plan.'
+            })
+
     if request.method != 'POST' or not request.FILES.get('file'):
          return render(request, template_name, {
             'title': f'{input_type_name} to PDF Converter',
@@ -89,7 +134,9 @@ def process_to_pdf_request(request, accepted_extensions, conversion_func, input_
 
     except Exception as e:
         # trace back for debugging if needed, or just log
-        traceback.print_exc()
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error("Exception during To PDF conversion", exc_info=True)
         # Cleanup error
         cleanup_files([input_path, output_path])
         
@@ -102,12 +149,18 @@ def process_to_pdf_request(request, accepted_extensions, conversion_func, input_
         response['Cache-Control'] = 'no-cache, no-store, must-revalidate'
         return response
 
-def process_from_pdf_request(request, conversion_func, content_type, output_ext=None, **options):
+def process_from_pdf_request(request, conversion_func, content_type, output_ext=None, premium_required=True, **options):
     """
     Handles the common logic for 'From PDF' conversions (e.g. PDF -> Word).
     Returns an HttpResponse (file) or JsonResponse (error).
     options can include default values for the conversion function.
     """
+    # 1. Enforce Authentication & Premium via Helper
+    if premium_required:
+        allowed, error_response = check_premium_access(request)
+        if not allowed:
+            return error_response
+
     try:
         uploaded_file = request.FILES.get('pdf_file') or request.FILES.get('file')
         if not uploaded_file:
@@ -150,5 +203,7 @@ def process_from_pdf_request(request, conversion_func, content_type, output_ext=
         return JsonResponse({'error': 'Conversion returned no data'}, status=500)
 
     except Exception as e:
-        traceback.print_exc()
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Conversion failed: {str(e)}", exc_info=True)
         return JsonResponse({'error': f'Conversion failed: {str(e)}'}, status=500)

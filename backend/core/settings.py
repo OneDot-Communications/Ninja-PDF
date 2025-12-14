@@ -39,6 +39,10 @@ AUTHENTICATION_BACKENDS = [
     'allauth.account.auth_backends.AuthenticationBackend',
 ]
 
+# RAZORPAY SETTINGS
+RAZORPAY_KEY_ID = os.getenv('RAZORPAY_KEY_ID')
+RAZORPAY_KEY_SECRET = os.getenv('RAZORPAY_KEY_SECRET')
+
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
@@ -251,18 +255,28 @@ REST_AUTH = {
 
 # AllAuth Configuration
 # AllAuth Configuration (2025 Modern Standards)
-ACCOUNT_USER_MODEL_USERNAME_FIELD = None 
-ACCOUNT_LOGIN_METHODS = {'email'} 
+# AllAuth Configuration (2025 Modern Standards)
+ACCOUNT_USER_MODEL_USERNAME_FIELD = None
+ACCOUNT_LOGIN_METHODS = {'email'} # Replaces ACCOUNT_AUTHENTICATION_METHOD
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_USERNAME_REQUIRED = False
+ACCOUNT_SIGNUP_PASSWORD_ENTER_TWICE = False
+ACCOUNT_EMAIL_VERIFICATION = 'mandatory'
+# ACCOUNT_SIGNUP_FIELDS replaces old REQUIRED fields logic in newer versions, 
+# but dj-rest-auth might still rely on older settings. keeping both for safety if compatible.
 
 # CSRF Settings for JWT Auth
 CSRF_COOKIE_SAMESITE = 'Lax'
 CSRF_COOKIE_HTTPONLY = False  # Critical: Frontend needs to read this cookie
 CSRF_USE_SESSIONS = False 
-ACCOUNT_EMAIL_REQUIRED = True 
-ACCOUNT_USERNAME_REQUIRED = False 
-ACCOUNT_SIGNUP_FIELDS = ['email*', 'password1', 'first_name', 'last_name'] # Explicitly set required fields
-ACCOUNT_EMAIL_VERIFICATION = 'mandatory' # Enforced OTP/Link
+
+# ACCOUNT_SIGNUP_FIELDS is not a standard setting for allauth/dj-rest-auth, removing to avoid confusion
+# Validation is handled by RegisterSerializer and settings above.
+ACCOUNT_EMAIL_VERIFICATION = 'mandatory' 
+ACCOUNT_CONFIRM_EMAIL_ON_GET = False # Secure: Requires POST to verify
 ACCOUNT_ADAPTER = 'authentication.adapters.CustomAccountAdapter'
+OLD_PASSWORD_FIELD_ENABLED = True
+LOGOUT_ON_PASSWORD_CHANGE = True
 
 # Google Provider
 SOCIALACCOUNT_PROVIDERS = {
@@ -337,3 +351,64 @@ LOGGING = {
         },
     },
 }
+
+# -----------------------------------------------------------------------------
+# ASYNC & CACHE CONFIGURATION (REDIS)
+# -----------------------------------------------------------------------------
+# Use Redis for Caching
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": os.getenv("REDIS_URL", "redis://127.0.0.1:6379/1"),
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        }
+    }
+}
+
+# Celery Configuration
+CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://127.0.0.1:6379/0")
+CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", "redis://127.0.0.1:6379/0")
+CELERY_ACCEPT_CONTENT = ['application/json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = TIME_ZONE
+
+from kombu import Queue
+CELERY_TASK_QUEUES = (
+    Queue('high_priority', routing_key='high_priority'),
+    Queue('default', routing_key='default'),
+)
+CELERY_TASK_DEFAULT_QUEUE = 'default'
+CELERY_TASK_DEFAULT_ROUTING_KEY = 'default'
+
+# -----------------------------------------------------------------------------
+# CLOUD STORAGE (AWS/CLOUDFLARE R2)
+# -----------------------------------------------------------------------------
+if os.getenv('USE_S3', 'False') == 'True':
+    AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
+    AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
+    AWS_STORAGE_BUCKET_NAME = os.getenv('AWS_STORAGE_BUCKET_NAME')
+    AWS_S3_ENDPOINT_URL = os.getenv('AWS_S3_ENDPOINT_URL') # Essential for R2
+    AWS_S3_CUSTOM_DOMAIN = os.getenv('AWS_S3_CUSTOM_DOMAIN') # Public URL
+    AWS_S3_OBJECT_PARAMETERS = {
+        'CacheControl': 'max-age=86400',
+    }
+    STORAGES = {
+        "default": {
+            "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+        },
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    }
+else:
+    # Default to FileSystemStorage
+    STORAGES = {
+        "default": {
+            "BACKEND": "django.core.files.storage.FileSystemStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    }

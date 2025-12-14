@@ -1,4 +1,4 @@
-import { ToolShell } from "../components/layout/tool-shell";
+import { DynamicToolShell } from "../components/layout/dynamic-tool-shell";
 import { MergePdfTool } from "../components/tools/merge-pdf";
 
 export const metadata = {
@@ -8,11 +8,12 @@ export const metadata = {
 
 export default function MergePdfPage() {
     return (
-        <ToolShell
-            title="Merge PDF"
-            description="Combine PDFs in the order you want with the easiest PDF merger available."
+        <DynamicToolShell
+            toolCode="merge-pdf"
+            defaultTitle="Merge PDF"
+            defaultDescription="Combine PDFs in the order you want with the easiest PDF merger available."
         >
             <MergePdfTool />
-        </ToolShell>
+        </DynamicToolShell>
     );
 }
