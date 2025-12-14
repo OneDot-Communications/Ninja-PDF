@@ -100,10 +100,7 @@ const LoginPage = () => {
                         </Button>
                     </form>
 
-                    <div className="my-6 flex gap-4 mb-6">
-                        <Button variant="outline" className="w-full flex items-center gap-2 border-slate-200 text-slate-700 hover:bg-slate-50 h-10">
-                            <FaFacebook className="text-[#1877F2]" /> Facebook
-                        </Button>
+                    <div className="my-6 mb-6">
                         <div className="w-full">
                             <GoogleLoginButton />
                         </div>

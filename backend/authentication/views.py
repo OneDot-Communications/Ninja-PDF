@@ -1,63 +1,47 @@
-from rest_framework import status, generics, viewsets, permissions
+from rest_framework import status, generics, viewsets, permissions, serializers, filters
 import os
 from django.shortcuts import redirect
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.contrib.auth import get_user_model
 from dj_rest_auth.views import LoginView
-from dj_rest_auth.registration.views import SocialLoginView
+from dj_rest_auth.registration.views import SocialLoginView, RegisterView
 from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
 from allauth.socialaccount.providers.oauth2.client import OAuth2Client
+from rest_framework.exceptions import PermissionDenied
 from .serializers import (
     SignupSerializer, 
-    VerifyOTPSerializer, 
     UserSerializer, 
     AdminUserUpdateSerializer
 )
-from .utils import generate_otp, verify_otp_code
 from .permissions import IsSuperAdmin, IsAdmin
 
 User = get_user_model()
 
-class SignupView(generics.CreateAPIView):
+class SignupView(RegisterView):
+    # Using dj-rest-auth's RegisterView which handles signal sending for email verification
     serializer_class = SignupSerializer
     permission_classes = [permissions.AllowAny]
 
     def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
+        # Intercept data to handle single-password submission
+        data = request.data.copy()
+        if 'password' in data and 'password1' not in data:
+            data['password1'] = data['password']
+            data['password2'] = data['password']
+        
+        serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
-        user = serializer.save()
+        user = self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
         
-        # Generate and Send OTP. generate_otp returns whether email was sent.
-        otp_sent = generate_otp(user)
-        
-        return Response({
-            "message": "User created successfully. Please verify your email.",
-            "email": user.email,
-            "otp_sent": bool(otp_sent)
-        }, status=status.HTTP_201_CREATED)
+        return Response(
+            self.get_response_data(user),
+            status=status.HTTP_201_CREATED,
+            headers=headers
+        )
 
-class VerifyOTPView(APIView):
-    permission_classes = [permissions.AllowAny]
-
-    def post(self, request):
-        serializer = VerifyOTPSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        
-        email = serializer.validated_data['email']
-        otp_code = serializer.validated_data['otp']
-        
-        try:
-            user = User.objects.get(email=email)
-        except User.DoesNotExist:
-            return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
-            
-        if verify_otp_code(user, otp_code):
-            user.is_verified = True
-            user.save()
-            return Response({"message": "Email verified successfully. You can now login."}, status=status.HTTP_200_OK)
-        else:
-            return Response({"error": "Invalid or expired OTP"}, status=status.HTTP_400_BAD_REQUEST)
+# VerifyOTPView REMOVED - Using dj-rest-auth's VerifyEmailView (via urls)
 
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
@@ -71,11 +55,6 @@ class CustomLoginView(LoginView):
         # Check if user is verified after successful authentication
         if response.status_code == 200:
             user = self.user
-            if not user.is_verified:
-                return Response(
-                    {"error": "Email not verified. Please verify your OTP."},
-                    status=status.HTTP_403_FORBIDDEN
-                )
             
             # --- FORTRESS SECURITY UPGRADE ---
             # Create a Session Record
@@ -98,44 +77,38 @@ class GoogleLogin(SocialLoginView):
     callback_url = "http://127.0.0.1:3000/auth/google/callback"
     client_class = OAuth2Client
 
-    def post(self, request, *args, **kwargs):
-        print("GoogleLogin: received POST for token exchange")
-        print("POST body:", request.data)
-        return super().post(request, *args, **kwargs)
-
-
 class GoogleRedirectView(APIView):
     """
     Redirects GET requests for /api/auth/google/ to the allauth provider start URL
-    (which is typically /accounts/google/login/) so the browser can start the OAuth flow.
     """
     permission_classes = [permissions.AllowAny]
 
     def get(self, request, *args, **kwargs):
-        # Redirect to allauth provider login route. We intentionally include a `next` param
-        # that points back to the frontend callback so that after provider auth completes
-        # the user is sent to the frontend.
-        # Note: allauth will handle real provider redirect logic.
         frontend_callback = os.getenv('FRONTEND_HOST', 'http://127.0.0.1:3000') + '/auth/google/callback'
-        print(f"GoogleRedirectView: redirecting to allauth provider with next={frontend_callback}")
-        # Ensure we explicitly start the login process (not connect), and include the frontend callback.
+        # Explicitly start the login process
         redirect_url = f"/accounts/google/login/?process=login&next={frontend_callback}"
         return redirect(redirect_url)
 
 class UserManagementViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = AdminUserUpdateSerializer
-    permission_classes = [IsAdmin] # Or IsSuperAdmin depending on strictness
+    permission_classes = [IsAdmin] 
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['email', 'first_name', 'last_name']
+    from rest_framework.pagination import PageNumberPagination
+    class StandardResultsSetPagination(PageNumberPagination):
+        page_size = 10
+        page_size_query_param = 'page_size'
+        max_page_size = 100
+    pagination_class = StandardResultsSetPagination
 
     def get_queryset(self):
         user = self.request.user
         if user.role == User.Roles.SUPER_ADMIN:
              return User.objects.all()
-        # Admins cannot see/edit Super Admins
         return User.objects.exclude(role=User.Roles.SUPER_ADMIN)
     
     def perform_destroy(self, instance):
-        # Admins cannot delete users, only Super Admin can (optional rule)
         if self.request.user.role != User.Roles.SUPER_ADMIN:
              from rest_framework.exceptions import PermissionDenied
              raise PermissionDenied("Only Super Admin can delete users.")
@@ -147,23 +120,12 @@ class UserSessionViewSet(viewsets.ModelViewSet):
     ViewSet for users to view and revoke their own sessions.
     """
     permission_classes = [permissions.IsAuthenticated]
+    from .serializers import UserSessionSerializer
+    serializer_class = UserSessionSerializer
     
     def get_queryset(self):
         from .session_models import UserSession
-        # Users can only see their own sessions
         return UserSession.objects.filter(user=self.request.user).order_by('-last_active')
-    
-    def get_serializer_class(self):
-        from rest_framework import serializers
-        from .session_models import UserSession
-        
-        class UserSessionSerializer(serializers.ModelSerializer):
-            class Meta:
-                model = UserSession
-                fields = ['id', 'ip_address', 'user_agent', 'device_fingerprint', 'created_at', 'last_active']
-                read_only_fields = fields
-        
-        return UserSessionSerializer
     
     def destroy(self, request, *args, **kwargs):
         """Revoke (delete) a session"""

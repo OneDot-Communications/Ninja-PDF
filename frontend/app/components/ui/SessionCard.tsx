@@ -25,7 +25,7 @@ export const SessionCard: React.FC<SessionCardProps> = ({ session, onRevoke }) =
     const handleRevoke = async () => {
         setRevoking(true);
         try {
-            await api.revokeSession(session.id);
+            await api.revokeSession(String(session.id));
             onRevoke();
         } catch (e) {
             console.error("Failed to revoke session", e);

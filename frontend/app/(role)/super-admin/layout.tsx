@@ -2,6 +2,7 @@
 
 import { useAuth } from "@/app/context/AuthContext";
 import { SharedSidebar } from "@/app/components/dashboard/SharedSidebar";
+import { Header } from "@/app/components/dashboard/Header";
 import { Toaster } from "sonner";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -35,9 +36,12 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
     return (
         <div className="flex min-h-screen bg-slate-50/50">
             <SharedSidebar type="SUPER_ADMIN" className="w-72 hidden md:block fixed h-full z-20" />
-            <main className="flex-1 md:ml-72 p-8 overflow-y-auto h-screen">
-                <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                    {children}
+            <main className="flex-1 md:ml-72 flex flex-col min-h-screen">
+                <Header role="SUPER_ADMIN" />
+                <div className="flex-1 p-8 overflow-y-auto">
+                    <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+                        {children}
+                    </div>
                 </div>
                 <Toaster />
             </main>

@@ -2,28 +2,27 @@ from rest_framework import serializers
 from .models import User
 from dj_rest_auth.registration.serializers import SocialLoginSerializer
 
-class SignupSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True)
+from dj_rest_auth.registration.serializers import RegisterSerializer
+
+class SignupSerializer(RegisterSerializer):
     first_name = serializers.CharField(required=False, allow_blank=True)
     last_name = serializers.CharField(required=False, allow_blank=True)
+    username = serializers.CharField(required=False, allow_blank=True)
+    password = serializers.CharField(write_only=True) # Explicitly define password
+    
+    def validate_username(self, username):
+        # Do nothing, username is not required
+        return None
 
-    class Meta:
-        model = User
-        fields = ('email', 'password', 'first_name', 'last_name')
+    def save(self, request):
+        return super().save(request)
 
-    def create(self, validated_data):
-        # Pop optional name fields so they can be passed via extra_fields
-        first_name = validated_data.pop('first_name', '')
-        last_name = validated_data.pop('last_name', '')
-        user = User.objects.create_user(
-            email=validated_data.get('email'),
-            password=validated_data.get('password'),
-            first_name=first_name,
-            last_name=last_name,
-            is_active=True,  # User is active but not verified
-            is_verified=False
-        )
-        return user
+    def custom_signup(self, request, user):
+        # This hook is called by RegisterSerializer.save()
+        user.first_name = self.validated_data.get('first_name', '')
+        user.last_name = self.validated_data.get('last_name', '')
+        user.save()
+
 
 class VerifyOTPSerializer(serializers.Serializer):
     email = serializers.EmailField()
@@ -53,16 +52,25 @@ class AdminUserUpdateSerializer(serializers.ModelSerializer):
     """
     class Meta:
         model = User
-        fields = ('id', 'email', 'role', 'subscription_tier', 'is_active')
+        fields = ('id', 'email', 'first_name', 'last_name', 'role', 'subscription_tier', 'is_active', 'is_verified', 'date_joined')
         read_only_fields = ('email',)
 
 class GoogleLoginSerializer(SocialLoginSerializer):
     # Overriding if needed, else using default from dj-rest-auth
     pass
 
-from dj_rest_auth.serializers import LoginSerializer as DefaultLoginSerializer
+from dj_rest_auth.serializers import LoginSerializer
+from .session_models import UserSession
 
-class CustomLoginSerializer(DefaultLoginSerializer):
+class UserSessionSerializer(serializers.ModelSerializer):
+    user_email = serializers.EmailField(source='user.email', read_only=True)
+
+    class Meta:
+        model = UserSession
+        fields = ['id', 'user_email', 'ip_address', 'device_fingerprint', 'is_active', 'created_at', 'last_activity']
+        read_only_fields = ['id', 'created_at', 'last_activity']
+
+class CustomLoginSerializer(LoginSerializer):
     username = None # Disable username field
     
     def get_fields(self):

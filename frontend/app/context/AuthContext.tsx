@@ -21,7 +21,8 @@ interface AuthContextProps {
     signup: (email: string, password: string, first_name?: string, last_name?: string) => Promise<any>;
     login: (email: string, password: string) => Promise<void>;
     logout: () => Promise<void>;
-    verifyOtp: (email: string, otp: string) => Promise<void>;
+    verifyEmail: (key: string) => Promise<void>;
+    googleLogin: (code: string) => Promise<void>;
     refreshUser: () => Promise<User | null>;
 }
 
@@ -52,7 +53,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }, []);
 
     const signup = async (email: string, password: string, first_name?: string, last_name?: string) => {
-        // Return the API response so callers can inspect otp_sent etc.
         return await api.signup(email, password, first_name, last_name);
     };
 
@@ -67,20 +67,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         await refreshUser();
     };
 
+    const googleLogin = async (code: string) => {
+        try {
+            const res = await api.googleLogin(code);
+            console.debug("googleLogin: response", res);
+        } catch (err) {
+            console.error("googleLogin failed", err);
+            throw err;
+        }
+        await refreshUser();
+    };
+
     const logout = async () => {
         await api.logout();
         setUser(null);
     };
 
-    const verifyOtp = async (email: string, otp: string) => {
-        await api.verifyOtp(email, otp);
-        // OTP verified - user is now marked is_verified=true in backend
-        // User should now login with their credentials
+    const verifyEmail = async (key: string) => {
+        await api.verifyEmail(key);
     };
 
     return (
         <AuthContext.Provider
-            value={{ user, loading, signup, login, logout, verifyOtp, refreshUser }}
+            value={{ user, loading, signup, login, logout, verifyEmail, googleLogin, refreshUser }}
         >
             {children}
         </AuthContext.Provider>
@@ -90,18 +99,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 export const useAuth = () => {
     const context = useContext(AuthContext);
     if (!context) {
-        // During server-side rendering, there may be no AuthProvider applied.
-        // In that case, don't throw to allow prerendering; return a safe stub.
         if (typeof window !== 'undefined') {
             throw new Error("useAuth must be used within an AuthProvider");
         }
         return {
             user: null,
             loading: true,
-            signup: async (_email?: string, _password?: string, _first_name?: string, _last_name?: string) => { },
-            login: async (_email?: string, _password?: string) => { },
+            signup: async () => { },
+            login: async () => { },
             logout: async () => { },
-            verifyOtp: async () => { },
+            verifyEmail: async () => { },
+            googleLogin: async () => { },
             refreshUser: async () => null
         } as AuthContextProps;
     }

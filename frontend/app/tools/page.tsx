@@ -2,17 +2,18 @@
 
 import { Header } from "../components/layout/header";
 import { Footer } from "../components/layout/footer";
-import { tools } from "../lib/tools";
+import { useTools } from "../lib/useTools";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { ArrowRight, Search } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 
-// Group tools by category
-const categories = Array.from(new Set(tools.map((tool) => tool.category)));
-
 export default function ToolsPage() {
+  const { tools } = useTools();
+  // Group tools by category
+  const categories = Array.from(new Set(tools.map((tool) => tool.category)));
+
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const searchRef = useRef<HTMLInputElement | null>(null);
@@ -45,10 +46,10 @@ export default function ToolsPage() {
   );
 
   // Odoo-style App Icon Component with dynamic colors
-  const AppIcon = ({ tool }: { tool: typeof tools[0] }) => {
+  const AppIcon = ({ tool }: { tool: any }) => {
     const iconColor = tool.color || "#714B67";
     const bgColor = `${iconColor}10`; // 10% opacity for background tint
-    
+
     const descriptionId = `tool-desc-${tool.title.replace(/\s+/g, "-").toLowerCase()}`;
 
     return (
@@ -66,18 +67,27 @@ export default function ToolsPage() {
         }}
         aria-describedby={descriptionId}
       >
-        <div 
+        <div
           className="relative flex h-20 w-20 items-center justify-center rounded-2xl bg-white shadow-[0_4px_12px_rgba(0,0,0,0.08)] transition-all duration-300 group-hover:shadow-[0_8px_20px_rgba(0,0,0,0.12)] mb-3 border border-slate-100/80"
           style={{ backgroundColor: bgColor }}
         >
-          <tool.icon 
-            className="h-10 w-10 transition-transform duration-200 group-hover:scale-110" 
-            style={{ color: iconColor }}
-            strokeWidth={1.8} 
-          />
+          {typeof tool.icon === 'string' ? (
+            <img src={tool.icon} alt={tool.title} className="h-10 w-10 object-contain transition-transform duration-200 group-hover:scale-110" />
+          ) : (
+            <tool.icon
+              className="h-10 w-10 transition-transform duration-200 group-hover:scale-110"
+              style={{ color: iconColor }}
+              strokeWidth={1.8}
+            />
+          )}
           {tool.isNew && (
             <span className="absolute -top-1.5 -right-1.5 bg-brand-red text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-sm">
               NEW
+            </span>
+          )}
+          {tool.isPremium && (
+            <span className="absolute -top-1.5 -left-1.5 bg-amber-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-sm z-10">
+              PRO
             </span>
           )}
         </div>
@@ -114,10 +124,10 @@ export default function ToolsPage() {
   return (
     <div className="flex min-h-screen flex-col bg-slate-50 font-sans text-slate-900">
       <Header />
-      
+
       <main className="flex-1 pt-24 pb-20">
         <div className="container px-4 md:px-6 mx-auto">
-          
+
           {/* Header Section */}
           <div className="text-center max-w-3xl mx-auto mb-16">
             <h1 className="text-5xl md:text-6xl font-bold font-caveat text-slate-900 mb-6">
@@ -127,7 +137,7 @@ export default function ToolsPage() {
               Everything you need to manage and edit your documents in one place — simple tasks made effortless.
               <span className="block text-sm text-slate-500 mt-2">Not sure what to pick? Type a task (e.g. "compress" or "convert to Word") and we'll find the best tool.</span>
             </p>
-            
+
             {/* Search Bar */}
             <div className="relative max-w-md mx-auto">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">

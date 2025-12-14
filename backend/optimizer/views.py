@@ -3,6 +3,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from .compress_pdf.compress_pdf import compress_pdf
 from .compress_image.compress_image import compress_image
+from core.utils import check_premium_access
 
 @csrf_exempt
 @require_http_methods(["POST"])
@@ -10,6 +11,8 @@ def compress_pdf_view(request):
     """
     API endpoint to compress PDF files.
     """
+    allowed, error = check_premium_access(request)
+    if not allowed: return error
     try:
         if 'file' not in request.FILES:
              return JsonResponse({'error': 'No file uploaded'}, status=400)
@@ -32,6 +35,9 @@ def compress_pdf_view(request):
     except ValueError as e:
         return JsonResponse({'error': str(e)}, status=400)
     except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Compress PDF error: {str(e)}", exc_info=True)
         return JsonResponse({'error': f"Server error: {str(e)}"}, status=500)
 
 @csrf_exempt
@@ -40,6 +46,8 @@ def compress_image_view(request):
     """
     API endpoint to compress Image files.
     """
+    allowed, error = check_premium_access(request)
+    if not allowed: return error
     try:
         if 'file' not in request.FILES:
              return JsonResponse({'error': 'No file uploaded'}, status=400)
@@ -63,6 +71,9 @@ def compress_image_view(request):
     except ValueError as e:
          return JsonResponse({'error': str(e)}, status=400)
     except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Compress Image error: {str(e)}", exc_info=True)
         return JsonResponse({'error': f"Server error: {str(e)}"}, status=500)
 
 
@@ -72,6 +83,8 @@ def merge_pdf_view(request):
     """
     API endpoint to merge multiple PDF files.
     """
+    allowed, error = check_premium_access(request)
+    if not allowed: return error
     try:
         # Check files. 'files' convention might differ (e.g. file, file_1, or standard Django request.FILES.getlist('files'))
         # Frontend usually sends 'files' array if using FormData with same key.
@@ -99,6 +112,9 @@ def merge_pdf_view(request):
         return response
 
     except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Merge error: {str(e)}", exc_info=True)
         return JsonResponse({'error': f"Merge error: {str(e)}"}, status=500)
 
 
@@ -108,6 +124,8 @@ def split_pdf_view(request):
     """
     API endpoint to split/extract pages from PDF.
     """
+    allowed, error = check_premium_access(request)
+    if not allowed: return error
     try:
         if 'file' not in request.FILES:
             return JsonResponse({'error': 'No file uploaded'}, status=400)
@@ -143,6 +161,9 @@ def split_pdf_view(request):
         return response
 
     except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Split error: {e}", exc_info=True)
         return JsonResponse({'error': f"Split error: {str(e)}"}, status=500)
 
 @csrf_exempt
@@ -151,6 +172,8 @@ def organize_pdf_view(request):
     """
     API endpoint for Organize PDF (Rotate, Delete, Reorder).
     """
+    allowed, error = check_premium_access(request)
+    if not allowed: return error
     # Simply using the merge/split logic internally or pypdf to reconstruct
     try:
         if 'file' not in request.FILES:
@@ -204,6 +227,9 @@ def organize_pdf_view(request):
         return response
 
     except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Organize error: {e}", exc_info=True)
         return JsonResponse({'error': f"Organize error: {str(e)}"}, status=500)
 
 @csrf_exempt
@@ -212,6 +238,8 @@ def flatten_pdf_view(request):
     """
     API endpoint to flatten PDF (forms).
     """
+    allowed, error = check_premium_access(request)
+    if not allowed: return error
     try:
         if 'file' not in request.FILES:
              return JsonResponse({'error': 'No file uploaded'}, status=400)
@@ -255,6 +283,9 @@ def flatten_pdf_view(request):
         return response
 
     except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Flatten error: {e}", exc_info=True)
         return JsonResponse({'error': f"Flatten error: {str(e)}"}, status=500)
 
 
