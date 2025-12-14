@@ -40,6 +40,7 @@ jobs:
       - name: Run npm audit
         run: |
           npm audit --audit-level=moderate || true
+        working-directory: frontend
         continue-on-error: true
 
       - name: Check for known security issues
@@ -48,6 +49,7 @@ jobs:
           if [ -s npm-audit.json ]; then
             echo "Security vulnerabilities found. Please review npm-audit.json"
           fi
+        working-directory: frontend
         continue-on-error: true
 
       - name: Upload npm audit results
@@ -55,7 +57,7 @@ jobs:
         if: always()
         with:
           name: npm-audit-results
-          path: npm-audit.json
+          path: frontend/npm-audit.json
           retention-days: 30
 
   dependency-review:
