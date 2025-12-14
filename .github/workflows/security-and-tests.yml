@@ -172,7 +172,7 @@ jobs:
 
       - name: Verify build artifacts
         run: |
-          if [ ! -d "dist" ]; then
+          if [ ! -d "frontend/.next" ]; then
             echo "Build directory not found"
             exit 1
           fi
