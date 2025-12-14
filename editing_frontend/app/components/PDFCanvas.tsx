@@ -11,14 +11,23 @@ interface PDFCanvasProps {
     textItems: PDFTextItem[];
     pageDimensions: PDFPageDimensions;
     backgroundImageUrl: string;
+    onCanvasReady?: (canvas: fabric.Canvas) => void;
 }
 
 export default function PDFCanvas({
     textItems,
     pageDimensions,
     backgroundImageUrl,
+    onCanvasReady,
 }: PDFCanvasProps) {
     const canvas = useFabricCanvas('pdf-canvas', backgroundImageUrl);
+
+    // Notify parent when canvas is ready
+    useEffect(() => {
+        if (canvas && onCanvasReady) {
+            onCanvasReady(canvas);
+        }
+    }, [canvas, onCanvasReady]);
 
     // Set canvas dimensions
     useEffect(() => {
@@ -30,7 +39,7 @@ export default function PDFCanvas({
         });
     }, [canvas, pageDimensions]);
 
-    // Add extracted text items as editable elements (no white background needed)
+    // Add extracted text items as editable elements
     useEffect(() => {
         if (!canvas || textItems.length === 0) return;
 
@@ -54,7 +63,7 @@ export default function PDFCanvas({
         if (!canvas) return;
 
         const handleDoubleClick = (e: fabric.IEvent) => {
-            // Only add new text if clicking on empty area (not on existing object)
+            // Only add new text if clicking on empty area
             if (e.target) return;
 
             const pointer = canvas.getPointer(e.e);
@@ -83,7 +92,7 @@ export default function PDFCanvas({
     }, [canvas]);
 
     return (
-        <div className="relative rounded-lg overflow-hidden shadow-xl border border-gray-200">
+        <div className="relative rounded-lg overflow-hidden shadow-xl border border-gray-200 bg-white">
             <canvas id="pdf-canvas" />
 
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/80 text-white px-4 py-2 rounded-full text-xs flex items-center gap-3">

@@ -1,39 +1,16 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { usePDFLoader } from '@/app/hooks/usePDFLoader';
 import PDFUploader from './PDFUploader';
 import PDFCanvas from './PDFCanvas';
+import { fabric } from 'fabric';
 
-// Tool icons as simple SVG components
+// Tool icons
 const TextIcon = () => (
     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-    </svg>
-);
-
-const ShapeIcon = () => (
-    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
-    </svg>
-);
-
-const HighlightIcon = () => (
-    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-    </svg>
-);
-
-const DrawIcon = () => (
-    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-    </svg>
-);
-
-const EraserIcon = () => (
-    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
     </svg>
 );
 
@@ -61,45 +38,164 @@ const UploadIcon = () => (
     </svg>
 );
 
-interface ToolButtonProps {
-    icon: React.ReactNode;
-    label: string;
-    active?: boolean;
-    onClick?: () => void;
+// Formatting icons
+const BoldIcon = () => <span className="font-bold text-sm">B</span>;
+const ItalicIcon = () => <span className="italic text-sm">I</span>;
+const UnderlineIcon = () => <span className="underline text-sm">U</span>;
+const StrikethroughIcon = () => <span className="line-through text-sm">S</span>;
+
+const AlignLeftIcon = () => (
+    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h10M4 18h14" />
+    </svg>
+);
+
+const AlignCenterIcon = () => (
+    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M7 12h10M5 18h14" />
+    </svg>
+);
+
+const AlignRightIcon = () => (
+    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M10 12h10M6 18h14" />
+    </svg>
+);
+
+interface TextProperties {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    angle: number;
+    fontSize: number;
+    fontFamily: string;
+    fill: string;
+    fontWeight: string;
+    fontStyle: "" | "normal" | "italic" | "oblique";
+    underline: boolean;
+    linethrough: boolean;
+    textAlign: string;
+    lineHeight: number;
+    charSpacing: number;
 }
 
-function ToolButton({ icon, label, active, onClick }: ToolButtonProps) {
-    return (
-        <button
-            onClick={onClick}
-            className={`flex flex-col items-center justify-center p-2 rounded-lg transition-all duration-200 group
-                ${active
-                    ? 'bg-black text-white shadow-lg'
-                    : 'text-gray-600 hover:bg-gray-100 hover:text-black'
-                }`}
-            title={label}
-        >
-            {icon}
-            <span className="text-[10px] mt-1 opacity-80">{label}</span>
-        </button>
-    );
-}
+const defaultTextProps: TextProperties = {
+    x: 0, y: 0, width: 100, height: 20, angle: 0,
+    fontSize: 16, fontFamily: 'Arial', fill: '#000000',
+    fontWeight: 'normal', fontStyle: 'normal',
+    underline: false, linethrough: false,
+    textAlign: 'left', lineHeight: 1.2, charSpacing: 0
+};
+
+const FONTS = ['Arial', 'Times New Roman', 'Helvetica', 'Georgia', 'Verdana', 'Courier New'];
+const COLORS = ['#000000', '#EF4444', '#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#6B7280'];
 
 export default function PDFEditor() {
-    const {
-        loadFile,
-        textItems,
-        pageDimensions,
-        backgroundImageUrl,
-        isLoading,
-        error,
-    } = usePDFLoader();
-
-    const [activeTool, setActiveTool] = useState('select');
+    const { loadFile, textItems, pageDimensions, backgroundImageUrl, isLoading, error } = usePDFLoader();
     const [zoom, setZoom] = useState(100);
+    const [selectedObject, setSelectedObject] = useState<fabric.Object | null>(null);
+    const [textProps, setTextProps] = useState<TextProperties>(defaultTextProps);
+    const [fabricCanvas, setFabricCanvas] = useState<fabric.Canvas | null>(null);
 
     const handleZoomIn = () => setZoom(prev => Math.min(prev + 25, 200));
     const handleZoomOut = () => setZoom(prev => Math.max(prev - 25, 50));
+
+    // Handle canvas reference from PDFCanvas
+    const handleCanvasReady = useCallback((canvas: fabric.Canvas) => {
+        setFabricCanvas(canvas);
+
+        canvas.on('selection:created', (e) => {
+            if (e.selected && e.selected[0]) {
+                setSelectedObject(e.selected[0]);
+                updateTextPropsFromObject(e.selected[0]);
+            }
+        });
+
+        canvas.on('selection:updated', (e) => {
+            if (e.selected && e.selected[0]) {
+                setSelectedObject(e.selected[0]);
+                updateTextPropsFromObject(e.selected[0]);
+            }
+        });
+
+        canvas.on('selection:cleared', () => {
+            setSelectedObject(null);
+            setTextProps(defaultTextProps);
+        });
+
+        canvas.on('object:modified', (e) => {
+            if (e.target) {
+                updateTextPropsFromObject(e.target);
+            }
+        });
+
+        canvas.on('object:scaling', (e) => {
+            if (e.target) {
+                updateTextPropsFromObject(e.target);
+            }
+        });
+
+        canvas.on('object:moving', (e) => {
+            if (e.target) {
+                updateTextPropsFromObject(e.target);
+            }
+        });
+
+        canvas.on('object:rotating', (e) => {
+            if (e.target) {
+                updateTextPropsFromObject(e.target);
+            }
+        });
+    }, []);
+
+    const updateTextPropsFromObject = (obj: fabric.Object) => {
+        if (obj.type === 'textbox' || obj.type === 'text') {
+            const textObj = obj as fabric.Textbox;
+            setTextProps({
+                x: Math.round(obj.left || 0),
+                y: Math.round(obj.top || 0),
+                width: Math.round((obj.width || 100) * (obj.scaleX || 1)),
+                height: Math.round((obj.height || 20) * (obj.scaleY || 1)),
+                angle: Math.round(obj.angle || 0),
+                fontSize: textObj.fontSize || 16,
+                fontFamily: textObj.fontFamily || 'Arial',
+                fill: (textObj.fill as string) || '#000000',
+                fontWeight: textObj.fontWeight as string || 'normal',
+                fontStyle: textObj.fontStyle || 'normal',
+                underline: textObj.underline || false,
+                linethrough: textObj.linethrough || false,
+                textAlign: textObj.textAlign || 'left',
+                lineHeight: textObj.lineHeight || 1.2,
+                charSpacing: textObj.charSpacing || 0,
+            });
+        }
+    };
+
+    const updateSelectedText = (updates: Partial<TextProperties>) => {
+        if (!selectedObject || !fabricCanvas) return;
+
+        const textObj = selectedObject as fabric.Textbox;
+
+        if (updates.x !== undefined) textObj.set('left', updates.x);
+        if (updates.y !== undefined) textObj.set('top', updates.y);
+        if (updates.angle !== undefined) textObj.set('angle', updates.angle);
+        if (updates.fontSize !== undefined) textObj.set('fontSize', updates.fontSize);
+        if (updates.fontFamily !== undefined) textObj.set('fontFamily', updates.fontFamily);
+        if (updates.fill !== undefined) textObj.set('fill', updates.fill);
+        if (updates.fontWeight !== undefined) textObj.set('fontWeight', updates.fontWeight);
+        if (updates.fontStyle !== undefined) textObj.set('fontStyle', updates.fontStyle);
+        if (updates.underline !== undefined) textObj.set('underline', updates.underline);
+        if (updates.linethrough !== undefined) textObj.set('linethrough', updates.linethrough);
+        if (updates.textAlign !== undefined) textObj.set('textAlign', updates.textAlign);
+        if (updates.lineHeight !== undefined) textObj.set('lineHeight', updates.lineHeight);
+        if (updates.charSpacing !== undefined) textObj.set('charSpacing', updates.charSpacing);
+
+        fabricCanvas.renderAll();
+        setTextProps(prev => ({ ...prev, ...updates }));
+    };
+
+    const isTextSelected = selectedObject?.type === 'textbox' || selectedObject?.type === 'text';
 
     return (
         <div className="h-screen flex flex-col bg-white text-black overflow-hidden">
@@ -134,43 +230,6 @@ export default function PDFEditor() {
             </header>
 
             <div className="flex flex-1 overflow-hidden">
-                {/* Left Toolbar */}
-                {pageDimensions && (
-                    <aside className="w-16 bg-white border-r border-gray-200 flex flex-col items-center py-4 gap-1">
-                        <ToolButton
-                            icon={<TextIcon />}
-                            label="Text"
-                            active={activeTool === 'text'}
-                            onClick={() => setActiveTool('text')}
-                        />
-                        <ToolButton
-                            icon={<ShapeIcon />}
-                            label="Shape"
-                            active={activeTool === 'shape'}
-                            onClick={() => setActiveTool('shape')}
-                        />
-                        <ToolButton
-                            icon={<HighlightIcon />}
-                            label="Mark"
-                            active={activeTool === 'highlight'}
-                            onClick={() => setActiveTool('highlight')}
-                        />
-                        <ToolButton
-                            icon={<DrawIcon />}
-                            label="Draw"
-                            active={activeTool === 'draw'}
-                            onClick={() => setActiveTool('draw')}
-                        />
-                        <div className="w-8 h-px bg-gray-200 my-2" />
-                        <ToolButton
-                            icon={<EraserIcon />}
-                            label="Erase"
-                            active={activeTool === 'eraser'}
-                            onClick={() => setActiveTool('eraser')}
-                        />
-                    </aside>
-                )}
-
                 {/* Main Canvas Area */}
                 <main className="flex-1 overflow-auto bg-gray-100 relative">
                     {error && (
@@ -197,6 +256,7 @@ export default function PDFEditor() {
                                 textItems={textItems}
                                 pageDimensions={pageDimensions}
                                 backgroundImageUrl={backgroundImageUrl}
+                                onCanvasReady={handleCanvasReady}
                             />
                         </div>
                     )}
@@ -219,52 +279,218 @@ export default function PDFEditor() {
 
                 {/* Right Properties Panel */}
                 {pageDimensions && (
-                    <aside className="w-64 bg-white border-l border-gray-200 p-4 overflow-y-auto">
-                        <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Properties</h3>
-
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-xs text-gray-500 mb-1">Font Size</label>
-                                <input
-                                    type="range"
-                                    min="8"
-                                    max="72"
-                                    defaultValue="16"
-                                    className="w-full accent-black"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-xs text-gray-500 mb-1">Color</label>
-                                <div className="flex gap-2">
-                                    {['#000000', '#EF4444', '#3B82F6', '#10B981', '#F59E0B', '#8B5CF6'].map(color => (
-                                        <button
-                                            key={color}
-                                            className="w-6 h-6 rounded-full border-2 border-gray-200 hover:border-black transition-colors"
-                                            style={{ backgroundColor: color }}
-                                        />
-                                    ))}
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="block text-xs text-gray-500 mb-1">Opacity</label>
-                                <input
-                                    type="range"
-                                    min="0"
-                                    max="100"
-                                    defaultValue="100"
-                                    className="w-full accent-black"
-                                />
-                            </div>
+                    <aside className="w-72 bg-white border-l border-gray-200 overflow-y-auto">
+                        {/* Tabs */}
+                        <div className="flex border-b border-gray-200">
+                            <button className="flex-1 py-3 text-sm font-medium border-b-2 border-black">Style</button>
+                            <button className="flex-1 py-3 text-sm font-medium text-gray-400 hover:text-gray-600">Layer</button>
                         </div>
 
-                        <div className="mt-6 pt-4 border-t border-gray-200">
-                            <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Document</h3>
-                            <div className="text-sm text-gray-600 space-y-1">
-                                <p>Width: {pageDimensions.width.toFixed(0)}px</p>
-                                <p>Height: {pageDimensions.height.toFixed(0)}px</p>
-                                <p>Scale: {(pageDimensions.scale * 100).toFixed(0)}%</p>
+                        {isTextSelected ? (
+                            <div className="p-4 space-y-5">
+                                {/* Position & Size */}
+                                <div>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-xs text-gray-500 w-4">X</span>
+                                            <input
+                                                type="number"
+                                                value={textProps.x}
+                                                onChange={(e) => updateSelectedText({ x: Number(e.target.value) })}
+                                                className="w-full px-2 py-1.5 text-sm border border-gray-200 rounded focus:outline-none focus:border-black"
+                                            />
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-xs text-gray-500 w-4">Y</span>
+                                            <input
+                                                type="number"
+                                                value={textProps.y}
+                                                onChange={(e) => updateSelectedText({ y: Number(e.target.value) })}
+                                                className="w-full px-2 py-1.5 text-sm border border-gray-200 rounded focus:outline-none focus:border-black"
+                                            />
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-xs text-gray-500 w-4">W</span>
+                                            <input
+                                                type="number"
+                                                value={textProps.width}
+                                                readOnly
+                                                className="w-full px-2 py-1.5 text-sm border border-gray-200 rounded bg-gray-50"
+                                            />
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-xs text-gray-500 w-4">H</span>
+                                            <input
+                                                type="number"
+                                                value={textProps.height}
+                                                readOnly
+                                                className="w-full px-2 py-1.5 text-sm border border-gray-200 rounded bg-gray-50"
+                                            />
+                                        </div>
+                                        <div className="flex items-center gap-2 col-span-2">
+                                            <span className="text-xs text-gray-500 w-4">A</span>
+                                            <input
+                                                type="number"
+                                                value={textProps.angle}
+                                                onChange={(e) => updateSelectedText({ angle: Number(e.target.value) })}
+                                                className="w-20 px-2 py-1.5 text-sm border border-gray-200 rounded focus:outline-none focus:border-black"
+                                            />
+                                            <span className="text-xs text-gray-400">°</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="h-px bg-gray-200" />
+
+                                {/* Font Family & Size */}
+                                <div className="grid grid-cols-2 gap-2">
+                                    <select
+                                        value={textProps.fontFamily}
+                                        onChange={(e) => updateSelectedText({ fontFamily: e.target.value })}
+                                        className="px-2 py-1.5 text-sm border border-gray-200 rounded focus:outline-none focus:border-black"
+                                    >
+                                        {FONTS.map(font => (
+                                            <option key={font} value={font}>{font}</option>
+                                        ))}
+                                    </select>
+                                    <input
+                                        type="number"
+                                        value={textProps.fontSize}
+                                        onChange={(e) => updateSelectedText({ fontSize: Number(e.target.value) })}
+                                        className="px-2 py-1.5 text-sm border border-gray-200 rounded focus:outline-none focus:border-black"
+                                    />
+                                </div>
+
+                                {/* Text Styling */}
+                                <div className="flex gap-1">
+                                    <button
+                                        onClick={() => updateSelectedText({ fontWeight: textProps.fontWeight === 'bold' ? 'normal' : 'bold' })}
+                                        className={`flex-1 py-2 rounded border ${textProps.fontWeight === 'bold' ? 'bg-black text-white border-black' : 'border-gray-200 hover:bg-gray-50'}`}
+                                    >
+                                        <BoldIcon />
+                                    </button>
+                                    <button
+                                        onClick={() => updateSelectedText({ fontStyle: textProps.fontStyle === 'italic' ? 'normal' : 'italic' })}
+                                        className={`flex-1 py-2 rounded border ${textProps.fontStyle === 'italic' ? 'bg-black text-white border-black' : 'border-gray-200 hover:bg-gray-50'}`}
+                                    >
+                                        <ItalicIcon />
+                                    </button>
+                                    <button
+                                        onClick={() => updateSelectedText({ underline: !textProps.underline })}
+                                        className={`flex-1 py-2 rounded border ${textProps.underline ? 'bg-black text-white border-black' : 'border-gray-200 hover:bg-gray-50'}`}
+                                    >
+                                        <UnderlineIcon />
+                                    </button>
+                                    <button
+                                        onClick={() => updateSelectedText({ linethrough: !textProps.linethrough })}
+                                        className={`flex-1 py-2 rounded border ${textProps.linethrough ? 'bg-black text-white border-black' : 'border-gray-200 hover:bg-gray-50'}`}
+                                    >
+                                        <StrikethroughIcon />
+                                    </button>
+                                </div>
+
+                                {/* Alignment */}
+                                <div className="flex gap-1">
+                                    <button
+                                        onClick={() => updateSelectedText({ textAlign: 'left' })}
+                                        className={`flex-1 py-2 rounded border flex justify-center ${textProps.textAlign === 'left' ? 'bg-black text-white border-black' : 'border-gray-200 hover:bg-gray-50'}`}
+                                    >
+                                        <AlignLeftIcon />
+                                    </button>
+                                    <button
+                                        onClick={() => updateSelectedText({ textAlign: 'center' })}
+                                        className={`flex-1 py-2 rounded border flex justify-center ${textProps.textAlign === 'center' ? 'bg-black text-white border-black' : 'border-gray-200 hover:bg-gray-50'}`}
+                                    >
+                                        <AlignCenterIcon />
+                                    </button>
+                                    <button
+                                        onClick={() => updateSelectedText({ textAlign: 'right' })}
+                                        className={`flex-1 py-2 rounded border flex justify-center ${textProps.textAlign === 'right' ? 'bg-black text-white border-black' : 'border-gray-200 hover:bg-gray-50'}`}
+                                    >
+                                        <AlignRightIcon />
+                                    </button>
+                                </div>
+
+                                <div className="h-px bg-gray-200" />
+
+                                {/* Color */}
+                                <div>
+                                    <label className="block text-xs text-gray-500 mb-2">Color</label>
+                                    <div className="flex gap-2 flex-wrap">
+                                        {COLORS.map(color => (
+                                            <button
+                                                key={color}
+                                                onClick={() => updateSelectedText({ fill: color })}
+                                                className={`w-7 h-7 rounded-full border-2 transition-all ${textProps.fill === color ? 'border-black scale-110' : 'border-gray-200 hover:border-gray-400'}`}
+                                                style={{ backgroundColor: color }}
+                                            />
+                                        ))}
+                                        <input
+                                            type="color"
+                                            value={textProps.fill}
+                                            onChange={(e) => updateSelectedText({ fill: e.target.value })}
+                                            className="w-7 h-7 rounded cursor-pointer"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="h-px bg-gray-200" />
+
+                                {/* Line Height & Char Spacing */}
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-xs text-gray-500 mb-1">Line Height</label>
+                                        <input
+                                            type="number"
+                                            step="0.1"
+                                            min="0.5"
+                                            max="3"
+                                            value={textProps.lineHeight}
+                                            onChange={(e) => updateSelectedText({ lineHeight: Number(e.target.value) })}
+                                            className="w-full px-2 py-1.5 text-sm border border-gray-200 rounded focus:outline-none focus:border-black"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs text-gray-500 mb-1">Char Spacing</label>
+                                        <input
+                                            type="number"
+                                            step="10"
+                                            min="-100"
+                                            max="500"
+                                            value={textProps.charSpacing}
+                                            onChange={(e) => updateSelectedText({ charSpacing: Number(e.target.value) })}
+                                            className="w-full px-2 py-1.5 text-sm border border-gray-200 rounded focus:outline-none focus:border-black"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="h-px bg-gray-200" />
+
+                                {/* Delete button */}
+                                <button
+                                    onClick={() => {
+                                        if (fabricCanvas && selectedObject) {
+                                            fabricCanvas.remove(selectedObject);
+                                            setSelectedObject(null);
+                                        }
+                                    }}
+                                    className="w-full py-2 text-sm text-red-600 border border-red-200 rounded hover:bg-red-50 transition-colors"
+                                >
+                                    Delete Selected
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="p-4 text-center text-gray-400">
+                                <TextIcon />
+                                <p className="mt-2 text-sm">Select a text element to edit its properties</p>
+                            </div>
+                        )}
+
+                        {/* Document Info */}
+                        <div className="p-4 border-t border-gray-200">
+                            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Document</h3>
+                            <div className="text-xs text-gray-500 space-y-1">
+                                <p>Size: {pageDimensions?.width.toFixed(0)} × {pageDimensions?.height.toFixed(0)}</p>
                             </div>
                         </div>
                     </aside>
