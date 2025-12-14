@@ -6,6 +6,7 @@ import { usePDFLoader } from '@/app/hooks/usePDFLoader';
 import PDFUploader from './PDFUploader';
 import PDFCanvas from './PDFCanvas';
 import { fabric } from 'fabric';
+import { PDFDocument } from 'pdf-lib';
 
 // Tool icons
 const TextIcon = () => (
@@ -97,9 +98,61 @@ export default function PDFEditor() {
     const [selectedObject, setSelectedObject] = useState<fabric.Object | null>(null);
     const [textProps, setTextProps] = useState<TextProperties>(defaultTextProps);
     const [fabricCanvas, setFabricCanvas] = useState<fabric.Canvas | null>(null);
+    const [isExporting, setIsExporting] = useState(false);
 
     const handleZoomIn = () => setZoom(prev => Math.min(prev + 25, 200));
     const handleZoomOut = () => setZoom(prev => Math.max(prev - 25, 50));
+
+    // Export edited PDF
+    const handleExportPDF = async () => {
+        if (!fabricCanvas || !pageDimensions) return;
+
+        setIsExporting(true);
+
+        try {
+            // Get canvas as PNG data URL (high quality)
+            const imageDataUrl = fabricCanvas.toDataURL({
+                format: 'png',
+                quality: 1,
+                multiplier: 2, // 2x resolution for better quality
+            });
+
+            // Create new PDF document
+            const pdfDoc = await PDFDocument.create();
+            const page = pdfDoc.addPage([pageDimensions.width, pageDimensions.height]);
+
+            // Convert data URL to bytes
+            const base64Data = imageDataUrl.split(',')[1];
+            const imageBytes = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
+
+            // Embed PNG image
+            const pngImage = await pdfDoc.embedPng(imageBytes);
+
+            // Draw the image on the page (full page)
+            page.drawImage(pngImage, {
+                x: 0,
+                y: 0,
+                width: pageDimensions.width,
+                height: pageDimensions.height,
+            });
+
+            // Save and download
+            const pdfBytes = await pdfDoc.save();
+            const blob = new Blob([pdfBytes.buffer as ArrayBuffer], { type: 'application/pdf' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'edited-document.pdf';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(link.href);
+        } catch (err) {
+            console.error('Export failed:', err);
+            alert('Failed to export PDF. Please try again.');
+        } finally {
+            setIsExporting(false);
+        }
+    };
 
     // Handle canvas reference from PDFCanvas
     const handleCanvasReady = useCallback((canvas: fabric.Canvas) => {
@@ -220,9 +273,17 @@ export default function PDFEditor() {
                                     <ZoomInIcon />
                                 </button>
                             </div>
-                            <button className="flex items-center gap-2 px-4 py-2 bg-black hover:bg-gray-800 text-white rounded-lg transition-colors">
-                                <DownloadIcon />
-                                <span className="text-sm font-medium">Export</span>
+                            <button
+                                onClick={handleExportPDF}
+                                disabled={isExporting}
+                                className="flex items-center gap-2 px-4 py-2 bg-black hover:bg-gray-800 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {isExporting ? (
+                                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                ) : (
+                                    <DownloadIcon />
+                                )}
+                                <span className="text-sm font-medium">{isExporting ? 'Exporting...' : 'Export'}</span>
                             </button>
                         </>
                     )}
