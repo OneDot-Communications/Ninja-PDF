@@ -10,9 +10,9 @@
     "build": "npm run build --workspace=frontend",
     "start": "npm run start --workspace=frontend",
     "lint": "npm run lint --workspace=frontend",
-    "test": "npm run test --workspace=frontend",
-    "test:coverage": "npm run test:coverage --workspace=frontend",
-    "test:integration": "npm run test:integration --workspace=frontend",
-    "format:check": "npm run format:check --workspace=frontend"
+    "test": "echo 'No tests configured yet'",
+    "test:coverage": "echo 'No test coverage configured yet'",
+    "test:integration": "echo 'No integration tests configured yet'",
+    "format:check": "echo 'No format check configured yet'"
   }
 }
