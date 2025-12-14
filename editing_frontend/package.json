@@ -12,6 +12,7 @@
     "@types/fabric": "^5.3.10",
     "fabric": "^5.5.2",
     "next": "16.0.10",
+    "pdf-lib": "^1.17.1",
     "pdfjs-dist": "^3.11.174",
     "react": "19.2.1",
     "react-dom": "19.2.1"
