@@ -3,13 +3,12 @@
 import React, { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { motion } from "framer-motion";
-import { useAuth } from "@/app/context/AuthContext";
+import { api } from "@/app/lib/api";
 import { Button } from "@/app/components/ui/button";
 
 const VerifyEmailPage = () => {
     const router = useRouter();
     const params = useParams();
-    const { verifyEmail } = useAuth();
     const [status, setStatus] = useState<'verifying' | 'success' | 'error'>('verifying');
     const [message, setMessage] = useState("Verifying your email...");
 
@@ -23,8 +22,7 @@ const VerifyEmailPage = () => {
             }
 
             try {
-                // @ts-ignore
-                await verifyEmail(key);
+                await api.request("POST", "/api/auth/registration/verify-email/", { key });
                 setStatus('success');
                 setMessage("Email verified successfully!");
             } catch (error: any) {
@@ -34,7 +32,7 @@ const VerifyEmailPage = () => {
         };
 
         verify();
-    }, [params, verifyEmail]);
+    }, [params]);
 
     return (
         <div className="py-12">

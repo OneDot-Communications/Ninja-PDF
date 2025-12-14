@@ -12,11 +12,81 @@ import { api } from "@/app/lib/api";
 
 export default function SecurityPage() {
     const [loading, setLoading] = useState(false);
-    const [twoFactor, setTwoFactor] = useState(false);
+    const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
+    const [twoFactorSetup, setTwoFactorSetup] = useState<any>(null);
+    const [twoFactorToken, setTwoFactorToken] = useState("");
+    const [setupLoading, setSetupLoading] = useState(false);
+    const [showSecret, setShowSecret] = useState(false);
 
     const [currentPassword, setCurrentPassword] = useState("");
     const [newPassword, setNewPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
+
+    useEffect(() => {
+        loadTwoFactorStatus();
+    }, []);
+
+    const loadTwoFactorStatus = async () => {
+        try {
+            const data = await api.getTwoFactorStatus();
+            setTwoFactorEnabled(data.enabled);
+        } catch (error) {
+            // If user is unauthenticated, this endpoint will return a 401 with
+            // message 'Authentication credentials were not provided.' — treat
+            // that as "not enabled / not logged in" and avoid noisy console
+            // errors in normal unauthenticated browsing.
+            const msg = (error as any)?.message || '';
+            if (typeof msg === 'string' && msg.includes('Authentication credentials')) {
+                setTwoFactorEnabled(false);
+                return;
+            }
+            console.error("Failed to load 2FA status", error);
+        }
+    };
+
+    const handleEnableTwoFactor = async () => {
+        setSetupLoading(true);
+        try {
+            const data = await api.setupTwoFactor();
+            setTwoFactorSetup(data);
+        } catch (error: any) {
+            toast.error(error.message || "Failed to setup 2FA");
+        } finally {
+            setSetupLoading(false);
+        }
+    };
+
+    const handleConfirmTwoFactor = async () => {
+        if (!twoFactorToken) {
+            toast.error("Please enter the 6-digit code");
+            return;
+        }
+        setSetupLoading(true);
+        try {
+            await api.enableTwoFactor(twoFactorToken);
+            toast.success("2FA enabled successfully");
+            setTwoFactorSetup(null);
+            setTwoFactorToken("");
+            await loadTwoFactorStatus(); // Refresh status
+        } catch (error: any) {
+            toast.error(error.message || "Invalid code");
+        } finally {
+            setSetupLoading(false);
+        }
+    };
+
+    const handleDisableTwoFactor = async () => {
+        setSetupLoading(true);
+        try {
+            await api.disableTwoFactor();
+            toast.success("2FA disabled");
+            await loadTwoFactorStatus(); // Refresh status
+        } catch (error: any) {
+            toast.error(error.message || "Failed to disable 2FA");
+        } finally {
+            setSetupLoading(false);
+        }
+    };
 
     const handlePasswordUpdate = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -107,25 +177,140 @@ export default function SecurityPage() {
                             <CardDescription>Add an extra layer of security to your account.</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
-                            <div className="flex items-center justify-between">
-                                <div className="space-y-0.5">
-                                    <Label className="text-base">Enable 2FA</Label>
-                                    <p className="text-xs text-muted-foreground">
-                                        Secure your account with authenticator app.
-                                    </p>
-                                </div>
-                                <Switch
-                                    checked={twoFactor}
-                                    onCheckedChange={setTwoFactor}
-                                />
-                            </div>
-                            {twoFactor && (
-                                <div className="bg-slate-50 p-4 rounded-lg border text-sm text-slate-600">
-                                    <p className="mb-2 font-semibold">Scan this QR Code</p>
-                                    <div className="w-32 h-32 bg-white border mx-auto mb-2 flex items-center justify-center text-xs text-slate-300">
-                                        [QR Code Placeholder]
+                            {twoFactorEnabled ? (
+                                <div className="space-y-4">
+                                    <div className="flex items-center gap-2 text-green-600">
+                                        <Lock className="w-4 h-4" />
+                                        <span className="text-sm font-medium">2FA is enabled</span>
                                     </div>
-                                    <p className="text-xs text-center">Use Google Authenticator or Authy to scan.</p>
+                                    <Button
+                                        variant="outline"
+                                        onClick={handleDisableTwoFactor}
+                                        disabled={setupLoading}
+                                        className="w-full"
+                                    >
+                                        {setupLoading ? "Disabling..." : "Disable 2FA"}
+                                    </Button>
+                                </div>
+                            ) : twoFactorSetup ? (
+                                <div className="space-y-4">
+                                    <div className="bg-slate-50 p-4 rounded-lg border">
+                                        <p className="mb-2 font-semibold text-sm">Scan this QR Code</p>
+                                        <div className="w-32 h-32 bg-white border mx-auto mb-2 flex items-center justify-center">
+                                            <img src={twoFactorSetup.qr_code} alt="QR Code" className="w-full h-full" />
+                                        </div>
+                                        <p className="text-xs text-center text-slate-600">Use Google Authenticator or Authy to scan.</p>
+                                        <div className="flex items-center justify-center gap-2 mt-2">
+                                            <div className="text-xs text-slate-500">Secret: </div>
+                                            <div className="text-xs font-mono text-slate-700 bg-white px-2 py-1 rounded">
+                                                {showSecret ? twoFactorSetup.secret : '••••••••••••'}
+                                            </div>
+                                            <div>
+                                                <button
+                                                    type="button"
+                                                    className="text-xs text-[#01B0F1] hover:underline"
+                                                    onClick={() => {
+                                                        if (showSecret) setShowSecret(false);
+                                                        else {
+                                                            setShowSecret(true);
+                                                        }
+                                                    }}
+                                                >
+                                                    {showSecret ? 'Hide' : 'Show'}
+                                                </button>
+                                            </div>
+                                            <div>
+                                                <button
+                                                    type="button"
+                                                    className="text-xs text-[#01B0F1] hover:underline"
+                                                    onClick={() => navigator.clipboard?.writeText(twoFactorSetup.secret)}
+                                                >
+                                                    Copy
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {twoFactorSetup.backup_codes && (
+                                        <div className="bg-white border rounded p-3">
+                                            <p className="font-semibold text-sm mb-2">Backup codes (store them securely)</p>
+                                            <p className="text-xs text-slate-600 mb-2">These codes are shown only once. Each code can be used one time to recover access.</p>
+                                            <div className="grid grid-cols-2 gap-2">
+                                                {twoFactorSetup.backup_codes.map((c: string) => (
+                                                    <div key={c} className="text-xs font-mono bg-slate-100 px-2 py-1 rounded flex items-center justify-between">
+                                                        <span>{c}</span>
+                                                        <button onClick={() => navigator.clipboard?.writeText(c)} className="text-xs text-[#01B0F1] ml-2">Copy</button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                    <div className="space-y-2">
+                                        <Label htmlFor="token">Enter 6-digit code</Label>
+                                        <Input
+                                            id="token"
+                                            type="text"
+                                            inputMode="numeric"
+                                            pattern="[0-9]*"
+                                            placeholder="000000"
+                                            value={twoFactorToken}
+                                            onChange={(e) => setTwoFactorToken(e.target.value.replace(/\D/g, '').slice(0,6))}
+                                            maxLength={6}
+                                        />
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <Button
+                                            onClick={handleConfirmTwoFactor}
+                                            disabled={setupLoading || twoFactorToken.length !== 6}
+                                            className="flex-1"
+                                        >
+                                            {setupLoading ? "Enabling..." : "Enable 2FA"}
+                                        </Button>
+                                        <Button
+                                            variant="outline"
+                                            onClick={() => setTwoFactorSetup(null)}
+                                            disabled={setupLoading}
+                                        >
+                                            Cancel
+                                        </Button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="space-y-4">
+                                    <div className="flex items-center justify-between">
+                                        <div className="space-y-0.5">
+                                            <Label className="text-base">Enable 2FA</Label>
+                                            <p className="text-xs text-muted-foreground">
+                                                Secure your account with authenticator app.
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <Button
+                                        onClick={handleEnableTwoFactor}
+                                        disabled={setupLoading}
+                                        className="w-full"
+                                    >
+                                        {setupLoading ? "Setting up..." : "Enable 2FA"}
+                                    </Button>
+                                </div>
+                            )}
+                            {twoFactorEnabled && (
+                                <div className="mt-4">
+                                    <Button
+                                        variant="ghost"
+                                        onClick={async () => {
+                                            const password = window.prompt('Enter your current password to regenerate backup codes');
+                                            if (!password) return;
+                                            try {
+                                                const res = await api.regenerateTwoFactorBackupCodes(password);
+                                                // show codes in a toast or modal - use simple alert for now
+                                                alert('New backup codes:\n' + res.backup_codes.join('\n'));
+                                            } catch (err: any) {
+                                                toast.error(err.message || 'Failed to regenerate backup codes');
+                                            }
+                                        }}
+                                    >
+                                        Regenerate Backup Codes
+                                    </Button>
                                 </div>
                             )}
                         </CardContent>
@@ -162,7 +347,7 @@ function SessionsList() {
             const data = await api.getSessions();
             setSessions(data);
         } catch (error) {
-            console.error("Failed to load sessions");
+            console.error("Failed to load sessions", error);
         } finally {
             setLoading(false);
         }

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { FileUpload } from "../ui/file-upload";
 import { Button } from "../ui/button";
 import { ArrowRight, FileSpreadsheet, Loader2, RefreshCw, Settings, Layout, Palette } from "lucide-react";
-import * as XLSX from "xlsx";
+import ExcelJS from 'exceljs';
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { Label } from "../ui/label";

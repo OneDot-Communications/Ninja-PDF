@@ -73,3 +73,75 @@ class ContentVersion(models.Model):
 
     def __str__(self):
         return f"Version {self.id} ({self.created_at})"
+
+class TaskLog(models.Model):
+    """
+    Persistent log of asynchronous tasks for User Dashboard and Audit.
+    Linked to Celery Task ID.
+    """
+    class Status(models.TextChoices):
+        PENDING = 'PENDING', _('Pending')
+        STARTED = 'STARTED', _('Started')
+        SUCCESS = 'SUCCESS', _('Success')
+        FAILURE = 'FAILURE', _('Failure')
+        RETRY = 'RETRY', _('Retry')
+        REVOKED = 'REVOKED', _('Revoked')
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='task_logs', null=True, blank=True)
+    task_id = models.CharField(max_length=255, unique=True, help_text="Celery Task ID")
+    task_name = models.CharField(max_length=255, help_text="e.g. convert_word_to_pdf")
+    status = models.CharField(max_length=50, choices=Status.choices, default=Status.PENDING)
+    
+    # Metadata for UI
+    file_name = models.CharField(max_length=255, blank=True, null=True)
+    file_size = models.BigIntegerField(null=True, blank=True)
+    tool_type = models.CharField(max_length=100, blank=True, null=True, help_text="e.g. WORD_TO_PDF")
+    
+    result_url = models.URLField(blank=True, null=True, max_length=500)
+    error_message = models.TextField(blank=True, null=True)
+    
+    metadata = models.JSONField(default=dict, blank=True, help_text="Extra task options or context")
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    finished_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['task_id']),
+            models.Index(fields=['user', '-created_at']),
+        ]
+
+    def __str__(self):
+        return f"{self.task_name} - {self.status} ({self.task_id})"
+
+class AuditLog(models.Model):
+    """
+    Immutable log of sensitive system actions.
+    """
+    class Action(models.TextChoices):
+        LOGIN = 'LOGIN', _('Login')
+        LOGOUT = 'LOGOUT', _('Logout')
+        FILE_ACCESS = 'FILE_ACCESS', _('File Access')
+        FILE_DELETE = 'FILE_DELETE', _('File Delete')
+        SETTINGS_CHANGE = 'SETTINGS_CHANGE', _('Settings Change')
+        USER_MODIFIED = 'USER_MODIFIED', _('User Modified')
+        EXPORT_DATA = 'EXPORT_DATA', _('Export Data')
+        
+    actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='audit_actions')
+    action = models.CharField(max_length=50, choices=Action.choices)
+    target = models.CharField(max_length=255, help_text="Target object or description")
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    details = models.JSONField(default=dict, blank=True)
+    timestamp = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-timestamp']
+        indexes = [
+            models.Index(fields=['actor', 'action']),
+            models.Index(fields=['timestamp']),
+        ]
+        
+    def __str__(self):
+        return f"{self.timestamp} - {self.actor} - {self.action}"

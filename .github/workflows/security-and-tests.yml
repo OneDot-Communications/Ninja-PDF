@@ -1,0 +1,85 @@
+name: Security & Tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  backend-security:
+    runs-on: ubuntu-latest
+    name: Backend tests & security
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install Python deps
+        working-directory: ./backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install bandit safety pip-audit
+
+      - name: Run bandit
+        working-directory: ./backend
+        run: bandit -r apps core -x migrations -n 5 -lll
+
+      - name: Run safety
+        working-directory: ./backend
+        run: safety check -r requirements.txt --full-report || true
+
+      - name: Run pip-audit
+        working-directory: ./backend
+        run: pip-audit || true
+
+      - name: Run Django tests
+        working-directory: ./backend
+        env:
+          DJANGO_SETTINGS_MODULE: core.settings
+        run: |
+          python manage.py test --verbosity=2
+
+  frontend-security:
+    runs-on: ubuntu-latest
+    name: Frontend tests & security
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install pnpm
+        run: npm i -g pnpm
+
+      - name: Install deps
+        working-directory: ./frontend
+        run: pnpm install --frozen-lockfile || pnpm install
+
+      - name: Run TypeScript check
+        working-directory: ./frontend
+        run: pnpm exec tsc --noEmit
+
+      - name: Run pnpm audit
+        working-directory: ./frontend
+        run: pnpm audit --json || true
+
+  secret-scan:
+    runs-on: ubuntu-latest
+    name: Secret scanning
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run TruffleHog secret scan
+        uses: trufflesecurity/secret-scan-action@v1
+        with:
+          fail-on-secrets: true

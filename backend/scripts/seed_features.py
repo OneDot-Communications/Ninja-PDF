@@ -7,7 +7,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
 django.setup()
 
-from billing.models import Feature
+from apps.subscriptions.models.subscription import Feature
 
 # Feature Codes and Free Limits (Daily)
 features = [

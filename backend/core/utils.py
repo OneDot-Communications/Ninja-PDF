@@ -4,6 +4,8 @@ import time
 import traceback
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
+from rest_framework.response import Response
+from django.core.files.storage import default_storage
 
 def cleanup_files(paths, retries=3, delay=0.1):
     """
@@ -41,6 +43,151 @@ def check_premium_access(request):
         return False, JsonResponse({'error': 'This feature is available for Premium users only.'}, status=403)
         
     return True, None
+
+def dispatch_async_task(request, task_func, quota_code, task_args=None, task_kwargs_extra=None):
+    """
+    Generic dispatcher for Async Celery Tasks.
+    Handles File Upload -> Storage -> Task Dispatch -> Quota Increment.
+    """
+    from core.quotas import QuotaManager
+    
+    if not request.FILES.get('file'):
+        return Response({'error': 'No file uploaded'}, status=400)
+    
+    # Support multiple files (for Merge) if 'files' list is passed, but this function implies single upload handling usually.
+    # If the view handles multiple files, it should upload them and pass paths in task_args?
+    # For now, let's assume 'file' is the primary input.
+    
+    file_obj = request.FILES['file']
+
+    # Define storage paths early for UserFile creation
+    import time
+    user_key = str(request.user.id) if request.user.is_authenticated else f"guest_{QuotaManager.get_client_ip(request)}"
+    filename = f"{int(time.time())}_{file_obj.name}"
+    
+    import hashlib
+    import pikepdf
+    
+    # Calculate SHA256 (preferred). MD5 is deprecated and not used for new security checks.
+    sha256_hash = hashlib.sha256()
+    for chunk in file_obj.chunks():
+        sha256_hash.update(chunk)
+    file_sha256 = sha256_hash.hexdigest()
+    
+    # Reset pointer for saving
+    file_obj.seek(0)
+
+    # Validate PDF & Get Page Count
+    page_count = None
+    if file_obj.content_type == 'application/pdf' or file_obj.name.lower().endswith('.pdf'):
+        try:
+            # We need to read it to open with pikepdf, or save first. 
+            # Since we have it in memory/chunks, let's defer page count until after save or use temporary stream?
+            # Using pikepdf.open on stream might work if seekable.
+            with pikepdf.open(file_obj) as pdf:
+                page_count = len(pdf.pages)
+        except Exception:
+            # Not a valid PDF or encryption issue
+            pass
+        finally:
+             file_obj.seek(0)
+             
+    # Create File Asset Record (State: CREATED)
+    from apps.files.models.user_file import UserFile
+    from django.utils import timezone
+    
+    file_asset = None
+    if request.user.is_authenticated:
+        metadata = {'original_name': file_obj.name}
+        if page_count:
+            metadata['page_count'] = page_count
+            
+        file_asset = UserFile.objects.create(
+            user=request.user,
+            file=f"uploads/{user_key}/{filename}", 
+            name=file_obj.name,
+            size_bytes=file_obj.size,
+            mime_type=file_obj.content_type,
+            status=UserFile.Status.CREATED,
+            md5_hash=None,
+            sha256_hash=file_sha256,
+            metadata=metadata
+        )
+    
+    # Save Upload (State: UPLOADING -> VALIDATED)
+    try:
+        if file_asset:
+            file_asset.status = UserFile.Status.UPLOADING
+            file_asset.save()
+            
+        file_path = default_storage.save(f"uploads/{user_key}/{filename}", file_obj)
+        
+        if file_asset:
+            # Update actual path if storage changed it
+            file_asset.file.name = file_path
+            # State: VALIDATED -> TEMP_STORED
+            file_asset.status = UserFile.Status.VALIDATED
+            file_asset.save()
+            # Simulate Validation Steps (MIME, Magic Bytes already done in Form/Serializer usually)
+            # Here we mark as TEMP_STORED as it is physically in R2/S3 now
+            file_asset.status = UserFile.Status.TEMP_STORED
+            file_asset.save()
+            
+    except Exception as e:
+        if file_asset:
+            file_asset.status = UserFile.Status.FAILED
+            file_asset.save()
+        raise e
+    
+    # Determine Queue based on Priority
+    queue = 'default'
+    if request.user.is_authenticated and (request.user.is_premium or request.user.is_super_admin):
+        queue = 'high_priority'
+
+    # Prepare args
+    args = [file_path]
+    if task_args:
+        args.extend(task_args)
+
+    # Pass Metadata
+    task_kwargs = {}
+    if request.user.is_authenticated:
+        task_kwargs['user_id'] = request.user.id
+        if file_asset:
+             task_kwargs['file_asset_id'] = file_asset.id
+        
+    if task_kwargs_extra:
+        task_kwargs.update(task_kwargs_extra)
+        
+    # State: METADATA_REGISTERED
+    if file_asset:
+        file_asset.status = UserFile.Status.METADATA_REGISTERED
+        file_asset.save()
+
+    # Dispatch Task (State: QUEUED)
+    if file_asset:
+        file_asset.status = UserFile.Status.QUEUED
+        file_asset.save()
+
+    task = task_func.apply_async(args=args, kwargs=task_kwargs, queue=queue)
+    
+    # Link Task ID to File Asset? 
+    # Ideally UserFile should have task_id or TaskLog links to UserFile.
+    # For now, we rely on TaskLog creation in Signal or here?
+    # Signal handles TaskLog. We can update TaskLog with file_asset_id if we want.
+    
+    # Increment Quota  
+    if request.user.is_authenticated:
+        QuotaManager.increment_user_quota(request.user, quota_code)
+    else:
+        QuotaManager.increment_guest_quota(request)
+        
+    return Response({
+        'task_id': task.id,
+        'file_id': file_asset.id if file_asset else None,
+        'status': 'processing', 
+        'message': 'File uploaded and conversion started.'
+    })
 
 def process_to_pdf_request(request, accepted_extensions, conversion_func, input_type_name, template_name='to_pdf/convert_form.html', default_ext=None, premium_required=True):
     """
