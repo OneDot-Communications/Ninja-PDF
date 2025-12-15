@@ -1,6 +1,12 @@
 {
-m   "short_name": "18+ PDF",
-    "description": "Smart Wo"icons": [
+    "name": "18+ PDF - Free Online PDF Tools",
+    "short_name": "18+ PDF",
+    "description": "Smart Workspace for PDF Tools",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#000000",
+    "icons": [
         {
             "src": "/favicon.ico",
             "sizes": "64x64 32x32 24x24 16x16",
