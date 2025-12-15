@@ -6,13 +6,15 @@ import { FileUpload } from "../ui/file-upload";
 import { Button } from "../ui/button";
 import { ArrowRight, Trash2, Settings } from "lucide-react";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
-import { pdfStrategyManager } from "../../lib/pdf-service";
+import { pdfApi } from "../../lib/pdf-api";
 import { toast } from "../../lib/use-toast";
+import { useRouter } from "next/navigation";
 
 export function JpgToPdfTool() {
+    const router = useRouter();
     const [files, setFiles] = useState<File[]>([]);
     const [isProcessing, setIsProcessing] = useState(false);
-    
+
     // Options
     const [pageSize, setPageSize] = useState<"auto" | "a4" | "letter">("a4");
     const [orientation, setOrientation] = useState<"portrait" | "landscape">("portrait");
@@ -39,28 +41,41 @@ export function JpgToPdfTool() {
         setIsProcessing(true);
 
         try {
-            const result = await pdfStrategyManager.execute('convert-to-pdf', files, {
-                pageSize,
-                orientation,
-                margin
-            });
+            // Backend-first with client-side fallback
+            // Note: Backend currently takes single file, so process first file
+            // For multiple files, falls back to client-side
+            const result = await pdfApi.jpgToPdf(files[0]);
 
-            saveAs(result.blob, result.fileName || "images.pdf");
-            
+            saveAs(result.blob, result.fileName);
+
             toast.show({
                 title: "Success",
                 message: "Images converted to PDF successfully!",
                 variant: "success",
                 position: "top-right",
             });
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error converting images to PDF:", error);
-            toast.show({
-                title: "Conversion Failed",
-                message: "Failed to convert images. Please try again.",
-                variant: "error",
-                position: "top-right",
-            });
+
+            if (error.message && error.message.includes("QUOTA_EXCEEDED")) {
+                toast.show({
+                    title: "Limit Reached",
+                    message: "You have reached your daily limit for this tool.",
+                    variant: "warning",
+                    position: "top-right",
+                    actions: {
+                        label: "Upgrade to Unlimited",
+                        onClick: () => router.push('/pricing')
+                    }
+                });
+            } else {
+                toast.show({
+                    title: "Conversion Failed",
+                    message: "Failed to convert images. Please try again.",
+                    variant: "error",
+                    position: "top-right",
+                });
+            }
         } finally {
             setIsProcessing(false);
         }

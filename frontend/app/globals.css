@@ -1,14 +1,15 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @custom-variant dark (&:is(.dark *));
+
 @theme {
     --font-sans: 'Montserrat', sans-serif;
     --font-handwriting: 'Kalam', cursive;
     --font-caveat: 'Caveat', cursive;
     /* Brand Colors */
-    --color-brand-red: #E42527;
+    --color-brand-red: #FF0000;
     --color-brand-green: #089949;
-    --color-brand-blue: #226DB4;
+    --color-brand-blue: #01B0F1;
     --color-brand-yellow: #F9B21D;
     /* Neutrals */
     --color-brand-black: #000000;
@@ -17,7 +18,7 @@
     --color-brand-white: #FFFFFF;
     /* Alerts */
     --color-alert-success: #1CB75E;
-    --color-alert-info: #03A9F5;
+    --color-alert-info: #01B0F1;
     --color-alert-warning: #FFA23A;
     --color-alert-error: #FF0000;
     /* Semantic mappings */
@@ -43,45 +44,52 @@
     --animate-accordion-up: accordion-up 0.2s ease-out;
     --animate-fade-in: fade-in 0.5s ease-out;
     --animate-slide-up: slide-up 0.5s ease-out;
+
     @keyframes accordion-down {
         from {
             height: 0;
         }
+
         to {
             height: var(--radix-accordion-content-height);
         }
     }
+
     @keyframes accordion-up {
         from {
             height: var(--radix-accordion-content-height);
         }
+
         to {
             height: 0;
         }
     }
+
     @keyframes fade-in {
         from {
             opacity: 0;
         }
+
         to {
             opacity: 1;
         }
     }
+
     @keyframes slide-up {
         from {
             transform: translateY(20px);
             opacity: 0;
         }
+
         to {
             transform: translateY(0);
-            opacity: 1;
         }
     }
 }
 
 :root {
     /* Primary: Brand Purple */
-    --primary: #714B67;
+    --primary: #01B0F1;
     --primary-foreground: #FFFFFF;
     /* Secondary: Green (Brand Green) */
     --secondary: #089949;
@@ -91,14 +99,14 @@
     --muted-foreground: #333333;
     /* Accent: Light Grey for hover */
     --accent: #FAFAFA;
-    --accent-foreground: #226DB4;
+    --accent-foreground: #01B0F1;
     /* Destructive: Red (Brand Red) */
-    --destructive: #E42527;
+    --destructive: #FF0000;
     --destructive-foreground: #FFFFFF;
     /* Border/Input/Ring */
     --border: #E5E5E5;
     --input: #E5E5E5;
-    --ring: #714B67;
+    --ring: #01B0F1;
     /* Radius */
     --radius: 0.625rem;
     /* Background/Foreground */
@@ -167,6 +175,7 @@
     * {
         @apply border-border;
     }
+
     body {
         @apply bg-background text-foreground antialiased;
     }
@@ -214,7 +223,44 @@
     * {
         @apply border-border outline-ring/50;
     }
+
     body {
         @apply bg-background text-foreground;
+    }
+
+}
+
+/* Hide scrollbar globally */
+::-webkit-scrollbar {
+    width: 0px;
+    background: transparent;
+    /* make scrollbar transparent */
+    display: none;
+}
+
+html,
+body {
+    scrollbar-width: none;
+    /* Firefox */
+    -ms-overflow-style: none;
+    /* IE and Edge */
+    overflow-x: hidden;
+    /* Prevent horizontal scroll */
+}
+
+/* Ensure no element shows a scrollbar */
+* {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+@layer utilities {
+    .no-scrollbar::-webkit-scrollbar {
+        display: none;
+    }
+
+    .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
     }
 }

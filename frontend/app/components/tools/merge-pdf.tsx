@@ -7,7 +7,7 @@ import { Button } from "../ui/button";
 import { ArrowRight, Download, Trash2, FileText, Settings, CheckSquare, Square } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
-import { pdfStrategyManager } from "../../lib/pdf-service";
+import { pdfApi } from "../../lib/pdf-api";
 import { toast } from "../../lib/use-toast";
 
 interface MergeFile {
@@ -82,10 +82,8 @@ export function MergePdfTool() {
             const ranges = files.map(f => f.range);
             const fileObjects = files.map(f => f.file);
 
-            const result = await pdfStrategyManager.execute('merge', fileObjects, {
-                ranges,
-                flatten
-            });
+            // Uses client-side processing (no backend endpoint for merge yet)
+            const result = await pdfApi.merge(fileObjects, { ranges, flatten });
 
             const url = URL.createObjectURL(result.blob);
             const link = document.createElement("a");
