@@ -1,5 +1,5 @@
-import { ToolShell } from "../components/layout/tool-shell";
-import { WordToPdfTool } from "../components/tools/word-to-pdf";
+import { ToolShell } from "@/app/components/layout/tool-shell";
+import { WordToPdfTool } from "@/app/components/tools/word-to-pdf";
 
 export const metadata = {
     title: "Word to PDF - 18+ PDF",

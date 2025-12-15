@@ -1,5 +1,5 @@
-import { ToolShell } from "../components/layout/tool-shell";
-import { PageNumbersTool } from "../components/tools/page-numbers";
+import { ToolShell } from "@/app/components/layout/tool-shell";
+import { PageNumbersTool } from "@/app/components/tools/page-numbers";
 
 export const metadata = {
     title: "Page Numbers - 18+ PDF",

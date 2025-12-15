@@ -1,5 +1,5 @@
-import { ToolShell } from "../components/layout/tool-shell";
-import { PdfToExcelTool } from "../components/tools/pdf-to-excel";
+import { ToolShell } from "@/app/components/layout/tool-shell";
+import { PdfToExcelTool } from "@/app/components/tools/pdf-to-excel";
 
 export default function PdfToExcelPage() {
     return (

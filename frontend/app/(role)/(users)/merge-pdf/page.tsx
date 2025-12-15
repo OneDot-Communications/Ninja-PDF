@@ -1,5 +1,5 @@
-import { DynamicToolShell } from "../components/layout/dynamic-tool-shell";
-import { MergePdfTool } from "../components/tools/merge-pdf";
+import { DynamicToolShell } from "@/app/components/layout/dynamic-tool-shell";
+import { MergePdfTool } from "@/app/components/tools/merge-pdf";
 
 export const metadata = {
     title: "Merge PDF - 18+ PDF",
