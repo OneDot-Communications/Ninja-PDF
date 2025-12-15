@@ -7,9 +7,12 @@ import { ArrowRight, FileText, Settings, Layout, Type } from "lucide-react";
 import mammoth from "mammoth";
 import jsPDF from "jspdf";
 import { saveAs } from "file-saver";
+import { toast } from "../../client-layout";
+import { useRouter } from "next/navigation";
 import { pdfApi } from "../../lib/pdf-api";
 
 export function WordToPdfTool() {
+    const router = useRouter();
     const [file, setFile] = useState<File | null>(null);
     const [isProcessing, setIsProcessing] = useState(false);
     const [htmlContent, setHtmlContent] = useState<string | null>(null);
@@ -31,7 +34,12 @@ export function WordToPdfTool() {
                 setHtmlContent(result.value);
             } catch (error) {
                 console.error("Error reading Word file:", error);
-                alert("Failed to read Word file.");
+                toast.show({
+                    title: "Error reading file",
+                    message: "Failed to read the Word file. Please try another.",
+                    variant: "error",
+                    position: "bottom-right"
+                });
             }
         }
     };
@@ -44,9 +52,36 @@ export function WordToPdfTool() {
             // Backend-first with client-side fallback
             const result = await pdfApi.wordToPdf(file);
             saveAs(result.blob, result.fileName);
-        } catch (error) {
+
+            toast.show({
+                title: "Success",
+                message: "File converted successfully!",
+                variant: "success",
+                position: "bottom-right"
+            });
+
+        } catch (error: any) {
             console.error("Error converting to PDF:", error);
-            alert("Failed to convert to PDF. Please try again.");
+
+            if (error.message && error.message.includes("QUOTA_EXCEEDED")) {
+                toast.show({
+                    title: "Limit Reached",
+                    message: "You have reached your daily limit for this tool.",
+                    variant: "warning",
+                    position: "top-center",
+                    actions: {
+                        label: "Upgrade to Unlimited",
+                        onClick: () => router.push('/pricing')
+                    }
+                });
+            } else {
+                toast.show({
+                    title: "Conversion Failed",
+                    message: "Failed to convert file. Please try again.",
+                    variant: "error",
+                    position: "bottom-right"
+                });
+            }
         } finally {
             setIsProcessing(false);
         }
