@@ -1,6 +1,7 @@
 "use client";
 
 import { Sidebar } from "@/app/components/dashboard/Sidebar";
+import { Header } from "@/app/components/dashboard/Header";
 import { Toaster } from "sonner";
 import { useAuth } from "@/app/context/AuthContext";
 import { useRouter } from "next/navigation";
@@ -36,10 +37,15 @@ export default function UserDashboardLayout({
 
     return (
         <div className="flex min-h-screen bg-muted/20">
-            <Sidebar />
-            <main className="flex-1 p-8 overflow-y-auto h-screen">
-                <div className="max-w-6xl mx-auto space-y-8 pb-20">
-                    {children}
+            <div className="hidden md:block w-64 fixed h-full z-20">
+                <Sidebar />
+            </div>
+            <main className="flex-1 md:ml-64 flex flex-col min-h-screen">
+                <Header role="USER" />
+                <div className="flex-1 p-8 overflow-y-auto">
+                    <div className="max-w-6xl mx-auto space-y-8 pb-20">
+                        {children}
+                    </div>
                 </div>
                 <Toaster />
             </main>

@@ -29,20 +29,11 @@ const GoogleCallbackContent = () => {
                 const code = params.get('code');
                 if (code) {
                     // Exchange the provider code for a backend session/JWT via token endpoint
-                    // This endpoint was configured at /api/auth/google/token/ (POST)
                     await api.request('POST', '/api/auth/google/token/', { code });
                 }
-                // Refresh user to retrieve new session/JWT state
-                const refreshed = await refreshUser();
-                // If the user has no first name set, ask them to complete profile inline
-                if (refreshed && (!refreshed.first_name || refreshed.first_name.trim() === '')) {
-                    setNeedName(true);
-                    setFirstName(refreshed?.first_name || '');
-                    setLastName(refreshed?.last_name || '');
-                    setLoading(false);
-                } else {
-                    router.replace('/dashboard');
-                }
+                // Refresh user and redirect to dashboard
+                await refreshUser();
+                router.replace('/dashboard');
             } catch (e) {
                 console.error('Google callback exchange failed', e);
                 router.replace('/login');
