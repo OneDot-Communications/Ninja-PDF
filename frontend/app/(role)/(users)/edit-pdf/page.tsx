@@ -1,5 +1,5 @@
-import { ToolShell } from "../components/layout/tool-shell";
-import { EditPdfTool } from "../components/tools/edit-pdf";
+import { ToolShell } from "@/app/components/layout/tool-shell";
+import { EditPdfTool } from "@/app/components/tools/edit-pdf";
 
 export const metadata = {
     title: "Edit PDF - 18+ PDF",

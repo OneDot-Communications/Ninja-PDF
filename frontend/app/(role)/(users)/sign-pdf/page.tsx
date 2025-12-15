@@ -1,5 +1,5 @@
-import { ToolShell } from "../components/layout/tool-shell";
-import { SignPdfTool } from "../components/tools/sign-pdf";
+import { ToolShell } from "@/app/components/layout/tool-shell";
+import { SignPdfTool } from "@/app/components/tools/sign-pdf";
 
 export const metadata = {
     title: "Sign PDF - 18+ PDF",

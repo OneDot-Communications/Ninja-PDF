@@ -1,5 +1,5 @@
-import { ToolShell } from "../components/layout/tool-shell";
-import { JpgToPdfTool } from "../components/tools/jpg-to-pdf";
+import { ToolShell } from "@/app/components/layout/tool-shell";
+import { JpgToPdfTool } from "@/app/components/tools/jpg-to-pdf";
 
 export const metadata = {
     title: "JPG to PDF - 18+ PDF",

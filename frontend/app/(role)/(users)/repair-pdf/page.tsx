@@ -1,5 +1,5 @@
-import { ToolShell } from "../components/layout/tool-shell";
-import { RepairPdfTool } from "../components/tools/repair-pdf";
+import { ToolShell } from "@/app/components/layout/tool-shell";
+import { RepairPdfTool } from "@/app/components/tools/repair-pdf";
 
 export const metadata = {
     title: "Repair PDF - 18+ PDF",

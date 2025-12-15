@@ -1,5 +1,5 @@
-import { ToolShell } from "../components/layout/tool-shell";
-import { PdfToJpgTool } from "../components/tools/pdf-to-jpg";
+import { ToolShell } from "@/app/components/layout/tool-shell";
+import { PdfToJpgTool } from "@/app/components/tools/pdf-to-jpg";
 
 export const metadata = {
     title: "PDF to JPG - 18+ PDF",

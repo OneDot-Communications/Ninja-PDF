@@ -1,5 +1,5 @@
-import { ToolShell } from "../components/layout/tool-shell";
-import { RedactPdfTool } from "../components/tools/redact-pdf";
+import { ToolShell } from "@/app/components/layout/tool-shell";
+import { RedactPdfTool } from "@/app/components/tools/redact-pdf";
 
 export const metadata = {
     title: "Redact PDF - 18+ PDF",

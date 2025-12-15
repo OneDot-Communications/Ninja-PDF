@@ -1,5 +1,5 @@
-import { ToolShell } from "../components/layout/tool-shell";
-import { WatermarkPdfTool } from "../components/tools/watermark-pdf";
+import { ToolShell } from "@/app/components/layout/tool-shell";
+import { WatermarkPdfTool } from "@/app/components/tools/watermark-pdf";
 
 export const metadata = {
     title: "Watermark PDF - 18+ PDF",

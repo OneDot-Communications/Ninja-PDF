@@ -1,5 +1,5 @@
-import { ToolShell } from "../components/layout/tool-shell";
-import { ProtectPdfTool } from "../components/tools/protect-pdf";
+import { ToolShell } from "@/app/components/layout/tool-shell";
+import { ProtectPdfTool } from "@/app/components/tools/protect-pdf";
 
 export const metadata = {
     title: "Protect PDF - 18+ PDF",

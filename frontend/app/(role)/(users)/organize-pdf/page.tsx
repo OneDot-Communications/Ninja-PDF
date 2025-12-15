@@ -1,5 +1,5 @@
-import { ToolShell } from "../components/layout/tool-shell";
-import { OrganizePdfTool } from "../components/tools/organize-pdf";
+import { ToolShell } from "@/app/components/layout/tool-shell";
+import { OrganizePdfTool } from "@/app/components/tools/organize-pdf";
 
 export const metadata = {
     title: "Organize PDF - 18+ PDF",
