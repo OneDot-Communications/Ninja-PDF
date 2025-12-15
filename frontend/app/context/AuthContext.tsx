@@ -11,6 +11,11 @@ export interface User {
     role: 'USER' | 'ADMIN' | 'SUPER_ADMIN';
     subscription_tier: 'FREE' | 'PRO' | 'PREMIUM' | 'ENTERPRISE';
     avatar?: string;
+    phone_number?: string;
+    is_verified: boolean;
+    date_joined: string;
+    storage_used?: number;
+    storage_limit?: number;
 }
 
 export interface Subscription {
@@ -26,7 +31,7 @@ interface AuthContextType {
     loading: boolean; // Alias for compatibility
     // Returns `{ requires_2fa: true }` if backend requires OTP; otherwise resolves when logged in
     login: (email: string, password: string, otp_token?: string) => Promise<any>;
-    signup: (email: string, password: string, first_name?: string, last_name?: string) => Promise<void>;
+    signup: (email: string, password: string, confirmPassword?: string, first_name?: string, last_name?: string, referral_code?: string) => Promise<void>;
     googleLogin: (code: string) => Promise<void>;
     logout: () => Promise<void>;
     refreshUser: () => Promise<void>;
@@ -103,11 +108,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
     };
 
-    const signup = async (email: string, password: string, first_name?: string, last_name?: string) => {
+    const signup = async (email: string, password: string, confirmPassword?: string, first_name?: string, last_name?: string, referral_code?: string) => {
         setIsLoading(true);
         try {
-            await api.signup(email, password, first_name, last_name);
-            // After signup, user may need to verify email - let caller handle redirect
+            await api.signup(email, password, confirmPassword, first_name, last_name, referral_code);
+            // Don't auto-login if email verification is required
+            // For now assume verification required
         } catch (e) {
             setIsLoading(false);
             throw e;

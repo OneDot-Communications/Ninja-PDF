@@ -14,6 +14,7 @@ import {
     TableHeader,
     TableRow,
 } from "@/app/components/ui/table";
+import { Skeleton } from "@/app/components/ui/skeleton";
 
 export default function TrashPage() {
     const [deletedItems, setDeletedItems] = useState<any[]>([]);
@@ -53,7 +54,17 @@ export default function TrashPage() {
             <Card>
                 <CardContent className="p-0">
                     {loading ? (
-                        <div className="p-12 text-center text-muted-foreground">Loading trash...</div>
+                        <div className="p-6 space-y-4">
+                            {[1, 2, 3].map(i => (
+                                <div key={i} className="flex justify-between items-center">
+                                    <div className="flex gap-4">
+                                        <Skeleton className="h-4 w-24" />
+                                        <Skeleton className="h-4 w-48" />
+                                    </div>
+                                    <Skeleton className="h-8 w-16" />
+                                </div>
+                            ))}
+                        </div>
                     ) : deletedItems.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
                             <Trash2 className="w-12 h-12 mb-4 opacity-20" />

@@ -36,3 +36,4 @@ boto3
 requests
 pytest
 pytest-django
+whitenoise

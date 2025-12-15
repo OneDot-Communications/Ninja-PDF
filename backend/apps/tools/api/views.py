@@ -231,13 +231,86 @@ class PDFToPDFAView(PDFToolAPIView):
 # PDF OPTIMIZATION
 # ─────────────────────────────────────────────────────────────────────────────
 
+
+# ─────────────────────────────────────────────────────────────────────────────
+# UTILS
+# ─────────────────────────────────────────────────────────────────────────────
+
+def check_usage_limit(user, feature_code):
+    """
+    Checks if user has reached limit for feature.
+    Returns (allowed: bool, response: Response | None)
+    """
+    if not user.is_authenticated:
+        return True, None # Guests allowed for now? Or block? Assuming yes.
+        
+    try:
+        from apps.subscriptions.models.subscription import Feature, UserFeatureUsage, UserFeatureOverride
+        from django.utils import timezone
+        
+        # Get Feature
+        feature = Feature.objects.filter(code=feature_code).first()
+        if not feature:
+            return True, None # Feature not restricted or unknown
+            
+        # Check Override
+        override = UserFeatureOverride.objects.filter(user=user, feature=feature).first()
+        if override:
+            if override.is_enabled:
+                return True, None
+            else:
+                return False, Response({'error': 'Feature disabled for your account'}, status=status.HTTP_403_FORBIDDEN)
+        
+        # Check Plan Limits (Simplification: Pro = 1000, Free = limit)
+        # Ideally Plan has limits.
+        # Assuming Subscription Tier check:
+        if user.subscription_tier in ['PRO', 'ENTERPRISE', 'PREMIUM']:
+             return True, None # Unlimited for paid
+             
+        # Check Daily Usage
+        today = timezone.now().date()
+        usage, created = UserFeatureUsage.objects.get_or_create(user=user, feature=feature, date=today)
+        
+        limit = feature.free_limit
+        if limit > 0:
+            # Check for 80% Usage Alert
+            threshold_80 = int(limit * 0.8)
+            if usage.count == threshold_80 and threshold_80 > 0:
+                 from core.services.email_service import EmailService
+                 EmailService.send_usage_alert_80(user, feature.name)
+
+            if usage.count >= limit:
+                # Limit Reached
+                from core.services.email_service import EmailService
+                # Only email once per day per feature to avoid spam
+                if usage.count == limit:
+                     EmailService.send_limit_reached(user, feature.name)
+                
+                return False, Response({'error': f'Daily limit of {limit} reached for {feature.name}. Upgrade for unlimited.'}, status=status.HTTP_403_FORBIDDEN)
+
+            
+        # Increment
+        usage.count += 1
+        usage.save()
+        return True, None
+        
+    except Exception as e:
+        print(f"Limit Check Error: {e}")
+        return True, None # Fail safe open
+
 class MergePDFView(PDFToolAPIView):
     """Merge multiple PDFs into one."""
     
     def post(self, request):
+        # Usage Check
+        allowed, error_response = check_usage_limit(request.user, 'MERGE_PDF')
+        if not allowed:
+            return error_response
+
         files = request.FILES.getlist('files')
         if not files or len(files) < 2:
             return Response({'error': 'At least 2 files required for merge'}, status=status.HTTP_400_BAD_REQUEST)
+
         
         try:
             import fitz

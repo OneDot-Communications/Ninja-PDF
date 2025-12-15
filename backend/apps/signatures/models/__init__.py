@@ -64,3 +64,20 @@ class SignatureContact(models.Model):
 
     def __str__(self):
         return f"{self.name} <{self.email}>"
+
+
+class SavedSignature(models.Model):
+    """User's saved signature for reuse."""
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='saved_signatures')
+    image = models.FileField(upload_to='signatures/saved/')
+    name = models.CharField(max_length=255, default='My Signature')
+    is_default = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.name} ({self.user.email})"
+

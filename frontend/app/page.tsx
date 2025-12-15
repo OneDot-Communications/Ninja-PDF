@@ -23,7 +23,7 @@ export default function Home() {
           setSettings({
             heroTitle: response.hero_title || "All your PDF headache in one place.",
             heroSubtitle: response.hero_subtitle || "Simple, super, and totally free!",
-            platformName: response.platform_name || "Ninja PDF"
+            platformName: response.platform_name || "18+ PDF"
           });
         }
       } catch (error) {
