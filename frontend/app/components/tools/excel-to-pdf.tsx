@@ -4,15 +4,18 @@ import { useState } from "react";
 import { FileUpload } from "../ui/file-upload";
 import { Button } from "../ui/button";
 import { ArrowRight, FileSpreadsheet, Loader2, RefreshCw, Settings, Layout, Palette } from "lucide-react";
-import * as XLSX from "xlsx";
+import ExcelJS from 'exceljs';
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { Label } from "../ui/label";
 import { Switch } from "../ui/switch";
 import { saveAs } from "file-saver";
 import { pdfApi } from "../../lib/pdf-api";
+import { toast } from "../../client-layout";
+import { useRouter } from "next/navigation";
 
 export function ExcelToPdfTool() {
+    const router = useRouter();
     const [files, setFiles] = useState<File[]>([]);
     const [isProcessing, setIsProcessing] = useState(false);
     const [status, setStatus] = useState("");
@@ -39,9 +42,28 @@ export function ExcelToPdfTool() {
             setStatus("Saving PDF...");
             saveAs(result.blob, result.fileName);
             setStatus("Completed!");
-        } catch (error) {
+        } catch (error: any) {
             console.error("Conversion Error:", error);
-            alert("Failed to convert Excel to PDF.");
+
+            if (error.message && error.message.includes("QUOTA_EXCEEDED")) {
+                toast.show({
+                    title: "Limit Reached",
+                    message: "You have reached your daily limit for this tool.",
+                    variant: "warning",
+                    position: "top-center",
+                    actions: {
+                        label: "Upgrade to Unlimited",
+                        onClick: () => router.push('/pricing')
+                    }
+                });
+            } else {
+                toast.show({
+                    title: "Conversion Failed",
+                    message: "Failed to convert Excel file. Please try again.",
+                    variant: "error",
+                    position: "bottom-right"
+                });
+            }
         } finally {
             setIsProcessing(false);
         }

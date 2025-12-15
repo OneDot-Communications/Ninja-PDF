@@ -10,8 +10,11 @@ import { saveAs } from "file-saver";
 import { pdfApi } from "../../lib/pdf-api";
 import { Switch } from "../ui/switch";
 import { Label } from "../ui/label";
+import { toast } from "../../client-layout";
+import { useRouter } from "next/navigation";
 
 export function PowerPointToPdfTool() {
+    const router = useRouter();
     const [files, setFiles] = useState<File[]>([]);
     const [isProcessing, setIsProcessing] = useState(false);
     const [status, setStatus] = useState("");
@@ -37,9 +40,28 @@ export function PowerPointToPdfTool() {
             saveAs(result.blob, result.fileName);
             setStatus("Completed!");
 
-        } catch (error) {
+        } catch (error: any) {
             console.error("Conversion Error:", error);
-            alert("Failed to convert PowerPoint to PDF.");
+
+            if (error.message && error.message.includes("QUOTA_EXCEEDED")) {
+                toast.show({
+                    title: "Limit Reached",
+                    message: "You have reached your daily limit for this tool.",
+                    variant: "warning",
+                    position: "top-center",
+                    actions: {
+                        label: "Upgrade to Unlimited",
+                        onClick: () => router.push('/pricing')
+                    }
+                });
+            } else {
+                toast.show({
+                    title: "Conversion Failed",
+                    message: "Failed to convert PowerPoint to PDF.",
+                    variant: "error",
+                    position: "bottom-right"
+                });
+            }
         } finally {
             setIsProcessing(false);
         }

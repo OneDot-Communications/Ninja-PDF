@@ -32,7 +32,7 @@ export default function InboxSignaturesPage() {
                                 <TableHead>Title</TableHead>
                                 <TableHead>Requester</TableHead>
                                 <TableHead>Status</TableHead>
-                                <TableHead className="text-right">BiAction</TableHead>
+                                <TableHead className="text-right">Action</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>

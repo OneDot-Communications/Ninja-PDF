@@ -39,6 +39,24 @@ AUTHENTICATION_BACKENDS = [
     'allauth.account.auth_backends.AuthenticationBackend',
 ]
 
+# Optional OTP authentication backend: only include if provided by installed
+# django-otp package to avoid import-time errors on newer versions which
+# don't expose a `django_otp.backends` module.
+try:
+    import importlib
+    importlib.import_module('django_otp.backends')
+except Exception:
+    import logging
+    logging.getLogger(__name__).warning(
+        'django_otp.backends not present; OTP authentication backend disabled.'
+    )
+else:
+    AUTHENTICATION_BACKENDS.insert(1, 'django_otp.backends.OTPBackend')
+
+# RAZORPAY SETTINGS
+RAZORPAY_KEY_ID = os.getenv('RAZORPAY_KEY_ID')
+RAZORPAY_KEY_SECRET = os.getenv('RAZORPAY_KEY_SECRET')
+
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
@@ -80,15 +98,20 @@ INSTALLED_APPS = [
     'allauth.socialaccount.providers.google',
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
+    'django_otp',
+    'django_otp.plugins.otp_totp',
+    'django_otp.plugins.otp_static',
 
-    # Local Apps
-    'to_pdf',
-    'from_pdf',
-    'authentication',
-    'billing',
-    'signatures',
-    'teams',
-    'workflows',
+    # Domain Apps (Consolidated)
+    'apps.accounts',
+    'apps.subscriptions',
+    'apps.files',
+    'apps.jobs',
+    'apps.tools',
+    'apps.teams',
+    'apps.workflows',
+    'apps.signatures',
+    'apps.admin_panel',
 ]
 
 SITE_ID = 1
@@ -100,6 +123,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django_otp.middleware.OTPMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'allauth.account.middleware.AccountMiddleware', # AllAuth
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -214,7 +238,7 @@ EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
 # AUTHENTICATION CONFIGURATION
 # -----------------------------------------------------------------------------
 
-AUTH_USER_MODEL = 'authentication.User'
+AUTH_USER_MODEL = 'accounts.User'
 
 # REST FRAMEWORK
 REST_FRAMEWORK = {
@@ -223,13 +247,27 @@ REST_FRAMEWORK = {
     ),
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
-    )
+    ),
+    'DEFAULT_THROTTLE_CLASSES': (
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle',
+        'rest_framework.throttling.ScopedRateThrottle',
+    ),
+    # Throttling to protect auth endpoints and brute-force attempts
+    'DEFAULT_THROTTLE_RATES': {
+        'login': '10/min',
+        'anon': '20/min',
+        'password_reset': '5/hour',
+        'registration': '5/hour',
+        'otp': '10/min'
+    }
 }
 
 # JWT Configuration
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    # Shorter lifetimes for government-grade security
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
     'AUTH_HEADER_TYPES': ('Bearer',),
@@ -241,28 +279,43 @@ REST_AUTH = {
     'JWT_AUTH_COOKIE': 'access-token',
     'JWT_AUTH_REFRESH_COOKIE': 'refresh-token',
     'JWT_AUTH_HTTPONLY': True,  # Prevent JS access
+    # Recommend SameSite=Strict in production for CSRF protection on cookies
+    'JWT_AUTH_SAMESITE': os.getenv('JWT_AUTH_SAMESITE', 'Strict'),
     # For local development don't hardcode a cookie domain so it's host-specific.
     # This avoids issues when frontend runs on `localhost` while backend is `127.0.0.1`.
     'JWT_AUTH_COOKIE_DOMAIN': None,
     'SESSION_LOGIN': False,
-    'LOGIN_SERIALIZER': 'authentication.serializers.CustomLoginSerializer',
-    'USER_DETAILS_SERIALIZER': 'authentication.serializers.UserSerializer',
+    'LOGIN_SERIALIZER': 'apps.accounts.api.serializers.CustomLoginSerializer',
+    'USER_DETAILS_SERIALIZER': 'apps.accounts.api.serializers.UserSerializer',
 }
+
+# Cookie config used by helpers
+JWT_COOKIE_SAMESITE = REST_AUTH.get('JWT_AUTH_SAMESITE', 'Strict')
 
 # AllAuth Configuration
 # AllAuth Configuration (2025 Modern Standards)
-ACCOUNT_USER_MODEL_USERNAME_FIELD = None 
-ACCOUNT_LOGIN_METHODS = {'email'} 
+# AllAuth Configuration (2025 Modern Standards)
+ACCOUNT_USER_MODEL_USERNAME_FIELD = None
+ACCOUNT_LOGIN_METHODS = {'email'} # Replaces ACCOUNT_AUTHENTICATION_METHOD
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_USERNAME_REQUIRED = False
+ACCOUNT_SIGNUP_PASSWORD_ENTER_TWICE = False
+ACCOUNT_EMAIL_VERIFICATION = 'mandatory'
+# ACCOUNT_SIGNUP_FIELDS replaces old REQUIRED fields logic in newer versions, 
+# but dj-rest-auth might still rely on older settings. keeping both for safety if compatible.
 
 # CSRF Settings for JWT Auth
 CSRF_COOKIE_SAMESITE = 'Lax'
 CSRF_COOKIE_HTTPONLY = False  # Critical: Frontend needs to read this cookie
 CSRF_USE_SESSIONS = False 
-ACCOUNT_EMAIL_REQUIRED = True 
-ACCOUNT_USERNAME_REQUIRED = False 
-ACCOUNT_SIGNUP_FIELDS = ['email*', 'password1', 'first_name', 'last_name'] # Explicitly set required fields
-ACCOUNT_EMAIL_VERIFICATION = 'mandatory' # Enforced OTP/Link
-ACCOUNT_ADAPTER = 'authentication.adapters.CustomAccountAdapter'
+
+# ACCOUNT_SIGNUP_FIELDS is not a standard setting for allauth/dj-rest-auth, removing to avoid confusion
+# Validation is handled by RegisterSerializer and settings above.
+ACCOUNT_EMAIL_VERIFICATION = 'mandatory' 
+ACCOUNT_CONFIRM_EMAIL_ON_GET = False # Secure: Requires POST to verify
+ACCOUNT_ADAPTER = 'apps.accounts.services.adapters.CustomAccountAdapter'
+OLD_PASSWORD_FIELD_ENABLED = True
+LOGOUT_ON_PASSWORD_CHANGE = True
 
 # Google Provider
 SOCIALACCOUNT_PROVIDERS = {
@@ -337,3 +390,83 @@ LOGGING = {
         },
     },
 }
+
+# -----------------------------------------------------------------------------
+# ASYNC & CACHE CONFIGURATION (REDIS)
+# -----------------------------------------------------------------------------
+# Use Redis for Caching
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": os.getenv("REDIS_URL", "redis://127.0.0.1:6379/1"),
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        }
+    }
+}
+
+# Celery Configuration
+CELERY_BROKER_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+CELERY_RESULT_BACKEND = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'UTC'
+
+# Stripe Configuration
+STRIPE_PUBLIC_KEY = os.getenv('STRIPE_PUBLIC_KEY', 'pk_test_placeholder')
+STRIPE_SECRET_KEY = os.getenv('STRIPE_SECRET_KEY', 'sk_test_placeholder')
+STRIPE_WEBHOOK_SECRET = os.getenv('STRIPE_WEBHOOK_SECRET', 'whsec_placeholder')
+
+from kombu import Queue
+CELERY_TASK_QUEUES = (
+    Queue('high_priority', routing_key='high_priority'),
+    Queue('default', routing_key='default'),
+)
+CELERY_TASK_DEFAULT_QUEUE = 'default'
+CELERY_TASK_DEFAULT_ROUTING_KEY = 'default'
+
+# -----------------------------------------------------------------------------
+# CLOUD STORAGE (DYNAMIC: S3 / CLOUDFLARE R2 / LOCAL)
+# ENV: STORAGE_BACKEND = 's3' | 'r2' | 'local' (default)
+# -----------------------------------------------------------------------------
+STORAGE_BACKEND = os.getenv('STORAGE_BACKEND', 'local').lower()
+
+if STORAGE_BACKEND in ('s3', 'r2'):
+    # Common S3-compatible settings
+    AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
+    AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
+    AWS_STORAGE_BUCKET_NAME = os.getenv('AWS_STORAGE_BUCKET_NAME')
+    AWS_S3_OBJECT_PARAMETERS = {'CacheControl': 'max-age=86400'}
+    AWS_DEFAULT_ACL = 'private'  # Security: Private by default
+    AWS_QUERYSTRING_AUTH = True  # Signed URLs
+    
+    if STORAGE_BACKEND == 'r2':
+        # Cloudflare R2 requires a custom endpoint
+        AWS_S3_ENDPOINT_URL = os.getenv('AWS_S3_ENDPOINT_URL')  # e.g. https://<account>.r2.cloudflarestorage.com
+        AWS_S3_REGION_NAME = 'auto'  # R2 uses 'auto'
+    else:
+        # Standard AWS S3
+        AWS_S3_REGION_NAME = os.getenv('AWS_S3_REGION_NAME', 'us-east-1')
+        
+    AWS_S3_CUSTOM_DOMAIN = os.getenv('AWS_S3_CUSTOM_DOMAIN')  # Optional public CDN domain
+    
+    STORAGES = {
+        "default": {
+            "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+        },
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    }
+else:
+    # Default: FileSystemStorage for local development
+    STORAGES = {
+        "default": {
+            "BACKEND": "django.core.files.storage.FileSystemStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    }
+

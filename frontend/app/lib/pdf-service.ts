@@ -741,10 +741,9 @@ async function pdfToPdfa(file: File, options: any): Promise<StrategyResult> {
 
 async function pdfToExcel(files: File[], options: any): Promise<StrategyResult> {
     const { mergePages, rowTolerance, onProgress } = options;
-    const XLSX = await import("xlsx");
+    const ExcelJS = await import('exceljs');
     const pdfjsLib = await getPdfJs();
-
-    const wb = XLSX.utils.book_new();
+    const workbook = new ExcelJS.Workbook();
     let allData: any[][] = [];
 
     for (let fileIndex = 0; fileIndex < files.length; fileIndex++) {
@@ -793,19 +792,19 @@ async function pdfToExcel(files: File[], options: any): Promise<StrategyResult> 
             if (mergePages) {
                 allData = [...allData, ...sheetData, []]; // Add empty row between pages
             } else {
-                const ws = XLSX.utils.aoa_to_sheet(sheetData);
-                XLSX.utils.book_append_sheet(wb, ws, `Page ${i}`);
+                const ws = workbook.addWorksheet(`Page ${i}`);
+                sheetData.forEach(row => ws.addRow(row));
             }
         }
     }
 
     if (mergePages) {
-        const ws = XLSX.utils.aoa_to_sheet(allData);
-        XLSX.utils.book_append_sheet(wb, ws, "Merged Data");
+        const ws = workbook.addWorksheet('Merged Data');
+        allData.forEach(row => ws.addRow(row));
     }
 
-    const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-    const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
 
     return {
         blob,

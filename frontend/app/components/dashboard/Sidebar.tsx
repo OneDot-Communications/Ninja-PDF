@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useAuth } from "@/app/context/AuthContext";
 
 const SidebarItem = ({ href, icon: Icon, label, active, hasSubmenu, isOpen, onClick }: any) => {
     return (
@@ -77,6 +78,7 @@ const SubMenuItem = ({ href, label, active }: any) => (
 
 export function Sidebar() {
     const pathname = usePathname();
+    const { user } = useAuth();
     const [signaturesOpen, setSignaturesOpen] = useState(pathname?.includes("/signatures") || false);
     const [billingOpen, setBillingOpen] = useState(pathname?.includes("/billing") || false);
 
@@ -121,6 +123,57 @@ export function Sidebar() {
                     active={isActive("/profile/tasks")}
                 />
 
+                {/* SUPER ADMIN: Special Section */}
+                {user?.role === 'SUPER_ADMIN' && (
+                    <>
+                        <div className="pt-4 pb-2 px-3">
+                            <h2 className="text-xs font-semibold text-violet-600 uppercase tracking-wider">Super Admin</h2>
+                        </div>
+                        <SidebarItem
+                            href="/super-admin"
+                            icon={LayoutTemplate}
+                            label="Dashboard"
+                            active={isActive("/super-admin")}
+                        />
+                        <SidebarItem
+                            href="/super-admin/plans"
+                            icon={Settings}
+                            label="Plan Management"
+                            active={isActive("/super-admin/plans")}
+                        />
+                        <SidebarItem
+                            href="/super-admin/payments"
+                            icon={Receipt}
+                            label="Global Payments"
+                            active={isActive("/super-admin/payments")}
+                        />
+                        {/* User Management is also available to SUPER_ADMIN via /admin/users path */}
+                        <SidebarItem
+                            href="/admin/users"
+                            icon={Users}
+                            label="User Management"
+                            active={isActive("/admin/users")}
+                        />
+                        <div className="pt-4 border-t mt-4 mx-2" />
+                    </>
+                )}
+
+                {/* ADMIN (Regular Admin) Section - If NOT Super Admin but IS Admin */}
+                {user?.role === 'ADMIN' && (
+                    <>
+                        <div className="pt-4 pb-2 px-3">
+                            <h2 className="text-xs font-semibold text-blue-600 uppercase tracking-wider">Admin</h2>
+                        </div>
+                        <SidebarItem
+                            href="/admin/users"
+                            icon={Users}
+                            label="User Management"
+                            active={isActive("/admin/users")}
+                        />
+                        <div className="pt-4 border-t mt-4 mx-2" />
+                    </>
+                )}
+
                 {/* Signatures Group */}
                 <div className="pt-4 pb-2 px-3">
                     <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Productivity</h2>
@@ -141,13 +194,13 @@ export function Sidebar() {
                             exit={{ height: 0, opacity: 0 }}
                             className="overflow-hidden space-y-0.5 mb-2"
                         >
-                            <SubMenuItem href="/profile/signatures" label="Overview" active={isActive("/profile/signatures")} />
-                            <SubMenuItem href="/profile/signatures/sent" label="Sent" active={isActive("/profile/signatures/sent")} />
-                            <SubMenuItem href="/profile/signatures/outbox" label="Inbox" active={isActive("/profile/signatures/outbox")} />
-                            <SubMenuItem href="/profile/signatures/signed" label="Signed" active={isActive("/profile/signatures/signed")} />
-                            <SubMenuItem href="/profile/signatures/templates" label="Templates" active={isActive("/profile/signatures/templates")} />
-                            <SubMenuItem href="/profile/signatures/contacts" label="Contacts" active={isActive("/profile/signatures/contacts")} />
-                            <SubMenuItem href="/profile/signatures/settings" label="Settings" active={isActive("/profile/signatures/settings")} />
+                            <SubMenuItem href="/signatures" label="Overview" active={isActive("/signatures")} />
+                            <SubMenuItem href="/signatures/sent" label="Sent" active={isActive("/signatures/sent")} />
+                            <SubMenuItem href="/signatures/inbox" label="Inbox" active={isActive("/signatures/inbox")} />
+                            <SubMenuItem href="/signatures/signed" label="Signed" active={isActive("/signatures/signed")} />
+                            <SubMenuItem href="/signatures/templates" label="Templates" active={isActive("/signatures/templates")} />
+                            <SubMenuItem href="/signatures/contacts" label="Contacts" active={isActive("/signatures/contacts")} />
+                            <SubMenuItem href="/signatures/settings" label="Settings" active={isActive("/signatures/settings")} />
                         </motion.div>
                     )}
                 </AnimatePresence>

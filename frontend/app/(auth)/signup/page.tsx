@@ -9,7 +9,6 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/context/AuthContext";
 import { Button } from "@/app/components/ui/button";
 import { Label } from "@/app/components/ui/label";
-import { FaFacebook } from "react-icons/fa";
 import GoogleLoginButton from "@/app/components/ui/GoogleLoginButton";
 
 const SignupPage = () => {
@@ -21,6 +20,7 @@ const SignupPage = () => {
     const [password, setPassword] = useState("");
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
+    const [success, setSuccess] = useState(false);
 
     // Redirect if already logged in
     React.useEffect(() => {
@@ -34,20 +34,45 @@ const SignupPage = () => {
         setError(null);
         setLoading(true);
         try {
-            const res = await signup(email, password, firstName, lastName);
-            // If backend couldn't send OTP (SMTP issue), inform the user instead of redirecting
-            if (res && res.otp_sent === false) {
-                setError("We couldn't send a verification email. Please try again later or contact support.");
-            } else {
-                // After successful signup, redirect to OTP verification page
-                router.push(`/auth/verify-otp?email=${encodeURIComponent(email)}`);
-            }
+            await signup(email, password, firstName, lastName);
+            // Show success message
+            setSuccess(true);
         } catch (err: any) {
             setError(err.message || "Signup failed");
         } finally {
             setLoading(false);
         }
     };
+
+    if (success) {
+        return (
+            <div className="py-12">
+                <div className="mx-auto max-w-md px-4 text-center">
+                    <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="w-full bg-white dark:bg-gray-800 p-8 rounded-lg shadow-sm border border-slate-200 dark:border-gray-700"
+                    >
+                        <div className="mb-4 flex justify-center">
+                            <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center text-green-600">
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                            </div>
+                        </div>
+                        <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Check your email</h2>
+                        <p className="text-slate-600 dark:text-slate-300 mb-6">
+                            We've sent a verification link to <span className="font-semibold text-slate-900 dark:text-white">{email}</span>. Please click the link to activate your account.
+                        </p>
+                        <p className="text-sm text-slate-500 mb-6">
+                            Didn't receive the email? <button className="text-indigo-600 hover:underline">Click to resend</button>
+                        </p>
+                        <Button variant="outline" className="w-full" onClick={() => router.push('/login')}>
+                            Back to Login
+                        </Button>
+                    </motion.div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="py-12">
@@ -57,12 +82,8 @@ const SignupPage = () => {
                         <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">Create Your Account</h1>
                         <p className="text-slate-500 dark:text-slate-300">Start your free account.</p>
                     </div>
-                    <div className="flex gap-4 mb-6">
-                        <Button variant="outline" className="w-full flex items-center gap-2 border-slate-200 text-slate-700 hover:bg-slate-50 h-10">
-                            <FaFacebook className="text-[#1877F2]" /> Facebook
-                        </Button>
+                    <div className="mb-6">
                         <div className="w-full">
-                            {/* Use the same Google button component as the login page */}
                             <GoogleLoginButton />
                         </div>
                     </div>

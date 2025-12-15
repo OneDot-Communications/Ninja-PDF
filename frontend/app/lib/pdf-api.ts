@@ -31,7 +31,12 @@ const withFallback = async (
         // Try backend API first (PRIMARY)
         const blob = await backendCall();
         return { blob, fileName };
-    } catch (backendError) {
+    } catch (backendError: any) {
+        // If Quota Limit reached, DO NOT fallback to client side (bypass)
+        if (backendError.message && backendError.message.includes("QUOTA_EXCEEDED")) {
+            throw backendError;
+        }
+
         console.warn("Backend API failed, falling back to client-side:", backendError);
 
         try {
