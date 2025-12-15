@@ -10,9 +10,11 @@ import { useAuth } from "@/app/context/AuthContext";
 import GoogleLoginButton from "@/app/components/ui/GoogleLoginButton";
 import { Button } from "@/app/components/ui/button";
 import { Label } from "@/app/components/ui/label";
+import { toast } from "sonner"; // Import sonner
 import { FaFacebook } from "react-icons/fa";
 
 const LoginPage = () => {
+    // ... (hooks)
     const router = useRouter();
     const { login, refreshUser, user } = useAuth();
     const [email, setEmail] = useState("");
@@ -40,12 +42,31 @@ const LoginPage = () => {
             if (res && res.requires_2fa) {
                 setRequires2fa(true);
                 setLoading(false);
+                toast.info("Two-factor authentication required.");
                 return;
             }
             // Refresh user and redirect - login already refreshes user
+            toast.success("Welcome back!");
             router.push('/');
         } catch (err: any) {
-            setError(err.message || "Login failed");
+            // Handle Email Not Verified (403 or 400 from AllAuth)
+            if ((err.status === 403 || err.status === 400) &&
+                (err.body?.error?.code === 'email_not_verified' ||
+                    err.message?.toLowerCase().includes('verified') ||
+                    JSON.stringify(err.body).toLowerCase().includes('verified'))) {
+
+                const msg = "E-mail is not verified. ( verification link resent, verify )";
+                setError(msg);
+                toast.warning(msg);
+            } else if (err.status === 423) {
+                // Locked
+                const msg = err.body?.error?.message || 'Account locked due to suspicious activity.';
+                setError(msg);
+                toast.error("Account Locked", { description: msg });
+            } else {
+                setError(err.message || "Login failed");
+                toast.error("Login failed", { description: err.message || "Please check your credentials." });
+            }
         } finally {
             setLoading(false);
         }
@@ -154,7 +175,7 @@ const LoginPage = () => {
                         <form onSubmit={handleSubmitOtp} className="mt-4 space-y-2">
                             <div className="mb-2 text-sm text-yellow-700 bg-yellow-50 border border-yellow-200 p-2 rounded">Two-factor authentication is required for this account. Enter your authentication token below.</div>
                             {cooldown && (
-                                <div className="mb-2 text-sm text-red-700 bg-red-50 border border-red-200 p-2 rounded">Too many attempts. Please wait {(Math.ceil(((cooldown || 0) - Date.now())/1000))}s before retrying.</div>
+                                <div className="mb-2 text-sm text-red-700 bg-red-50 border border-red-200 p-2 rounded">Too many attempts. Please wait {(Math.ceil(((cooldown || 0) - Date.now()) / 1000))}s before retrying.</div>
                             )}
                             <Label htmlFor="otp">Two-factor token</Label>
                             <input
@@ -162,8 +183,8 @@ const LoginPage = () => {
                                 inputMode="numeric"
                                 pattern="[0-9]*"
                                 value={otpToken}
-                                onChange={(e) => setOtpToken(e.target.value.replace(/\D/g, '').slice(0,6))}
-                                className="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm" 
+                                onChange={(e) => setOtpToken(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                                className="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm"
                                 placeholder="123456"
                                 maxLength={6}
                             />

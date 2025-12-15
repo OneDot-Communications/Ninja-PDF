@@ -6,7 +6,8 @@ import { Card, CardContent } from "@/app/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/app/components/ui/table";
 import { Badge } from "@/app/components/ui/badge";
 import { Button } from "@/app/components/ui/button";
-import { Loader2, PenTool } from "lucide-react";
+import { PenTool } from "lucide-react";
+import { Skeleton } from "@/app/components/ui/skeleton";
 
 export default function InboxSignaturesPage() {
     const [requests, setRequests] = useState<any[]>([]);
@@ -19,7 +20,28 @@ export default function InboxSignaturesPage() {
             .finally(() => setLoading(false));
     }, []);
 
-    if (loading) return <div className="flex justify-center p-10"><Loader2 className="animate-spin" /></div>;
+    if (loading) {
+        return (
+            <div className="space-y-6">
+                <Skeleton className="h-9 w-32" />
+                <Card>
+                    <CardContent className="p-0">
+                        <div className="p-4 space-y-4">
+                            {[1, 2, 3, 4, 5].map((i) => (
+                                <div key={i} className="flex items-center justify-between">
+                                    <div className="space-y-2">
+                                        <Skeleton className="h-5 w-48" />
+                                        <Skeleton className="h-4 w-32" />
+                                    </div>
+                                    <Skeleton className="h-8 w-24" />
+                                </div>
+                            ))}
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-6">
@@ -38,13 +60,13 @@ export default function InboxSignaturesPage() {
                         <TableBody>
                             {requests.map((req) => (
                                 <TableRow key={req.id}>
-                                    <TableCell className="font-medium">{req.title}</TableCell>
-                                    <TableCell>{req.requester_email || "Unknown"}</TableCell>
+                                    <TableCell className="font-medium">{req.document_name || "Untitled"}</TableCell>
+                                    <TableCell>{req.sender_email || "Unknown"}</TableCell>
                                     <TableCell>
                                         <Badge variant="outline">{req.status}</Badge>
                                     </TableCell>
                                     <TableCell className="text-right">
-                                        <Button size="sm" className="gap-2">
+                                        <Button size="sm" className="gap-2" onClick={() => window.location.href = `/signatures/sign/${req.id}`}>
                                             <PenTool className="w-3 h-3" /> Sign Now
                                         </Button>
                                     </TableCell>

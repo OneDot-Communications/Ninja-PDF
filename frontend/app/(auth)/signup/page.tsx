@@ -2,43 +2,67 @@
 
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, Suspense } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/app/context/AuthContext";
+import GoogleLoginButton from "@/app/components/ui/GoogleLoginButton";
 import { Button } from "@/app/components/ui/button";
 import { Label } from "@/app/components/ui/label";
-import GoogleLoginButton from "@/app/components/ui/GoogleLoginButton";
+import { toast } from "sonner";
+import { api } from "@/app/lib/api";
 
-const SignupPage = () => {
+const SignupContent = () => {
     const router = useRouter();
-    const { signup, user } = useAuth();
+    const searchParams = useSearchParams();
+    const { signup } = useAuth();
+
     const [firstName, setFirstName] = useState("");
     const [lastName, setLastName] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
-    const [error, setError] = useState<string | null>(null);
+    const [confirmPassword, setConfirmPassword] = useState("");
+    const [referralCode, setReferralCode] = useState<string | null>(null);
+
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState(false);
 
-    // Redirect if already logged in
     React.useEffect(() => {
-        if (user) {
-            router.replace('/');
+        const ref = searchParams.get('ref');
+        if (ref) setReferralCode(ref);
+    }, [searchParams]);
+
+    const handleResendEmail = async () => {
+        try {
+            await api.resendVerificationEmail(email);
+            toast.success("Verification email resent!", { description: "Check your inbox (and spam folder)." });
+        } catch (error) {
+            console.error("Resend failed", error);
+            toast.error("Failed to resend email", { description: "Please try again later." });
         }
-    }, [user, router]);
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
         setLoading(true);
+
+        if (password !== confirmPassword) {
+            setError("Passwords do not match");
+            setLoading(false);
+            return;
+        }
+
         try {
-            await signup(email, password, firstName, lastName);
-            // Show success message
+            await signup(email, password, confirmPassword, firstName, lastName, referralCode || undefined);
             setSuccess(true);
+            toast.success("Account created successfully!");
         } catch (err: any) {
-            setError(err.message || "Signup failed");
+            const msg = err.body?.error?.message || err.message || "Signup failed";
+            setError(msg);
+            toast.error("Signup failed", { description: msg });
         } finally {
             setLoading(false);
         }
@@ -63,7 +87,7 @@ const SignupPage = () => {
                             We've sent a verification link to <span className="font-semibold text-slate-900 dark:text-white">{email}</span>. Please click the link to activate your account.
                         </p>
                         <p className="text-sm text-slate-500 mb-6">
-                            Didn't receive the email? <button className="text-indigo-600 hover:underline">Click to resend</button>
+                            Didn't receive the email? <button onClick={handleResendEmail} className="text-indigo-600 hover:underline">Click to resend</button>
                         </p>
                         <Button variant="outline" className="w-full" onClick={() => router.push('/login')}>
                             Back to Login
@@ -81,6 +105,11 @@ const SignupPage = () => {
                     <div className="text-center mb-8">
                         <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">Create Your Account</h1>
                         <p className="text-slate-500 dark:text-slate-300">Start your free account.</p>
+                        {referralCode && (
+                            <div className="mt-4 p-2 bg-green-50 text-green-700 text-sm rounded border border-green-200 inline-block px-4">
+                                🎉 Referral code applied successfully!
+                            </div>
+                        )}
                     </div>
                     <div className="mb-6">
                         <div className="w-full">
@@ -151,6 +180,19 @@ const SignupPage = () => {
                                 className="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#01B0F1] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                             />
                         </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="confirmPassword">Confirm Password</Label>
+                            <input
+                                id="confirmPassword"
+                                type="password"
+                                required
+                                minLength={8}
+                                value={confirmPassword}
+                                onChange={(e) => setConfirmPassword(e.target.value)}
+                                placeholder="••••••••"
+                                className="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#01B0F1] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                            />
+                        </div>
                         <Button className="w-full bg-[#E53935] hover:bg-[#D32F2F] text-white font-semibold h-10 rounded-md mt-2" type="submit">
                             {loading ? "Signing up..." : "Sign Up"}
                         </Button>
@@ -162,6 +204,14 @@ const SignupPage = () => {
                 </motion.div>
             </div>
         </div>
+    );
+};
+
+const SignupPage = () => {
+    return (
+        <Suspense fallback={<div className="flex justify-center items-center min-h-screen">Loading...</div>}>
+            <SignupContent />
+        </Suspense>
     );
 };
 

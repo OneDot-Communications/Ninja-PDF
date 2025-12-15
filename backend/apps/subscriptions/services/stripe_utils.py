@@ -10,7 +10,7 @@ def create_checkout_session(user, plan_stripe_price_id, success_url=None, cancel
     """
     if not success_url:
         # Fallback default URLs - frontend handles these usually
-        success_url = settings.FRONTEND_URL + '/dashboard?session_id={CHECKOUT_SESSION_ID}'
+        success_url = settings.FRONTEND_URL + '/payment-success?session_id={CHECKOUT_SESSION_ID}'
     if not cancel_url:
         cancel_url = settings.FRONTEND_URL + '/pricing'
 

@@ -36,3 +36,4 @@ class TeamMembership(models.Model):
 
     def __str__(self):
         return f"{self.user.email} - {self.team.name} ({self.role})"
+from .invitation import TeamInvitation

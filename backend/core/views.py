@@ -19,9 +19,15 @@ class PublicSettingsView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def get(self, request):
+        from django.conf import settings
         branding = PlatformBranding.load()
         serializer = PlatformBrandingSerializer(branding, context={'request': request})
-        return Response(serializer.data)
+        data = serializer.data
+        data['config'] = {
+            'stripe_public_key': getattr(settings, 'STRIPE_PUBLIC_KEY', ''),
+            'razorpay_key_id': getattr(settings, 'RAZORPAY_KEY_ID', ''),
+        }
+        return Response(data)
 
 class AdminBrandingView(APIView):
     permission_classes = [IsSuperAdmin]

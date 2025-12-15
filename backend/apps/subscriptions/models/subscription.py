@@ -15,6 +15,8 @@ class Plan(models.Model):
     features = models.JSONField(default=dict, help_text="JSON listing Plan features")
     is_active = models.BooleanField(default=True)
     stripe_price_id = models.CharField(max_length=100, blank=True, null=True)
+    storage_limit = models.BigIntegerField(default=104857600, help_text="Storage limit in bytes (Default 100MB)") # Default 100MB
+
 
     def __str__(self):
         return f"{self.name} ({self.interval})"
@@ -35,7 +37,14 @@ class Subscription(models.Model):
     current_period_start = models.DateTimeField(auto_now_add=True)
     current_period_end = models.DateTimeField()
     cancel_at_period_end = models.BooleanField(default=False)
+    cancel_at_period_end = models.BooleanField(default=False)
     stripe_subscription_id = models.CharField(max_length=100, blank=True, null=True)
+    
+    # Storage Quotas (in Bytes)
+    storage_used = models.BigIntegerField(default=0, help_text="Current storage usage in bytes")
+    
+    # We could store limit here or derive from plan. Deriving is better for updates.
+
 
     def __str__(self):
         return f"{self.user.email} - {self.plan.name if self.plan else 'No Plan'}"

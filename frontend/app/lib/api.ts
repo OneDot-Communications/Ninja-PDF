@@ -114,10 +114,18 @@ export const api = {
     const options: RequestInit = {
       method,
       credentials: "include",
-      headers: { "Content-Type": "application/json" },
+      headers: {},
     };
-    if (data) {
-      options.body = JSON.stringify(data);
+
+    if (data instanceof FormData) {
+      options.body = data;
+      // Do NOT set Content-Type header; browser sets it with boundary
+    } else {
+      // Default to JSON
+      options.headers = { "Content-Type": "application/json" };
+      if (data) {
+        options.body = JSON.stringify(data);
+      }
     }
     const response = await fetch(url, options);
     if (!response.ok) {
@@ -206,10 +214,19 @@ export const api = {
   // ─────────────────────────────────────────────────────────────────────────────
   // AUTH ENDPOINTS (/api/auth/)
   // ─────────────────────────────────────────────────────────────────────────────
-  signup: (email: string, password: string, first_name?: string, last_name?: string) =>
-    api.request("POST", "/api/auth/signup/", { email, password, first_name, last_name }),
+  signup: (email: string, password: string, confirmPassword?: string, first_name?: string, last_name?: string, referral_code?: string) =>
+    api.request("POST", "/api/auth/signup/", {
+      email,
+      password1: password,
+      password2: confirmPassword || password, // Fallback if confirmation not provided/needed by frontend validation, but backend expects it
+      first_name,
+      last_name,
+      referral_code
+    }),
   verifyEmail: (key: string) =>
     api.request("POST", "/api/auth/registration/verify-email/", { key }),
+  resendVerificationEmail: (email: string) =>
+    api.request("POST", "/api/auth/registration/resend-email/", { email }),
   googleLogin: (code: string) =>
     api.request("POST", "/api/auth/google/token/", { code }),
   // otp_token is optional: include it when completing 2FA
@@ -218,6 +235,8 @@ export const api = {
   logout: () => api.request("POST", "/api/auth/logout/"),
   getUser: () => api.request("GET", "/api/auth/user/"),
   updateCurrentUser: (data: any) => api.request("PATCH", "/api/auth/user/", data),
+  updateAvatar: (formData: FormData) => api.request("PATCH", "/api/auth/users/me/avatar/", formData),
+  deleteAvatar: () => api.request("DELETE", "/api/auth/users/me/avatar/"),
   startGoogleLogin: () => `${getBaseUrl()}/api/auth/google/`,
   requestPasswordReset: (email: string) =>
     api.request("POST", "/api/auth/password/reset/", { email }),
@@ -231,6 +250,7 @@ export const api = {
   // Session management
   getSessions: () => api.request("GET", "/api/auth/sessions/"),
   revokeSession: (sessionId: string) => api.request("DELETE", `/api/auth/sessions/${sessionId}/`),
+  revokeAllOtherSessions: () => api.request("POST", "/api/auth/sessions/revoke_others/"),
 
   // 2FA
   getTwoFactorStatus: () => api.request("GET", "/api/auth/2fa/status/"),
@@ -264,10 +284,44 @@ export const api = {
   // ─────────────────────────────────────────────────────────────────────────────
   getSignatureStats: () => api.request("GET", "/api/signatures/requests/stats/"),
   getTrash: () => api.request("GET", "/api/signatures/requests/?mode=trash"),
+  revokeSignatureRequest: (id: number) => api.request("POST", `/api/signatures/requests/${id}/revoke/`),
   restoreSignature: (id: number) => api.request("POST", `/api/signatures/requests/${id}/restore/`),
-  getSignatureRequests: (mode: string = "") => api.request("GET", `/api/signatures/requests/?mode=${mode}`),
+  getSignatureRequests: (mode: 'inbox' | 'sent' | 'signed' | 'trash' = 'sent') => api.request("GET", `/api/signatures/requests/?mode=${mode}`),
+  getSignatureRequest: (id: string) => api.request("GET", `/api/signatures/requests/${id}/`),
+  createSignatureRequest: (data: FormData) => api.request("POST", "/api/signatures/requests/", data),
+  signRequest: (id: string, data: { signature: string }) => api.request("POST", `/api/signatures/requests/${id}/sign/`, data),
   getSignatureTemplates: () => api.request("GET", "/api/signatures/templates/"),
   getSignatureContacts: () => api.request("GET", "/api/signatures/contacts/"),
+  createSignatureTemplate: (data: FormData) => api.request("POST", "/api/signatures/templates/", data),
+  createSignatureContact: (data: { name: string; email: string }) => api.request("POST", "/api/signatures/contacts/", data),
+  deleteSignatureContact: (id: number) => api.request("DELETE", `/api/signatures/contacts/${id}/`),
+
+  // Saved Signatures
+  getSavedSignatures: () => api.request("GET", "/api/signatures/saved/"),
+  getDefaultSignature: () => api.request("GET", "/api/signatures/saved/default/"),
+  createSavedSignature: (formData: FormData) => api.request("POST", "/api/signatures/saved/", formData),
+  deleteSavedSignature: (id: number) => api.request("DELETE", `/api/signatures/saved/${id}/`),
+  setDefaultSignature: (id: number) => api.request("PATCH", `/api/signatures/saved/${id}/`, { is_default: true }),
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // MY FILES (Secure Storage)
+  // ─────────────────────────────────────────────────────────────────────────────
+  getFiles: () => api.request("GET", "/api/files/"),
+  uploadFileAsset: (file: File, password?: string) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    if (password) formData.append("password", password);
+    return api.request("POST", "/api/files/", formData);
+  },
+  deleteFile: (id: number) => api.request("DELETE", `/api/files/${id}/`),
+  updateFilePassword: (id: number, password?: string) => {
+    if (!password) return api.request("POST", `/api/files/${id}/remove_password/`);
+    return api.request("POST", `/api/files/${id}/set_password/`, { password });
+  },
+
+  // Public Share Access
+  getPublicFileInfo: (token: string) => api.publicRequest("GET", `/api/files/share/info/${token}/`),
+  accessPublicFile: (token: string, password?: string) => api.publicRequest("POST", `/api/files/share/access/${token}/`, { password }),
 
   // ─────────────────────────────────────────────────────────────────────────────
   // PDF TOOLS - CONVERSION TO PDF (/api/tools/)
@@ -374,22 +428,29 @@ export const api = {
   createTeam: (data: { name: string }) => api.request("POST", "/api/teams/", data),
   inviteTeamMember: (teamId: number, email: string, role: string = 'MEMBER') =>
     api.request("POST", `/api/teams/${teamId}/invite/`, { email, role }),
+  revokeTeamInvitation: (teamId: number, invitationId: number) =>
+    api.request("POST", `/api/teams/${teamId}/revoke_invite/`, { invitation_id: invitationId }),
 
   // Workflows
   getWorkflows: () => api.request("GET", "/api/workflows/workflows/"),
   createWorkflow: (data: any) => api.request("POST", "/api/workflows/workflows/", data),
 
   // Tasks
-  getTasks: () => api.request("GET", "/api/workflows/tasks/"),
+  getTasks: () => api.request("GET", "/api/jobs/"),
 
   // Referrals
   getReferralStats: () => api.request("GET", "/api/billing/referrals/stats/"),
 
   // Payments
-  createOrder: (planSlug: string) => api.request("POST", "/api/billing/payments/create_order/", { plan_slug: planSlug }),
+  createOrder: (planSlug: string, provider: string = 'razorpay') => api.request("POST", "/api/billing/payments/create_order/", { plan_slug: planSlug, provider }),
   verifyPayment: (data: any) => api.request("POST", "/api/billing/payments/verify_payment/", data),
+  // getPlans, updatePlan, getSubscription are defined above under Billing Endpoints
   getPayments: () => api.request("GET", "/api/billing/payments/"),
   getAdminPayments: () => api.request("GET", "/api/billing/payments/"), // Super admin sees all by default via same endpoint
+  downloadReceipt: (id: number) => {
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+    window.open(`${baseUrl}/api/billing/payments/${id}/download_receipt/`, '_blank');
+  },
 
   getSystemSettings: () => api.request("GET", "/api/core/settings/"), // Legacy fallback
   createSystemSetting: (key: string, value: any, file?: File) => {
