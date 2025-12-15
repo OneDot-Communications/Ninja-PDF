@@ -47,6 +47,7 @@ export function useFabricCanvas(
 
 /**
  * Add editable text (no white background needed since original text is not rendered)
+ * Stores original text for later comparison during export
  */
 export function addEditableText(
     canvas: fabric.Canvas,
@@ -68,6 +69,11 @@ export function addEditableText(
         // Transparent background - no need to hide original
         backgroundColor: 'transparent',
     });
+
+    // Store original text and position for export comparison
+    (text as fabric.Textbox & { originalText?: string; originalLeft?: number; originalTop?: number }).originalText = textItem.text;
+    (text as fabric.Textbox & { originalText?: string; originalLeft?: number; originalTop?: number }).originalLeft = textItem.left;
+    (text as fabric.Textbox & { originalText?: string; originalLeft?: number; originalTop?: number }).originalTop = textItem.top;
 
     canvas.add(text);
     return text;
