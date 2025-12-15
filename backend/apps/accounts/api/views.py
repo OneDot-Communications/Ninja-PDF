@@ -66,19 +66,20 @@ from apps.accounts.services.cookie_utils import set_auth_cookies, clear_auth_coo
 class LoginRateThrottle(throttling.SimpleRateThrottle):
     scope = 'login'
 
-
-class OTPRateThrottle(throttling.SimpleRateThrottle):
-    scope = 'otp'
-    def get_cache_key(self, request, view):
-        ip = request.META.get('REMOTE_ADDR') or request.META.get('HTTP_X_FORWARDED_FOR', '')
-        ident = request.user.email if request.user and request.user.is_authenticated else ip
-        return f"throttle_otp:{ip}:{ident}"
-
     def get_cache_key(self, request, view):
         # Use IP + identifier to limit brute force attempts
         ip = request.META.get('REMOTE_ADDR') or request.META.get('HTTP_X_FORWARDED_FOR', '')
         ident = request.data.get('email', '')
         return f"throttle_login:{ip}:{ident}"
+
+
+class OTPRateThrottle(throttling.SimpleRateThrottle):
+    scope = 'otp'
+
+    def get_cache_key(self, request, view):
+        ip = request.META.get('REMOTE_ADDR') or request.META.get('HTTP_X_FORWARDED_FOR', '')
+        ident = request.user.email if request.user and request.user.is_authenticated else ip
+        return f"throttle_otp:{ip}:{ident}"
 
 
 @method_decorator(csrf_exempt, name='dispatch')
