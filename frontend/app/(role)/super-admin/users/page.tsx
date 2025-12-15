@@ -40,9 +40,16 @@ export default function SuperAdminUsersPage() {
         setLoading(true);
         try {
             const data = await api.getUsers(query);
-            setUsers(data);
+            if (data && data.results) {
+                setUsers(data.results);
+            } else if (Array.isArray(data)) {
+                setUsers(data);
+            } else {
+                setUsers([]);
+            }
         } catch (error) {
             toast.error("Failed to load users");
+            setUsers([]);
         } finally {
             setLoading(false);
         }

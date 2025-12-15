@@ -10,7 +10,8 @@ import {
     Trash2,
     UserX,
     UserCheck,
-    Mail
+    Mail,
+    Zap
 } from "lucide-react";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
@@ -29,7 +30,7 @@ import {
     DropdownMenuLabel,
     DropdownMenuSeparator,
     DropdownMenuTrigger,
-} from "@/app/components/ui/dropdown-menu"; // Assuming these exist, otherwise I'll use standard select
+} from "@/app/components/ui/dropdown-menu";
 import { Badge } from "@/app/components/ui/badge";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
@@ -38,12 +39,25 @@ export default function AdminUsersPage() {
     const [users, setUsers] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [totalUsers, setTotalUsers] = useState(0);
 
     const fetchUsers = async () => {
         try {
             setLoading(true);
-            const data = await api.getUsers();
-            setUsers(data);
+            const data = await api.getUsers(search, page);
+            // Handle Paginated Response
+            if (data.results) {
+                setUsers(data.results);
+                setTotalUsers(data.count);
+                setTotalPages(Math.ceil(data.count / 10)); // Assuming page_size=10
+            } else {
+                // Fallback if pagination disabled or error
+                setUsers(Array.isArray(data) ? data : []);
+                setTotalUsers(Array.isArray(data) ? data.length : 0);
+                setTotalPages(1);
+            }
         } catch (error) {
             toast.error("Failed to load users");
         } finally {
@@ -53,7 +67,18 @@ export default function AdminUsersPage() {
 
     useEffect(() => {
         fetchUsers();
-    }, []);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [page]); // Trigger on page change. Search triggers manually or with separate effect.
+
+    // Debounce search
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (page === 1) fetchUsers();
+            else setPage(1); // will trigger fetchUsers via page dependency
+        }, 500);
+        return () => clearTimeout(timer);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [search]);
 
     const handleDelete = async (id: number) => {
         if (!confirm("Are you sure you want to delete this user? This cannot be undone.")) return;
@@ -76,12 +101,6 @@ export default function AdminUsersPage() {
         }
     };
 
-    const filteredUsers = users.filter(user =>
-        user.email.toLowerCase().includes(search.toLowerCase()) ||
-        (user.first_name && user.first_name.toLowerCase().includes(search.toLowerCase())) ||
-        (user.last_name && user.last_name.toLowerCase().includes(search.toLowerCase()))
-    );
-
     return (
         <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -93,7 +112,10 @@ export default function AdminUsersPage() {
                     <h1 className="text-3xl font-bold tracking-tight text-slate-900">User Management</h1>
                     <p className="text-slate-500">Manage user access and roles.</p>
                 </div>
-                <Button onClick={fetchUsers}>Refresh</Button>
+                <div className="flex items-center gap-2">
+                    <Badge variant="secondary">Total: {totalUsers}</Badge>
+                    <Button onClick={() => fetchUsers()} size="sm" variant="outline">Refresh</Button>
+                </div>
             </div>
 
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
@@ -107,9 +129,6 @@ export default function AdminUsersPage() {
                             onChange={(e) => setSearch(e.target.value)}
                         />
                     </div>
-                    <Button variant="outline" className="gap-2">
-                        <Filter className="w-4 h-4" /> Filter
-                    </Button>
                 </div>
 
                 <Table>
@@ -127,21 +146,26 @@ export default function AdminUsersPage() {
                             <TableRow>
                                 <TableCell colSpan={5} className="text-center py-8">Loading users...</TableCell>
                             </TableRow>
-                        ) : filteredUsers.length === 0 ? (
+                        ) : users.length === 0 ? (
                             <TableRow>
                                 <TableCell colSpan={5} className="text-center py-8">No users found.</TableCell>
                             </TableRow>
                         ) : (
-                            filteredUsers.map((user) => (
+                            users.map((user) => (
                                 <TableRow key={user.id} className="group hover:bg-slate-50/50 transition-colors">
                                     <TableCell>
                                         <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-500 uppercase">
-                                                {user.first_name?.[0] || user.email[0]}
+                                            <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-500 uppercase overflow-hidden">
+                                                {user.avatar ? (
+                                                    // eslint-disable-next-line @next/next/no-img-element
+                                                    <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <span>{user.first_name?.[0] || user.email[0]}</span>
+                                                )}
                                             </div>
                                             <div>
                                                 <div className="font-medium text-slate-900">
-                                                    {user.first_name} {user.last_name}
+                                                    {user.first_name || 'User'} {user.last_name || ''}
                                                 </div>
                                                 <div className="text-xs text-slate-500">{user.email}</div>
                                             </div>
@@ -168,7 +192,7 @@ export default function AdminUsersPage() {
                                         )}
                                     </TableCell>
                                     <TableCell className="text-slate-500 text-sm">
-                                        {new Date(user.date_joined).toLocaleDateString()}
+                                        {user.date_joined ? new Date(user.date_joined).toLocaleDateString() : 'N/A'}
                                     </TableCell>
                                     <TableCell className="text-right">
                                         <DropdownMenu>
@@ -187,6 +211,28 @@ export default function AdminUsersPage() {
                                                     <UserX className="mr-2 h-4 w-4" /> Revoke Admin
                                                 </DropdownMenuItem>
                                                 <DropdownMenuSeparator />
+                                                <DropdownMenuLabel>Subscription</DropdownMenuLabel>
+                                                <DropdownMenuItem onClick={async () => {
+                                                    try {
+                                                        const res = await api.assignUserPlan(user.id, 'pro');
+                                                        if (res.status === 'Queued for Approval') toast.info("Request queued for Super Admin approval");
+                                                        else toast.success("Granted Premium");
+                                                        fetchUsers();
+                                                    } catch (e) { toast.error("Failed"); }
+                                                }}>
+                                                    <Zap className="mr-2 h-4 w-4 text-amber-500" /> Grant Premium
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem onClick={async () => {
+                                                    try {
+                                                        const res = await api.assignUserPlan(user.id, 'free');
+                                                        if (res.status === 'Queued for Approval') toast.info("Request queued for Super Admin approval");
+                                                        else toast.success("Set to Free");
+                                                        fetchUsers();
+                                                    } catch (e) { toast.error("Failed"); }
+                                                }}>
+                                                    <UserCheck className="mr-2 h-4 w-4" /> Set Free
+                                                </DropdownMenuItem>
+                                                <DropdownMenuSeparator />
                                                 <DropdownMenuItem className="text-red-600" onClick={() => handleDelete(user.id)}>
                                                     <Trash2 className="mr-2 h-4 w-4" /> Delete User
                                                 </DropdownMenuItem>
@@ -198,6 +244,31 @@ export default function AdminUsersPage() {
                         )}
                     </TableBody>
                 </Table>
+
+                {/* Pagination Controls */}
+                <div className="p-4 border-t border-slate-100 flex items-center justify-between bg-slate-50/50">
+                    <span className="text-sm text-slate-500">
+                        Page {page} of {totalPages}
+                    </span>
+                    <div className="flex gap-2">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setPage(p => Math.max(1, p - 1))}
+                            disabled={page === 1 || loading}
+                        >
+                            Previous
+                        </Button>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                            disabled={page === totalPages || loading}
+                        >
+                            Next
+                        </Button>
+                    </div>
+                </div>
             </div>
         </motion.div>
     );

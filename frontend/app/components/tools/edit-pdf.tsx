@@ -78,8 +78,8 @@ import { pdfStrategyManager, getPdfJs } from "../../lib/pdf-service";
 import { toast } from "../../lib/use-toast";
 import { cn } from "../../lib/utils";
 
-// Google Fonts API key - replace with your own if needed
-const GOOGLE_FONTS_API_KEY = "AIzaSyCvA2n2RkY5h8K8vQj6p9Z2s6t7u8v9w0x";
+// Google Fonts API key should be provided via environment variable NEXT_PUBLIC_GOOGLE_FONTS_API_KEY
+const GOOGLE_FONTS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_FONTS_API_KEY || undefined;
 
 // List of popular Google Fonts
 const POPULAR_FONTS = [
