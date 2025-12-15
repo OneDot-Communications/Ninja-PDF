@@ -4,13 +4,13 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { saveAs } from "file-saver";
 import { FileUpload } from "../ui/file-upload";
 import { Button } from "../ui/button";
-import { 
-    Type, 
-    Image as ImageIcon, 
-    Trash2, 
-    Save, 
-    ChevronLeft, 
-    ChevronRight, 
+import {
+    Type,
+    Image as ImageIcon,
+    Trash2,
+    Save,
+    ChevronLeft,
+    ChevronRight,
     ZoomIn,
     ZoomOut,
     Maximize,
@@ -44,6 +44,7 @@ import {
     ChevronDown
 } from "lucide-react";
 import { pdfStrategyManager, getPdfJs } from "../../lib/pdf-service";
+import { pdfApi } from "../../lib/pdf-api";
 import { toast } from "../../lib/use-toast";
 import { cn } from "../../lib/utils";
 
@@ -84,13 +85,13 @@ export function WatermarkPdfTool() {
     const [isProcessing, setIsProcessing] = useState(false);
     const [selectedWatermarkId, setSelectedWatermarkId] = useState<string | null>(null);
     const [zoom, setZoom] = useState(100);
-    
+
     // Canvas refs
     const canvasRefs = useRef<(HTMLCanvasElement | null)[]>([]);
     const containerRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
-    
+
     // Properties state
     const [text, setText] = useState("CONFIDENTIAL");
     const [fontSize, setFontSize] = useState(50);
@@ -102,7 +103,7 @@ export function WatermarkPdfTool() {
     const [isItalic, setIsItalic] = useState(false);
     const [position, setPosition] = useState<"center" | "top" | "bottom" | "tiled" | "custom">("center");
     const [applyToAll, setApplyToAll] = useState(true);
-    
+
     // UI state
     const [showToolbar, setShowToolbar] = useState(true);
     const [showProperties, setShowProperties] = useState(true);
@@ -111,21 +112,21 @@ export function WatermarkPdfTool() {
     const [showGrid, setShowGrid] = useState(false);
     const [snapToGrid, setSnapToGrid] = useState(false);
     const [gridSize, setGridSize] = useState(10);
-    
+
     // History state for undo/redo
     const [history, setHistory] = useState<HistoryState[]>([]);
     const [historyIndex, setHistoryIndex] = useState(-1);
-    
+
     // Font options
     const fontOptions = [
-        "Arial", "Helvetica", "Times New Roman", "Courier New", 
-        "Georgia", "Verdana", "Comic Sans MS", "Impact", 
+        "Arial", "Helvetica", "Times New Roman", "Courier New",
+        "Georgia", "Verdana", "Comic Sans MS", "Impact",
         "Lucida Console", "Tahoma", "Trebuchet MS", "Palatino"
     ];
-    
+
     // Color presets
     const colorPresets = [
-        "#FF0000", "#0000FF", "#00FF00", "#FFFF00", 
+        "#FF0000", "#0000FF", "#00FF00", "#FFFF00",
         "#FF00FF", "#00FFFF", "#000000", "#FFFFFF", "#888888"
     ];
 
@@ -134,13 +135,13 @@ export function WatermarkPdfTool() {
             setFile(files[0]);
             setWatermarks([]);
             setCurrentPage(1);
-            
+
             // Load PDF to get page count
             const pdfjsLib = await getPdfJs();
             const arrayBuffer = await files[0].arrayBuffer();
             const pdf = await (pdfjsLib as any).getDocument(new Uint8Array(arrayBuffer)).promise;
             setNumPages(pdf.numPages);
-            
+
             // Initialize canvas refs
             canvasRefs.current = Array(pdf.numPages).fill(null);
         }
@@ -153,25 +154,25 @@ export function WatermarkPdfTool() {
             const pdfjsLib = await getPdfJs();
             const arrayBuffer = await file.arrayBuffer();
             const pdf = await (pdfjsLib as any).getDocument(new Uint8Array(arrayBuffer)).promise;
-            
+
             // Apply zoom
             const scale = zoom / 100;
-            
+
             // Render each page
             for (let i = 1; i <= pdf.numPages; i++) {
                 const page = await pdf.getPage(i);
                 const viewport = page.getViewport({ scale });
-                
+
                 // Get or create canvas
                 let canvas = canvasRefs.current[i - 1];
-                
+
                 if (!canvas) continue;
-                
+
                 const context = canvas.getContext("2d")!;
-                
+
                 canvas.height = viewport.height;
                 canvas.width = viewport.width;
-                
+
                 await page.render({
                     canvasContext: context,
                     viewport: viewport,
@@ -179,7 +180,7 @@ export function WatermarkPdfTool() {
                 }).promise;
             }
         };
-        
+
         renderAllPages();
     }, [file, zoom]);
 
@@ -189,16 +190,16 @@ export function WatermarkPdfTool() {
             watermarks: [...watermarks],
             currentPage
         };
-        
+
         // Remove any states after the current index
         const newHistory = history.slice(0, historyIndex + 1);
         newHistory.push(newState);
-        
+
         // Limit history to 50 states
         if (newHistory.length > 50) {
             newHistory.shift();
         }
-        
+
         setHistory(newHistory);
         setHistoryIndex(newHistory.length - 1);
     }, [watermarks, currentPage, history, historyIndex]);
@@ -247,7 +248,7 @@ export function WatermarkPdfTool() {
             position: position,
             page: applyToAll ? undefined : currentPage
         };
-        
+
         saveToHistory();
         setWatermarks(prev => [...prev, newWatermark]);
         setSelectedWatermarkId(id);
@@ -259,7 +260,7 @@ export function WatermarkPdfTool() {
             const imgFile = e.target.files[0];
             const arrayBuffer = await imgFile.arrayBuffer();
             const id = Math.random().toString(36).substr(2, 9);
-            
+
             const newWatermark: WatermarkElement = {
                 id,
                 type: "image",
@@ -273,7 +274,7 @@ export function WatermarkPdfTool() {
                 position: position,
                 page: applyToAll ? undefined : currentPage
             };
-            
+
             saveToHistory();
             setWatermarks(prev => [...prev, newWatermark]);
             setSelectedWatermarkId(id);
@@ -283,9 +284,9 @@ export function WatermarkPdfTool() {
     // Update selected watermark properties
     const updateSelectedWatermark = (updates: Partial<WatermarkElement>) => {
         if (!selectedWatermarkId) return;
-        
+
         saveToHistory();
-        setWatermarks(prev => prev.map(wm => 
+        setWatermarks(prev => prev.map(wm =>
             wm.id === selectedWatermarkId ? { ...wm, ...updates } : wm
         ));
     };
@@ -301,14 +302,14 @@ export function WatermarkPdfTool() {
     const duplicateWatermark = (id: string) => {
         const watermark = watermarks.find(wm => wm.id === id);
         if (!watermark) return;
-        
+
         const newWatermark = {
             ...watermark,
             id: Math.random().toString(36).substr(2, 9),
             x: watermark.x + 5,
             y: watermark.y + 5
         };
-        
+
         saveToHistory();
         setWatermarks(prev => [...prev, newWatermark]);
         setSelectedWatermarkId(newWatermark.id);
@@ -320,12 +321,12 @@ export function WatermarkPdfTool() {
         setIsProcessing(true);
 
         try {
-            const result = await pdfStrategyManager.execute('watermark', [file], {
+            const result = await pdfApi.watermark(file, {
                 watermarks
             });
 
             saveAs(result.blob, result.fileName || `watermarked-${file.name}`);
-            
+
             toast.show({
                 title: "Success",
                 message: "Watermarks applied successfully!",
@@ -386,11 +387,11 @@ export function WatermarkPdfTool() {
                 <div className="flex items-center gap-1">
                     {/* Navigation */}
                     <div className="flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-1 mr-2">
-                        <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8" 
-                            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} 
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                             disabled={currentPage === 1}
                         >
                             <ChevronLeft className="h-4 w-4" />
@@ -398,102 +399,102 @@ export function WatermarkPdfTool() {
                         <span className="text-sm font-medium px-2 min-w-20 text-center text-gray-700 dark:text-gray-300">
                             {currentPage} / {numPages}
                         </span>
-                        <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8" 
-                            onClick={() => setCurrentPage(Math.min(numPages, currentPage + 1))} 
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => setCurrentPage(Math.min(numPages, currentPage + 1))}
                             disabled={currentPage === numPages}
                         >
                             <ChevronRight className="h-4 w-4" />
                         </Button>
                     </div>
-                    
+
                     {/* Watermark Tools */}
                     <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-1 mr-2">
-                        <Button 
-                            variant="ghost" 
-                            size="icon" 
+                        <Button
+                            variant="ghost"
+                            size="icon"
                             onClick={addTextWatermark}
                             title="Add Text Watermark"
                             className="h-8 w-8"
                         >
                             <Type className="h-4 w-4" />
                         </Button>
-                        <Button 
-                            variant="ghost" 
-                            size="icon" 
+                        <Button
+                            variant="ghost"
+                            size="icon"
                             onClick={() => fileInputRef.current?.click()}
                             title="Add Image Watermark"
                             className="h-8 w-8"
                         >
                             <ImageIcon className="h-4 w-4" />
                         </Button>
-                        <input 
-                            type="file" 
-                            ref={fileInputRef} 
-                            className="hidden" 
-                            accept="image/*" 
-                            onChange={addImageWatermark} 
+                        <input
+                            type="file"
+                            ref={fileInputRef}
+                            className="hidden"
+                            accept="image/*"
+                            onChange={addImageWatermark}
                         />
                     </div>
-                    
+
                     {/* Zoom Controls */}
                     <div className="flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
-                        <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8" 
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
                             onClick={() => setZoom(Math.max(25, zoom - 25))}
                         >
                             <ZoomOut className="h-4 w-4" />
                         </Button>
                         <span className="text-sm font-medium px-2 min-w-[60px] text-center text-gray-700 dark:text-gray-300">{zoom}%</span>
-                        <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8" 
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
                             onClick={() => setZoom(Math.min(200, zoom + 25))}
                         >
                             <ZoomIn className="h-4 w-4" />
                         </Button>
                         <div className="w-px h-4 bg-gray-300 dark:bg-gray-600 mx-1" />
-                        <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8" 
-                            onClick={fitToPage} 
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={fitToPage}
                             title="Fit to Page"
                         >
                             <Maximize className="h-4 w-4" />
                         </Button>
                     </div>
-                    
+
                     {/* Actions */}
                     <div className="flex items-center gap-1 ml-2">
-                        <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8" 
-                            onClick={undo} 
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={undo}
                             disabled={historyIndex <= 0}
                             title="Undo"
                         >
                             <Undo className="h-4 w-4" />
                         </Button>
-                        <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8" 
-                            onClick={redo} 
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={redo}
                             disabled={historyIndex >= history.length - 1}
                             title="Redo"
                         >
                             <Redo className="h-4 w-4" />
                         </Button>
-                        <Button 
-                            onClick={applyWatermarks} 
-                            disabled={isProcessing || watermarks.length === 0} 
+                        <Button
+                            onClick={applyWatermarks}
+                            disabled={isProcessing || watermarks.length === 0}
                             className="h-8 px-3 bg-blue-600 hover:bg-blue-700 text-white"
                         >
                             {isProcessing ? "Processing..." : <><Download className="h-4 w-4 mr-1" /> Apply</>}
@@ -501,7 +502,7 @@ export function WatermarkPdfTool() {
                     </div>
                 </div>
             </div>
-            
+
             {/* Properties Panel */}
             <div className={cn(
                 "fixed right-4 top-20 z-40 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-4 w-80 transition-all duration-300",
@@ -509,16 +510,16 @@ export function WatermarkPdfTool() {
             )}>
                 <div className="flex items-center justify-between mb-4">
                     <h3 className="font-semibold text-gray-900 dark:text-white">Watermark Properties</h3>
-                    <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-6 w-6" 
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
                         onClick={() => setShowProperties(false)}
                     >
                         <X className="h-4 w-4" />
                     </Button>
                 </div>
-                
+
                 {/* Watermark Type */}
                 <div className="mb-4">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Type</label>
@@ -526,7 +527,7 @@ export function WatermarkPdfTool() {
                         <Button
                             variant="outline"
                             className="flex-1"
-                            onClick={() => {}}
+                            onClick={() => { }}
                         >
                             <Type className="h-4 w-4 mr-2" /> Text
                         </Button>
@@ -539,7 +540,7 @@ export function WatermarkPdfTool() {
                         </Button>
                     </div>
                 </div>
-                
+
                 {/* Text Content */}
                 <div className="mb-4">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Text Content</label>
@@ -551,7 +552,7 @@ export function WatermarkPdfTool() {
                         placeholder="Enter watermark text"
                     />
                 </div>
-                
+
                 {/* Font Selection */}
                 <div className="mb-4">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Font Family</label>
@@ -565,7 +566,7 @@ export function WatermarkPdfTool() {
                         ))}
                     </select>
                 </div>
-                
+
                 {/* Text Style Controls */}
                 <div className="mb-4">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Text Style</label>
@@ -590,7 +591,7 @@ export function WatermarkPdfTool() {
                         </Button>
                     </div>
                 </div>
-                
+
                 {/* Font Size */}
                 <div className="mb-4">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Font Size: {fontSize}px</label>
@@ -604,7 +605,7 @@ export function WatermarkPdfTool() {
                         className="w-full"
                     />
                 </div>
-                
+
                 {/* Color Picker */}
                 <div className="mb-4">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Color</label>
@@ -627,7 +628,7 @@ export function WatermarkPdfTool() {
                         />
                     </div>
                 </div>
-                
+
                 {/* Opacity */}
                 <div className="mb-4">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Opacity: {Math.round(opacity * 100)}%</label>
@@ -641,7 +642,7 @@ export function WatermarkPdfTool() {
                         className="w-full"
                     />
                 </div>
-                
+
                 {/* Rotation */}
                 <div className="mb-4">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Rotation: {rotation}°</label>
@@ -655,7 +656,7 @@ export function WatermarkPdfTool() {
                         className="w-full"
                     />
                 </div>
-                
+
                 {/* Position */}
                 <div className="mb-4">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Position</label>
@@ -673,7 +674,7 @@ export function WatermarkPdfTool() {
                         ))}
                     </div>
                 </div>
-                
+
                 {/* Apply to All Pages */}
                 <div className="mb-4">
                     <div className="flex items-center justify-between">
@@ -688,7 +689,7 @@ export function WatermarkPdfTool() {
                     </div>
                 </div>
             </div>
-            
+
             {/* Layers Panel */}
             <div className={cn(
                 "fixed left-4 top-20 z-40 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-4 w-64 transition-all duration-300",
@@ -696,16 +697,16 @@ export function WatermarkPdfTool() {
             )}>
                 <div className="flex items-center justify-between mb-4">
                     <h3 className="font-semibold text-gray-900 dark:text-white">Watermarks</h3>
-                    <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-6 w-6" 
-                        onClick={() => {}}
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={() => { }}
                     >
                         <Plus className="h-4 w-4" />
                     </Button>
                 </div>
-                
+
                 <div className="space-y-2 max-h-96 overflow-auto">
                     {watermarks.length === 0 ? (
                         <div className="text-center text-gray-500 dark:text-gray-400 py-4">
@@ -758,7 +759,7 @@ export function WatermarkPdfTool() {
                     )}
                 </div>
             </div>
-            
+
             {/* Settings Panel */}
             <div className="fixed bottom-4 left-4 z-40">
                 <div className="flex items-center gap-2 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-2">
@@ -826,28 +827,28 @@ export function WatermarkPdfTool() {
                     </Button>
                 </div>
             </div>
-            
+
             {/* Main Canvas Area */}
-            <div 
+            <div
                 ref={scrollContainerRef}
                 className="flex-1 bg-gray-50 dark:bg-gray-900 overflow-auto p-8 relative"
             >
                 <div className="flex flex-col items-center">
                     {Array.from({ length: numPages }, (_, i) => (
-                        <div 
-                            key={i} 
+                        <div
+                            key={i}
                             className="relative mb-8 shadow-2xl transition-transform duration-200 ease-out"
-                            style={{ 
-                                width: "fit-content", 
+                            style={{
+                                width: "fit-content",
                                 height: "fit-content",
                                 transform: `scale(${zoom / 100})`
                             }}
                         >
-                            <canvas 
-                                ref={el => { canvasRefs.current[i] = el; }} 
-                                className="max-w-none block bg-white" 
+                            <canvas
+                                ref={el => { canvasRefs.current[i] = el; }}
+                                className="max-w-none block bg-white"
                             />
-                            
+
                             {/* Watermark Overlay */}
                             <div className="absolute inset-0 pointer-events-none overflow-hidden">
                                 {watermarks.filter(wm => wm.page === undefined || wm.page === i + 1).map((wm) => (
@@ -857,7 +858,7 @@ export function WatermarkPdfTool() {
                                                 {Array.from({ length: 12 }).map((_, j) => (
                                                     <div key={j} className="flex items-center justify-center">
                                                         {wm.type === 'text' ? (
-                                                            <div 
+                                                            <div
                                                                 className="font-bold whitespace-nowrap select-none"
                                                                 style={{
                                                                     color: wm.color,
@@ -872,8 +873,8 @@ export function WatermarkPdfTool() {
                                                                 {wm.content}
                                                             </div>
                                                         ) : wm.imageBytes && (
-                                                            <img 
-                                                                src={URL.createObjectURL(new Blob([wm.imageBytes]))} 
+                                                            <img
+                                                                src={URL.createObjectURL(new Blob([wm.imageBytes]))}
                                                                 style={{
                                                                     opacity: wm.opacity,
                                                                     transform: `rotate(${wm.rotation}deg)`,
@@ -885,17 +886,17 @@ export function WatermarkPdfTool() {
                                                 ))}
                                             </div>
                                         ) : (
-                                            <div 
+                                            <div
                                                 className={cn(
                                                     "absolute flex items-center justify-center",
-                                                    wm.position === 'center' ? "inset-0" : 
-                                                    wm.position === 'top' ? "top-8 left-0 right-0" : 
-                                                    wm.position === 'bottom' ? "bottom-8 left-0 right-0" : 
-                                                    `left-[${wm.x}%] top-[${wm.y}%]`
+                                                    wm.position === 'center' ? "inset-0" :
+                                                        wm.position === 'top' ? "top-8 left-0 right-0" :
+                                                            wm.position === 'bottom' ? "bottom-8 left-0 right-0" :
+                                                                `left-[${wm.x}%] top-[${wm.y}%]`
                                                 )}
                                             >
                                                 {wm.type === 'text' ? (
-                                                    <div 
+                                                    <div
                                                         className="font-bold whitespace-nowrap select-none"
                                                         style={{
                                                             color: wm.color,
@@ -910,8 +911,8 @@ export function WatermarkPdfTool() {
                                                         {wm.content}
                                                     </div>
                                                 ) : wm.imageBytes && (
-                                                    <img 
-                                                        src={URL.createObjectURL(new Blob([wm.imageBytes]))} 
+                                                    <img
+                                                        src={URL.createObjectURL(new Blob([wm.imageBytes]))}
                                                         style={{
                                                             opacity: wm.opacity,
                                                             transform: `rotate(${wm.rotation}deg)`,
@@ -924,7 +925,7 @@ export function WatermarkPdfTool() {
                                     </div>
                                 ))}
                             </div>
-                            
+
                             {/* Page Number */}
                             <div className="absolute bottom-4 right-4 bg-gray-800 bg-opacity-70 text-white px-2 py-1 rounded text-sm">
                                 Page {i + 1} of {numPages}
@@ -933,7 +934,7 @@ export function WatermarkPdfTool() {
                     ))}
                 </div>
             </div>
-            
+
             {/* Help Button */}
             <div className="fixed bottom-4 right-4 z-40">
                 <Button

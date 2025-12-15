@@ -8,14 +8,14 @@ import { Switch } from "../ui/switch";
 import { Label } from "../ui/label";
 import { Slider } from "../ui/slider";
 import { saveAs } from "file-saver";
-import { pdfStrategyManager } from "../../lib/pdf-service";
+import { pdfApi } from "../../lib/pdf-api";
 
 export function PdfToExcelTool() {
     const [files, setFiles] = useState<File[]>([]);
     const [isProcessing, setIsProcessing] = useState(false);
     const [progress, setProgress] = useState(0);
     const [status, setStatus] = useState("");
-    
+
     // Options
     const [mergePages, setMergePages] = useState(false);
     const [rowTolerance, setRowTolerance] = useState(5); // Y-axis tolerance in pixels
@@ -32,21 +32,13 @@ export function PdfToExcelTool() {
         setStatus("Starting conversion...");
 
         try {
-            const result = await pdfStrategyManager.execute('pdf-to-excel', files, {
-                mergePages,
-                rowTolerance,
-                onProgress: (m: any) => {
-                    if (m.status === 'processing') {
-                        setProgress(Math.round(m.progress * 100));
-                        setStatus(`Processing... ${Math.round(m.progress * 100)}%`);
-                    }
-                }
-            });
-            
+            // Backend-first with client-side fallback
+            const result = await pdfApi.pdfToExcel(files[0]);
+
             setStatus("Saving Excel file...");
-            saveAs(result.blob, result.fileName || "converted.xlsx");
+            saveAs(result.blob, result.fileName);
             setStatus("Completed!");
-            
+
         } catch (error) {
             console.error("Conversion Error:", error);
             setStatus("Error occurred during conversion.");
@@ -94,7 +86,7 @@ export function PdfToExcelTool() {
                         <Settings className="h-5 w-5 text-muted-foreground" />
                         <h3 className="font-semibold">Conversion Settings</h3>
                     </div>
-                    
+
                     <div className="space-y-4">
                         <div className="flex items-center justify-between">
                             <div className="space-y-0.5">
@@ -103,17 +95,17 @@ export function PdfToExcelTool() {
                             </div>
                             <Switch checked={mergePages} onCheckedChange={setMergePages} />
                         </div>
-                        
+
                         <div className="space-y-2">
                             <div className="flex justify-between">
                                 <Label>Row Alignment Tolerance</Label>
                                 <span className="text-xs text-muted-foreground">{rowTolerance}px</span>
                             </div>
-                            <Slider 
-                                value={[rowTolerance]} 
-                                onValueChange={(v: number[]) => setRowTolerance(v[0])} 
-                                max={20} 
-                                step={1} 
+                            <Slider
+                                value={[rowTolerance]}
+                                onValueChange={(v: number[]) => setRowTolerance(v[0])}
+                                max={20}
+                                step={1}
                             />
                             <p className="text-xs text-muted-foreground">
                                 Higher values group slightly misaligned text into the same row.
@@ -128,8 +120,8 @@ export function PdfToExcelTool() {
                             <Loader2 className="mx-auto h-10 w-10 animate-spin text-primary" />
                             <p className="text-lg font-medium">{status}</p>
                             <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
-                                <div 
-                                    className="h-full bg-primary transition-all duration-300" 
+                                <div
+                                    className="h-full bg-primary transition-all duration-300"
                                     style={{ width: `${progress}%` }}
                                 />
                             </div>

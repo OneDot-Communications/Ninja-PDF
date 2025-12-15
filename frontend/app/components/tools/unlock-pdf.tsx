@@ -5,7 +5,8 @@ import { saveAs } from "file-saver";
 import { FileUpload } from "../ui/file-upload";
 import { Button } from "../ui/button";
 import { Unlock, Lock, CheckCircle } from "lucide-react";
-import { pdfStrategyManager, isPdfEncrypted } from "../../lib/pdf-service";
+import { pdfApi } from "../../lib/pdf-api";
+import { isPdfEncrypted } from "../../lib/pdf-service";
 import { toast } from "../../lib/use-toast";
 
 export function UnlockPdfTool() {
@@ -33,13 +34,12 @@ export function UnlockPdfTool() {
         setStatus("idle");
 
         try {
-            const result = await pdfStrategyManager.execute('unlock', [file], {
-                password: isEncrypted ? password : undefined
-            });
+            // Backend-first with client-side fallback
+            const result = await pdfApi.unlock(file, isEncrypted ? password : "");
 
-            saveAs(result.blob, result.fileName || `unlocked-${file.name}`);
+            saveAs(result.blob, result.fileName);
             setStatus("success");
-            
+
             toast.show({
                 title: "Success",
                 message: "PDF unlocked successfully!",
@@ -109,8 +109,8 @@ export function UnlockPdfTool() {
                         {isEncrypted ? "Unlock PDF" : "Remove Security"}
                     </h3>
                     <p className="text-sm text-muted-foreground mt-2">
-                        {isEncrypted 
-                            ? "This file is password protected. Enter the password to remove it." 
+                        {isEncrypted
+                            ? "This file is password protected. Enter the password to remove it."
                             : "This file does not have an open password, but may have editing restrictions. Click below to save a clean copy."}
                     </p>
                 </div>

@@ -7,6 +7,7 @@ import { Button } from "../ui/button";
 import { PenTool, Trash2, Type, Image as ImageIcon } from "lucide-react";
 import { PdfPreview } from "../ui/pdf-preview";
 import { pdfStrategyManager } from "../../lib/pdf-service";
+import { pdfApi } from "../../lib/pdf-api";
 import { toast } from "../../lib/use-toast";
 
 export function SignPdfTool() {
@@ -15,7 +16,7 @@ export function SignPdfTool() {
     const [signatureImage, setSignatureImage] = useState<string | null>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [isDrawing, setIsDrawing] = useState(false);
-    
+
     // Signature Mode
     const [signMode, setSignMode] = useState<"draw" | "type" | "upload">("draw");
     const [typedText, setTypedText] = useState("");
@@ -98,12 +99,12 @@ export function SignPdfTool() {
             const canvas = document.createElement("canvas");
             const ctx = canvas.getContext("2d");
             if (!ctx) return;
-            
+
             ctx.font = "48px 'Dancing Script', cursive, sans-serif";
             const metrics = ctx.measureText(typedText);
             canvas.width = metrics.width + 20;
             canvas.height = 80;
-            
+
             // Reset after resize
             ctx.font = "48px 'Dancing Script', cursive, sans-serif";
             ctx.fillStyle = drawColor;
@@ -129,7 +130,7 @@ export function SignPdfTool() {
         setIsProcessing(true);
 
         try {
-            const result = await pdfStrategyManager.execute('sign', [file], {
+            const result = await pdfApi.sign(file, {
                 type: 'visual',
                 signatureImage,
                 position,
@@ -138,7 +139,7 @@ export function SignPdfTool() {
             });
 
             saveAs(result.blob, result.fileName || `signed-${file.name}`);
-            
+
             toast.show({
                 title: "Success",
                 message: "PDF signed successfully!",
@@ -296,7 +297,7 @@ export function SignPdfTool() {
                     {signatureImage && (
                         <div className="space-y-4 rounded-xl border bg-card p-6">
                             <h3 className="font-semibold">Placement Options</h3>
-                            
+
                             <div className="space-y-3">
                                 <div>
                                     <label className="text-xs font-medium text-muted-foreground">Position</label>
@@ -366,7 +367,7 @@ export function SignPdfTool() {
                     <div className="relative h-full">
                         <PdfPreview file={file} />
                         {signatureImage && (
-                            <div 
+                            <div
                                 className={`absolute p-2 border-2 border-dashed border-primary bg-white/50 transition-all duration-300
                                     ${position === "top-left" ? "top-4 left-4" : ""}
                                     ${position === "top-right" ? "top-4 right-4" : ""}
@@ -375,14 +376,14 @@ export function SignPdfTool() {
                                     ${position === "center" ? "top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" : ""}
                                 `}
                             >
-                                <img 
-                                    src={signatureImage} 
-                                    alt="Signature Preview" 
+                                <img
+                                    src={signatureImage}
+                                    alt="Signature Preview"
                                     className={`object-contain transition-all duration-300
                                         ${scale === "small" ? "h-8" : ""}
                                         ${scale === "medium" ? "h-16" : ""}
                                         ${scale === "large" ? "h-24" : ""}
-                                    `} 
+                                    `}
                                 />
                             </div>
                         )}
