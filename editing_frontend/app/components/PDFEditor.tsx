@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { usePDFLoader } from '@/app/hooks/usePDFLoader';
 import PDFUploader from './PDFUploader';
 import PDFCanvas from './PDFCanvas';
@@ -93,13 +93,126 @@ const FONTS = ['Arial', 'Times New Roman', 'Helvetica', 'Georgia', 'Verdana', 'C
 const COLORS = ['#000000', '#EF4444', '#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#6B7280'];
 
 export default function PDFEditor() {
-    const { loadFile, textItems, pageDimensions, backgroundImageUrl, originalFile, isLoading, error } = usePDFLoader();
+    const { loadFile, textItems, pageDimensions, backgroundImageUrl, originalFile, isDigitallySigned, isLoading, error } = usePDFLoader();
     const [zoom, setZoom] = useState(100);
     const [selectedObject, setSelectedObject] = useState<fabric.Object | null>(null);
     const [textProps, setTextProps] = useState<TextProperties>(defaultTextProps);
     const [fabricCanvas, setFabricCanvas] = useState<fabric.Canvas | null>(null);
     const [isExporting, setIsExporting] = useState(false);
     const [showExportMenu, setShowExportMenu] = useState(false);
+    const [showSignatureWarning, setShowSignatureWarning] = useState(true);
+
+    // Undo/Redo history stacks
+    const historyRef = useRef<string[]>([]);
+    const historyIndexRef = useRef(-1);
+    const isUndoRedoRef = useRef(false);
+    const [canUndo, setCanUndo] = useState(false);
+    const [canRedo, setCanRedo] = useState(false);
+
+    // Use ref to avoid stale closure in event handlers
+    const saveStateRef = useRef<() => void>(() => { });
+
+    // Save current canvas state to history
+    const saveState = useCallback(() => {
+        if (!fabricCanvas || isUndoRedoRef.current) return;
+
+        const json = JSON.stringify(fabricCanvas.toJSON());
+
+        // Don't save if it's the same as the last state
+        if (historyRef.current.length > 0 && json === historyRef.current[historyIndexRef.current]) {
+            return;
+        }
+
+        // Remove any states after current index (discard redo history on new action)
+        historyRef.current = historyRef.current.slice(0, historyIndexRef.current + 1);
+        historyRef.current.push(json);
+        historyIndexRef.current = historyRef.current.length - 1;
+
+        // Limit history to 50 states
+        if (historyRef.current.length > 50) {
+            historyRef.current.shift();
+            historyIndexRef.current--;
+        }
+
+        setCanUndo(historyIndexRef.current > 0);
+        setCanRedo(false);
+        console.log(`History saved: ${historyRef.current.length} states, index: ${historyIndexRef.current}`);
+    }, [fabricCanvas]);
+
+    // Keep ref updated
+    useEffect(() => {
+        saveStateRef.current = saveState;
+    }, [saveState]);
+
+    // Save initial state when canvas and text items are ready
+    useEffect(() => {
+        if (fabricCanvas && textItems.length > 0 && historyRef.current.length === 0) {
+            // Wait for canvas to fully load text items
+            setTimeout(() => {
+                const json = JSON.stringify(fabricCanvas.toJSON());
+                historyRef.current = [json];
+                historyIndexRef.current = 0;
+                setCanUndo(false);
+                setCanRedo(false);
+                console.log('Initial state saved');
+            }, 500);
+        }
+    }, [fabricCanvas, textItems]);
+
+    // Undo function
+    const handleUndo = useCallback(() => {
+        if (!fabricCanvas || historyIndexRef.current <= 0) return;
+
+        isUndoRedoRef.current = true;
+        historyIndexRef.current--;
+
+        fabricCanvas.loadFromJSON(historyRef.current[historyIndexRef.current], () => {
+            fabricCanvas.renderAll();
+            isUndoRedoRef.current = false;
+            setCanUndo(historyIndexRef.current > 0);
+            setCanRedo(historyIndexRef.current < historyRef.current.length - 1);
+        });
+    }, [fabricCanvas]);
+
+    // Redo function
+    const handleRedo = useCallback(() => {
+        if (!fabricCanvas || historyIndexRef.current >= historyRef.current.length - 1) return;
+
+        isUndoRedoRef.current = true;
+        historyIndexRef.current++;
+
+        fabricCanvas.loadFromJSON(historyRef.current[historyIndexRef.current], () => {
+            fabricCanvas.renderAll();
+            isUndoRedoRef.current = false;
+            setCanUndo(historyIndexRef.current > 0);
+            setCanRedo(historyIndexRef.current < historyRef.current.length - 1);
+        });
+    }, [fabricCanvas]);
+
+    // Keyboard shortcuts for undo/redo
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+            const modifier = isMac ? e.metaKey : e.ctrlKey;
+
+            if (modifier && e.key === 'z') {
+                e.preventDefault();
+                if (e.shiftKey) {
+                    handleRedo();
+                } else {
+                    handleUndo();
+                }
+            }
+            // Also support Ctrl+Y for redo on Windows
+            if (!isMac && e.ctrlKey && e.key === 'y') {
+                e.preventDefault();
+                handleRedo();
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [handleUndo, handleRedo]);
 
     const handleZoomIn = () => setZoom(prev => Math.min(prev + 25, 200));
     const handleZoomOut = () => setZoom(prev => Math.max(prev - 25, 50));
@@ -279,6 +392,8 @@ export default function PDFEditor() {
             if (e.target) {
                 updateTextPropsFromObject(e.target);
             }
+            // Save state after any modification (move, resize, rotate, etc.)
+            saveStateRef.current();
         });
 
         canvas.on('object:scaling', (e) => {
@@ -298,7 +413,17 @@ export default function PDFEditor() {
                 updateTextPropsFromObject(e.target);
             }
         });
-    }, []);
+
+        // Save state when new objects are added (e.g., new text on double-click)
+        canvas.on('object:added', () => {
+            // Delay to avoid saving during initial load
+            setTimeout(() => {
+                if (!isUndoRedoRef.current && historyRef.current.length > 0) {
+                    saveStateRef.current();
+                }
+            }, 100);
+        });
+    }, []); // Empty deps - event handlers use refs
 
     const updateTextPropsFromObject = (obj: fabric.Object) => {
         if (obj.type === 'textbox' || obj.type === 'text') {
@@ -371,6 +496,31 @@ export default function PDFEditor() {
                                     <ZoomInIcon />
                                 </button>
                             </div>
+
+                            {/* Undo/Redo buttons */}
+                            <div className="flex items-center gap-1 border-l border-gray-200 pl-4 ml-2">
+                                <button
+                                    onClick={handleUndo}
+                                    disabled={!canUndo}
+                                    className="p-2 hover:bg-gray-200 rounded disabled:opacity-30 disabled:cursor-not-allowed"
+                                    title="Undo (Ctrl+Z)"
+                                >
+                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                                    </svg>
+                                </button>
+                                <button
+                                    onClick={handleRedo}
+                                    disabled={!canRedo}
+                                    className="p-2 hover:bg-gray-200 rounded disabled:opacity-30 disabled:cursor-not-allowed"
+                                    title="Redo (Ctrl+Shift+Z)"
+                                >
+                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 10h-10a8 8 0 00-8 8v2M21 10l-6 6m6-6l-6-6" />
+                                    </svg>
+                                </button>
+                            </div>
+
                             <div className="relative">
                                 <button
                                     onClick={() => setShowExportMenu(!showExportMenu)}
@@ -411,6 +561,29 @@ export default function PDFEditor() {
                     )}
                 </div>
             </header>
+
+            {/* Digital Signature Warning Banner */}
+            {isDigitallySigned && showSignatureWarning && (
+                <div className="bg-amber-50 border-b border-amber-200 px-4 py-3 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <svg className="w-5 h-5 text-amber-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                        <div>
+                            <p className="text-sm font-medium text-amber-800">This document is digitally signed</p>
+                            <p className="text-xs text-amber-600">Editing this PDF will invalidate the digital signature. Proceed with caution.</p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={() => setShowSignatureWarning(false)}
+                        className="text-amber-600 hover:text-amber-800 p-1"
+                    >
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+            )}
 
             <div className="flex flex-1 overflow-hidden">
                 {/* Main Canvas Area */}
