@@ -257,6 +257,7 @@ REST_FRAMEWORK = {
     'DEFAULT_THROTTLE_RATES': {
         'login': '10/min',
         'anon': '20/min',
+        'user': '100/min',  # Standard authenticated user limit
         'password_reset': '5/hour',
         'registration': '5/hour',
         'otp': '10/min'
@@ -295,23 +296,18 @@ JWT_COOKIE_SAMESITE = REST_AUTH.get('JWT_AUTH_SAMESITE', 'Strict')
 # AllAuth Configuration
 # AllAuth Configuration (2025 Modern Standards)
 # AllAuth Configuration (2025 Modern Standards)
+# AllAuth Configuration (Modern Standard)
 ACCOUNT_USER_MODEL_USERNAME_FIELD = None
-ACCOUNT_LOGIN_METHODS = {'email'} # Replaces ACCOUNT_AUTHENTICATION_METHOD
-ACCOUNT_EMAIL_REQUIRED = True
-ACCOUNT_USERNAME_REQUIRED = False
-ACCOUNT_SIGNUP_PASSWORD_ENTER_TWICE = False
+ACCOUNT_LOGIN_METHODS = {'email'} 
+ACCOUNT_SIGNUP_FIELDS = ['email*', 'password1*'] # Replaces EMAIL_REQUIRED, USERNAME_REQUIRED, PASSWORD_ENTER_TWICE
 ACCOUNT_EMAIL_VERIFICATION = 'mandatory'
-# ACCOUNT_SIGNUP_FIELDS replaces old REQUIRED fields logic in newer versions, 
-# but dj-rest-auth might still rely on older settings. keeping both for safety if compatible.
 
 # CSRF Settings for JWT Auth
 CSRF_COOKIE_SAMESITE = 'Lax'
 CSRF_COOKIE_HTTPONLY = False  # Critical: Frontend needs to read this cookie
 CSRF_USE_SESSIONS = False 
 
-# ACCOUNT_SIGNUP_FIELDS is not a standard setting for allauth/dj-rest-auth, removing to avoid confusion
 # Validation is handled by RegisterSerializer and settings above.
-ACCOUNT_EMAIL_VERIFICATION = 'mandatory' 
 ACCOUNT_CONFIRM_EMAIL_ON_GET = False # Secure: Requires POST to verify
 ACCOUNT_ADAPTER = 'apps.accounts.services.adapters.CustomAccountAdapter'
 OLD_PASSWORD_FIELD_ENABLED = True
