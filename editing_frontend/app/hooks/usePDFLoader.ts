@@ -11,6 +11,7 @@ interface UsePDFLoaderReturn {
     textItems: PDFTextItem[];
     pageDimensions: PDFPageDimensions | null;
     backgroundImageUrl: string | null;
+    originalFile: File | null;
     isLoading: boolean;
     error: string | null;
 }
@@ -19,6 +20,7 @@ export function usePDFLoader(): UsePDFLoaderReturn {
     const [textItems, setTextItems] = useState<PDFTextItem[]>([]);
     const [pageDimensions, setPageDimensions] = useState<PDFPageDimensions | null>(null);
     const [backgroundImageUrl, setBackgroundImageUrl] = useState<string | null>(null);
+    const [originalFile, setOriginalFile] = useState<File | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -26,6 +28,7 @@ export function usePDFLoader(): UsePDFLoaderReturn {
         try {
             setIsLoading(true);
             setError(null);
+            setOriginalFile(file);
 
             // Load PDF
             const pdf = await loadPDF(file);
@@ -69,6 +72,7 @@ export function usePDFLoader(): UsePDFLoaderReturn {
         textItems,
         pageDimensions,
         backgroundImageUrl,
+        originalFile,
         isLoading,
         error,
     };

@@ -93,28 +93,30 @@ const FONTS = ['Arial', 'Times New Roman', 'Helvetica', 'Georgia', 'Verdana', 'C
 const COLORS = ['#000000', '#EF4444', '#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#6B7280'];
 
 export default function PDFEditor() {
-    const { loadFile, textItems, pageDimensions, backgroundImageUrl, isLoading, error } = usePDFLoader();
+    const { loadFile, textItems, pageDimensions, backgroundImageUrl, originalFile, isLoading, error } = usePDFLoader();
     const [zoom, setZoom] = useState(100);
     const [selectedObject, setSelectedObject] = useState<fabric.Object | null>(null);
     const [textProps, setTextProps] = useState<TextProperties>(defaultTextProps);
     const [fabricCanvas, setFabricCanvas] = useState<fabric.Canvas | null>(null);
     const [isExporting, setIsExporting] = useState(false);
+    const [showExportMenu, setShowExportMenu] = useState(false);
 
     const handleZoomIn = () => setZoom(prev => Math.min(prev + 25, 200));
     const handleZoomOut = () => setZoom(prev => Math.max(prev - 25, 50));
 
-    // Export edited PDF
-    const handleExportPDF = async () => {
+    // Quick Export - Frontend only (uses pdf-lib, image-based)
+    const handleQuickExport = async () => {
         if (!fabricCanvas || !pageDimensions) return;
 
         setIsExporting(true);
+        setShowExportMenu(false);
 
         try {
             // Get canvas as PNG data URL (high quality)
             const imageDataUrl = fabricCanvas.toDataURL({
                 format: 'png',
                 quality: 1,
-                multiplier: 2, // 2x resolution for better quality
+                multiplier: 4, // 4x resolution for better quality
             });
 
             // Create new PDF document
@@ -149,6 +151,102 @@ export default function PDFEditor() {
         } catch (err) {
             console.error('Export failed:', err);
             alert('Failed to export PDF. Please try again.');
+        } finally {
+            setIsExporting(false);
+        }
+    };
+
+    // High Quality Export - via Go backend
+    const handleBackendExport = async () => {
+        if (!fabricCanvas || !pageDimensions || !originalFile) {
+            alert('Please upload a PDF first');
+            return;
+        }
+
+        setIsExporting(true);
+        setShowExportMenu(false);
+
+        try {
+            // Collect only ACTUALLY modified text edits from the canvas
+            const textEdits: Array<{
+                id: string;
+                page: number;
+                x: number;
+                y: number;
+                width: number;
+                height: number;
+                originalText: string;
+                newText: string;
+                fontSize: number;
+                fontFamily: string;
+                scale: number;
+            }> = [];
+
+            const canvasObjects = fabricCanvas.getObjects();
+
+            canvasObjects.forEach((obj, index) => {
+                if (obj.type === 'textbox' || obj.type === 'text') {
+                    const textObj = obj as fabric.Textbox & {
+                        originalText?: string;
+                        originalLeft?: number;
+                        originalTop?: number;
+                    };
+                    const currentText = textObj.text || '';
+                    const originalText = textObj.originalText || '';
+
+                    // Only include if text content was actually modified
+                    // If there's no originalText, it's a newly added text (double-click to add)
+                    const isModified = currentText !== originalText;
+                    const isNewText = textObj.originalText === undefined;
+
+                    if (isModified || isNewText) {
+                        textEdits.push({
+                            id: `edit-${index}`,
+                            page: 1, // Currently single page
+                            x: textObj.originalLeft || textObj.left || 0,
+                            y: textObj.originalTop || textObj.top || 0,
+                            width: (textObj.width || 100) * (textObj.scaleX || 1),
+                            height: (textObj.height || 20) * (textObj.scaleY || 1),
+                            originalText: originalText,
+                            newText: currentText,
+                            fontSize: textObj.fontSize || 16,
+                            fontFamily: textObj.fontFamily || 'Helvetica',
+                            scale: pageDimensions.scale,
+                        });
+                    }
+                }
+            });
+
+            console.log(`Sending ${textEdits.length} text edits to backend`);
+            console.log('Text edits:', textEdits);
+
+            // Create form data for backend
+            const formData = new FormData();
+            formData.append('file', originalFile);
+            formData.append('textEdits', JSON.stringify(textEdits));
+
+            // Send to Go backend
+            const response = await fetch('http://localhost:8080/api/pdf/apply-edits', {
+                method: 'POST',
+                body: formData,
+            });
+
+            if (!response.ok) {
+                throw new Error(`Backend error: ${response.statusText}`);
+            }
+
+            // Download the response as PDF
+            const blob = await response.blob();
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = originalFile.name.replace('.pdf', '-edited.pdf');
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(link.href);
+        } catch (err) {
+            console.error('Export failed:', err);
+            alert('Failed to export PDF. Make sure the backend server is running on localhost:8080');
         } finally {
             setIsExporting(false);
         }
@@ -273,18 +371,42 @@ export default function PDFEditor() {
                                     <ZoomInIcon />
                                 </button>
                             </div>
-                            <button
-                                onClick={handleExportPDF}
-                                disabled={isExporting}
-                                className="flex items-center gap-2 px-4 py-2 bg-black hover:bg-gray-800 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                {isExporting ? (
-                                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                ) : (
-                                    <DownloadIcon />
+                            <div className="relative">
+                                <button
+                                    onClick={() => setShowExportMenu(!showExportMenu)}
+                                    disabled={isExporting}
+                                    className="flex items-center gap-2 px-4 py-2 bg-black hover:bg-gray-800 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {isExporting ? (
+                                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                    ) : (
+                                        <DownloadIcon />
+                                    )}
+                                    <span className="text-sm font-medium">{isExporting ? 'Exporting...' : 'Export'}</span>
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </button>
+                                {showExportMenu && (
+                                    <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden z-50 min-w-[200px]">
+                                        <button
+                                            onClick={handleQuickExport}
+                                            className="w-full px-4 py-3 text-left hover:bg-gray-50 flex flex-col gap-0.5"
+                                        >
+                                            <span className="text-sm font-medium text-black">Quick Export</span>
+                                            <span className="text-xs text-gray-500">Fast, image-based PDF</span>
+                                        </button>
+                                        <div className="border-t border-gray-100" />
+                                        <button
+                                            onClick={handleBackendExport}
+                                            className="w-full px-4 py-3 text-left hover:bg-gray-50 flex flex-col gap-0.5"
+                                        >
+                                            <span className="text-sm font-medium text-black">High Quality Export</span>
+                                            <span className="text-xs text-gray-500">Vector text, selectable</span>
+                                        </button>
+                                    </div>
                                 )}
-                                <span className="text-sm font-medium">{isExporting ? 'Exporting...' : 'Export'}</span>
-                            </button>
+                            </div>
                         </>
                     )}
                 </div>
