@@ -5,8 +5,9 @@ import { api } from "@/app/lib/api";
 import { Card, CardContent } from "@/app/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/app/components/ui/table";
 import { Badge } from "@/app/components/ui/badge";
-import { Loader2, Download } from "lucide-react";
+import { Download } from "lucide-react";
 import { Button } from "@/app/components/ui/button";
+import { Skeleton } from "@/app/components/ui/skeleton";
 
 export default function SignedSignaturesPage() {
     const [requests, setRequests] = useState<any[]>([]);
@@ -19,7 +20,28 @@ export default function SignedSignaturesPage() {
             .finally(() => setLoading(false));
     }, []);
 
-    if (loading) return <div className="flex justify-center p-10"><Loader2 className="animate-spin" /></div>;
+    if (loading) {
+        return (
+            <div className="space-y-6">
+                <Skeleton className="h-9 w-48" />
+                <Card>
+                    <CardContent className="p-0">
+                        <div className="p-4 space-y-4">
+                            {[1, 2, 3].map((i) => (
+                                <div key={i} className="flex items-center justify-between">
+                                    <div className="space-y-2">
+                                        <Skeleton className="h-5 w-48" />
+                                        <Skeleton className="h-4 w-32" />
+                                    </div>
+                                    <Skeleton className="h-8 w-8 rounded-md" />
+                                </div>
+                            ))}
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-6">
@@ -37,12 +59,21 @@ export default function SignedSignaturesPage() {
                         <TableBody>
                             {requests.map((req) => (
                                 <TableRow key={req.id}>
-                                    <TableCell className="font-medium">{req.title}</TableCell>
+                                    <TableCell className="font-medium">{req.document_name || "Untitled"}</TableCell>
                                     <TableCell>{new Date(req.updated_at).toLocaleDateString()}</TableCell>
                                     <TableCell className="text-right">
-                                        <Button variant="ghost" size="sm">
-                                            <Download className="w-4 h-4" />
-                                        </Button>
+                                        {(req.signed_document || req.document) && (
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => {
+                                                    const url = req.signed_document || req.document;
+                                                    if (url) window.open(url, '_blank');
+                                                }}
+                                            >
+                                                <Download className="w-4 h-4" />
+                                            </Button>
+                                        )}
                                     </TableCell>
                                 </TableRow>
                             ))}

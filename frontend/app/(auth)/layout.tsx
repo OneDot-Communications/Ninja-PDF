@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { FaFilePdf, FaShieldHalved, FaRobot } from "react-icons/fa6";
 import Link from "next/link"; // Import Link for the logo
+import { Toaster } from "sonner";
 
 export default function AuthLayout({
     children,
@@ -25,6 +26,7 @@ export default function AuthLayout({
                     </div>
 
                     {children}
+                    <Toaster />
                 </div>
             </div>
 

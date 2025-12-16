@@ -21,8 +21,27 @@ class WorkflowViewSet(viewsets.ModelViewSet):
     def execute(self, request, pk=None):
         """Execute a workflow."""
         workflow = self.get_object()
-        # TODO: Implement workflow execution logic
-        return Response({'status': 'Workflow execution started', 'workflow': workflow.name})
+        # Execute a workflow
+        from apps.jobs.models import Job
+        from apps.jobs.services.job_runner import JobRunner
+
+        # Create a job for this workflow execution
+        job = Job.objects.create(
+            user=request.user,
+            workflow=workflow,
+            status=Job.Status.QUEUED,
+            input_file=None # Workflows might not start with a file immediately, or it comes from request.FILES
+        )
+
+        # Trigger execution (Async)
+        try:
+            JobRunner.run_job(job.id)
+            return Response({'status': 'Workflow execution started', 'job_id': job.id, 'workflow': workflow.name})
+        except Exception as e:
+            job.status = Job.Status.FAILED
+            job.error = str(e)
+            job.save()
+            return Response({'error': str(e)}, status=500)
 
 
 class TaskViewSet(viewsets.ModelViewSet):

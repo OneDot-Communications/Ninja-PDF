@@ -1,0 +1,19 @@
+import { ToolShell } from "@/app/components/layout/tool-shell";
+import { EditPdfTool } from "@/app/components/tools/edit-pdf";
+
+export const metadata = {
+    title: "Edit PDF - 18+ PDF",
+    description: "Add text, images, shapes or freehand annotations to a PDF document.",
+};
+
+export default function EditPdfPage() {
+    return (
+        <ToolShell
+            title="Edit PDF"
+            description="Add text, images, shapes or freehand annotations to a PDF document."
+            variant="editor"
+        >
+            <EditPdfTool />
+        </ToolShell>
+    );
+}

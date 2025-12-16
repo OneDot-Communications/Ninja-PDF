@@ -1,3 +1,4 @@
+import uuid
 from django.db import models
 from django.conf import settings
 from django.utils.translation import gettext_lazy as _
@@ -38,6 +39,12 @@ class UserFile(models.Model):
     md5_hash = models.CharField(max_length=32, blank=True, null=True, help_text="Integrity check")
     sha256_hash = models.CharField(max_length=64, blank=True, null=True, help_text="SHA256 integrity hash")
     is_public = models.BooleanField(default=False, help_text="Sharable via link")
+    
+    # Sharing Fields
+    share_token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    password_hash = models.CharField(max_length=128, blank=True, null=True, help_text="Hashed password for access protection")
+    download_count = models.IntegerField(default=0)
+    view_count = models.IntegerField(default=0)
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

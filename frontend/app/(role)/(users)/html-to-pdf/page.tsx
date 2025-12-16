@@ -1,0 +1,18 @@
+import { ToolShell } from "@/app/components/layout/tool-shell";
+import { HtmlToPdfTool } from "@/app/components/tools/html-to-pdf";
+
+export const metadata = {
+    title: "HTML to PDF - 18+ PDF",
+    description: "Convert webpages in HTML to PDF.",
+};
+
+export default function HtmlToPdfPage() {
+    return (
+        <ToolShell
+            title="HTML to PDF"
+            description="Convert webpages in HTML to PDF."
+        >
+            <HtmlToPdfTool />
+        </ToolShell>
+    );
+}

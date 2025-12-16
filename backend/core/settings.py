@@ -42,16 +42,11 @@ AUTHENTICATION_BACKENDS = [
 # Optional OTP authentication backend: only include if provided by installed
 # django-otp package to avoid import-time errors on newer versions which
 # don't expose a `django_otp.backends` module.
-try:
-    import importlib
-    importlib.import_module('django_otp.backends')
-except Exception:
-    import logging
-    logging.getLogger(__name__).warning(
-        'django_otp.backends not present; OTP authentication backend disabled.'
-    )
-else:
-    AUTHENTICATION_BACKENDS.insert(1, 'django_otp.backends.OTPBackend')
+# Optional OTP authentication backend
+# If you want to require OTP for admin login, you might need this, 
+# but simply having the middleware is often enough for custom views.
+# We will leave the standard ModelBackend.
+
 
 # RAZORPAY SETTINGS
 RAZORPAY_KEY_ID = os.getenv('RAZORPAY_KEY_ID')
@@ -84,6 +79,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'whitenoise.runserver_nostatic', # WhiteNoise dev support
     'django.contrib.sites',  # Required by allauth
 
     # Third Party
@@ -102,6 +98,7 @@ INSTALLED_APPS = [
     'django_otp.plugins.otp_totp',
     'django_otp.plugins.otp_static',
 
+
     # Domain Apps (Consolidated)
     'apps.accounts',
     'apps.subscriptions',
@@ -118,6 +115,7 @@ SITE_ID = 1
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware', # WhiteNoise Middleware
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware', # CORS
     'django.middleware.common.CommonMiddleware',
@@ -163,6 +161,7 @@ DATABASES = {
         'PASSWORD': os.getenv('POSTGRES_PASSWORD', 'ninja'),
         'HOST': os.getenv('POSTGRES_HOST', 'localhost'),
         'PORT': os.getenv('POSTGRES_PORT', '5432'),
+        'CONN_MAX_AGE': 600, # Persistent connections (10 mins) for optimization
     }
 }
 
@@ -206,33 +205,31 @@ STATICFILES_DIRS = [
     BASE_DIR / "static",
 ]
 
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / "media"
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # -----------------------------------------------------------------------------
-# AUTHENTICATION CONFIGURATION
+# EMAIL CONFIGURATION (Zepto Mail - Production Ready)
 # -----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+# EMAIL CONFIGURATION (Zepto Mail - Production Ready)
+# -----------------------------------------------------------------------------
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'noreply@18pluspdf.com')
+# FORCE SMTP BACKEND (No console fallback anymore)
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 
-# -----------------------------------------------------------------------------
-# EMAIL CONFIGURATION (SMTP / Console fallback for DEBUG)
-# -----------------------------------------------------------------------------
-DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'noreply@ninjapdf.com')
-# Allow overriding EMAIL_BACKEND from environment for production usage,
-# but default to SMTP in production and console backend in local DEBUG mode.
-EMAIL_BACKEND = os.getenv('EMAIL_BACKEND')
-if not EMAIL_BACKEND:
-    if DEBUG:
-        EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-    else:
-        EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-
-EMAIL_HOST = os.getenv('EMAIL_HOST')
+# Zepto Mail Configuration
+EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.zeptomail.com') # Strict Zepto Default
 EMAIL_PORT = int(os.getenv('EMAIL_PORT', 587))
 EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True') == 'True'
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
+
 
 # -----------------------------------------------------------------------------
 # AUTHENTICATION CONFIGURATION
@@ -260,15 +257,16 @@ REST_FRAMEWORK = {
         'user': '100/min',  # Standard authenticated user limit
         'password_reset': '5/hour',
         'registration': '5/hour',
-        'otp': '10/min'
+        'otp': '10/min',
+        'dj_rest_auth': '100/min',
     }
 }
 
 # JWT Configuration
 SIMPLE_JWT = {
     # Shorter lifetimes for government-grade security
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=7),
+    'REFRESH_TOKEN_LIFETIME': timedelta(hours=1),
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
     'AUTH_HEADER_TYPES': ('Bearer',),
@@ -281,7 +279,7 @@ REST_AUTH = {
     'JWT_AUTH_REFRESH_COOKIE': 'refresh-token',
     'JWT_AUTH_HTTPONLY': True,  # Prevent JS access
     # Recommend SameSite=Strict in production for CSRF protection on cookies
-    'JWT_AUTH_SAMESITE': os.getenv('JWT_AUTH_SAMESITE', 'Strict'),
+    'JWT_AUTH_SAMESITE': os.getenv('JWT_AUTH_SAMESITE', 'Lax'),
     # For local development don't hardcode a cookie domain so it's host-specific.
     # This avoids issues when frontend runs on `localhost` while backend is `127.0.0.1`.
     'JWT_AUTH_COOKIE_DOMAIN': None,
@@ -298,8 +296,8 @@ JWT_COOKIE_SAMESITE = REST_AUTH.get('JWT_AUTH_SAMESITE', 'Strict')
 # AllAuth Configuration (2025 Modern Standards)
 # AllAuth Configuration (Modern Standard)
 ACCOUNT_USER_MODEL_USERNAME_FIELD = None
-ACCOUNT_LOGIN_METHODS = {'email'} 
-ACCOUNT_SIGNUP_FIELDS = ['email*', 'password1*'] # Replaces EMAIL_REQUIRED, USERNAME_REQUIRED, PASSWORD_ENTER_TWICE
+ACCOUNT_LOGIN_METHODS = {'email'}
+ACCOUNT_SIGNUP_FIELDS = ['email*', 'password1*', 'password2*'] # Standard flow with confirmation
 ACCOUNT_EMAIL_VERIFICATION = 'mandatory'
 
 # CSRF Settings for JWT Auth
@@ -349,16 +347,21 @@ CORS_ALLOWED_ORIGINS = [
     # Production URLs (add your deployed frontend URL here)
     "https://ninja-pdf.onrender.com",
     "https://ninjapdf.com",
-    "https://www.ninjapdf.com",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "https://18pluspdf.com",
+    "https://www.18pluspdf.com",
 ]
 CORS_ALLOW_CREDENTIALS = True
 
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", "18pluspdf.com", "api.18pluspdf.com", ".onrender.com"]
 
 # CSRF trusted origins for local dev (frontend running on port 3000)
 CSRF_TRUSTED_ORIGINS = [
-    'http://localhost:3000',
-    'http://127.0.0.1:3000',
-    'https://ninja-pdf.onrender.com',
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "https://18pluspdf.com",
+    "https://www.18pluspdf.com",
 ]
 
 LOGGING = {
@@ -429,21 +432,22 @@ CELERY_TASK_DEFAULT_ROUTING_KEY = 'default'
 STORAGE_BACKEND = os.getenv('STORAGE_BACKEND', 'local').lower()
 
 if STORAGE_BACKEND in ('s3', 'r2'):
-    # Common S3-compatible settings
+    # General S3 Compatible Settings (Works for AWS S3, DO Spaces, Cloudflare R2, MinIO)
     AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
     AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
     AWS_STORAGE_BUCKET_NAME = os.getenv('AWS_STORAGE_BUCKET_NAME')
-    AWS_S3_OBJECT_PARAMETERS = {'CacheControl': 'max-age=86400'}
-    AWS_DEFAULT_ACL = 'private'  # Security: Private by default
-    AWS_QUERYSTRING_AUTH = True  # Signed URLs
     
+    # Critical for DigitalOcean Spaces / Compatibility
+    AWS_S3_ENDPOINT_URL = os.getenv('AWS_S3_ENDPOINT_URL') 
+    AWS_S3_REGION_NAME = os.getenv('AWS_S3_REGION_NAME', 'us-east-1')
+
+    AWS_S3_OBJECT_PARAMETERS = {'CacheControl': 'max-age=86400'}
+    AWS_DEFAULT_ACL = None # Use bucket default (private). Do NOT force public-read on private buckets.
+    AWS_QUERYSTRING_AUTH = True # Generate signed URLs
+    AWS_S3_ADDRESSING_STYLE = "path" # Fix for Supabase/MinIO path-style URLs
+    AWS_S3_SIGNATURE_VERSION = 's3v4' # Enforce v4 signature (required by modern S3/Supabase)
     if STORAGE_BACKEND == 'r2':
-        # Cloudflare R2 requires a custom endpoint
-        AWS_S3_ENDPOINT_URL = os.getenv('AWS_S3_ENDPOINT_URL')  # e.g. https://<account>.r2.cloudflarestorage.com
-        AWS_S3_REGION_NAME = 'auto'  # R2 uses 'auto'
-    else:
-        # Standard AWS S3
-        AWS_S3_REGION_NAME = os.getenv('AWS_S3_REGION_NAME', 'us-east-1')
+        AWS_S3_REGION_NAME = 'auto' # R2 specific
         
     AWS_S3_CUSTOM_DOMAIN = os.getenv('AWS_S3_CUSTOM_DOMAIN')  # Optional public CDN domain
     
