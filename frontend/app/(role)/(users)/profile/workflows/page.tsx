@@ -5,7 +5,8 @@ import { api } from "@/app/lib/api";
 import { Button } from "@/app/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/app/components/ui/card";
 import { Badge } from "@/app/components/ui/badge";
-import { Plus, Workflow, FileText, ArrowRight, Loader2 } from "lucide-react";
+import { Skeleton } from "@/app/components/ui/skeleton";
+import { Plus, Workflow, FileText, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 
@@ -48,7 +49,23 @@ export default function WorkflowsPage() {
             </div>
 
             {loading ? (
-                <div className="flex justify-center py-12"><Loader2 className="animate-spin text-slate-400" /></div>
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    {[1, 2, 3].map(i => (
+                        <Card key={i} className="border-slate-200">
+                            <CardHeader className="pb-3">
+                                <div className="flex justify-between items-start">
+                                    <Skeleton className="h-10 w-10 rounded-lg" />
+                                    <Skeleton className="h-5 w-16" />
+                                </div>
+                                <Skeleton className="h-6 w-40 mt-4" />
+                                <Skeleton className="h-4 w-full mt-2" />
+                            </CardHeader>
+                            <CardContent>
+                                <Skeleton className="h-3 w-28" />
+                            </CardContent>
+                        </Card>
+                    ))}
+                </div>
             ) : workflows.length === 0 ? (
                 <Card className="text-center py-12 border-dashed bg-slate-50/50">
                     <CardContent>

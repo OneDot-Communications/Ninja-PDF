@@ -171,10 +171,16 @@ export function Header() {
                                     <div className="space-y-6 border-l border-slate-100 pl-8">
                                         <h3 className="font-bold text-slate-400 text-sm tracking-wider uppercase">Quick Links</h3>
                                         <ul className="space-y-3">
-                                            {["Pricing", "Security", "Key Features", "About Us", "Help Center", "Language"].map(link => (
-                                                <li key={link}>
-                                                    <Link href="#" className="block p-2 text-slate-600 hover:text-blue-600 hover:bg-slate-50 rounded-lg font-medium">
-                                                        {link}
+                                            {[
+                                                { label: "Pricing", href: "/pricing" },
+                                                { label: "Security", href: "/security" },
+                                                { label: "All Tools", href: "/features" },
+                                                { label: "About Us", href: "/about" },
+                                                { label: "Help Center", href: "/help" }
+                                            ].map(link => (
+                                                <li key={link.label}>
+                                                    <Link href={link.href} className="block p-2 text-slate-600 hover:text-blue-600 hover:bg-slate-50 rounded-lg font-medium">
+                                                        {link.label}
                                                     </Link>
                                                 </li>
                                             ))}

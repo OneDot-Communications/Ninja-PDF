@@ -5,6 +5,7 @@ import { api } from "@/app/lib/api";
 import { Button } from "@/app/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/app/components/ui/card";
 import { Badge } from "@/app/components/ui/badge";
+import { Skeleton } from "@/app/components/ui/skeleton";
 import { Loader2, CheckCircle2, XCircle, Clock, FileText } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -24,7 +25,14 @@ export default function TasksPage() {
         try {
             setLoading(true);
             const data = await api.getTasks();
-            setTasks(data);
+            // Handle pagination (DRF usually returns { results: [...] })
+            if (data.results && Array.isArray(data.results)) {
+                setTasks(data.results);
+            } else if (Array.isArray(data)) {
+                setTasks(data);
+            } else {
+                setTasks([]);
+            }
         } catch (error) {
             console.error(error);
         } finally {
@@ -65,9 +73,16 @@ export default function TasksPage() {
                         </TableHeader>
                         <TableBody>
                             {loading ? (
-                                <TableRow>
-                                    <TableCell colSpan={4} className="text-center py-8"><Loader2 className="animate-spin inline mr-2" /> Loading...</TableCell>
-                                </TableRow>
+                                <>
+                                    {[1, 2, 3, 4, 5].map((i) => (
+                                        <TableRow key={i}>
+                                            <TableCell><Skeleton className="h-4 w-48" /></TableCell>
+                                            <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                                            <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                                            <TableCell className="text-right"><Skeleton className="h-4 w-16 ml-auto" /></TableCell>
+                                        </TableRow>
+                                    ))}
+                                </>
                             ) : tasks.length === 0 ? (
                                 <TableRow>
                                     <TableCell colSpan={4} className="text-center py-12 text-slate-500">

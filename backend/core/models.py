@@ -19,7 +19,7 @@ class PlatformBranding(models.Model):
     Singleton model for platform branding and configuration.
     Strictly enforce one instance.
     """
-    platform_name = models.CharField(max_length=100, default="Ninja PDF")
+    platform_name = models.CharField(max_length=100, default="18+ PDF")
     logo = models.ImageField(upload_to='branding/', blank=True, null=True)
     hero_title = models.TextField(default="All your PDF headache in one place.")
     hero_subtitle = models.TextField(default="Simple, super, and totally free!")

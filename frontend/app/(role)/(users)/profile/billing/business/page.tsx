@@ -7,7 +7,8 @@ import { Input } from "@/app/components/ui/input";
 import { Label } from "@/app/components/ui/label";
 import { Button } from "@/app/components/ui/button";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, Info } from "lucide-react";
+import { Skeleton } from "@/app/components/ui/skeleton";
 
 export default function BusinessDetailsPage() {
     const [loading, setLoading] = useState(true);
@@ -45,7 +46,31 @@ export default function BusinessDetailsPage() {
         }
     };
 
-    if (loading) return <div className="flex justify-center p-10"><Loader2 className="animate-spin" /></div>;
+    if (loading) {
+        return (
+            <div className="space-y-6">
+                <div>
+                    <h1 className="text-2xl font-bold tracking-tight">Business Details</h1>
+                    <p className="text-muted-foreground">These details will appear on your invoices.</p>
+                </div>
+                <div className="border rounded-lg p-6 space-y-4">
+                    <div className="space-y-2">
+                        <Skeleton className="h-4 w-32" />
+                        <Skeleton className="h-10 w-full" />
+                    </div>
+                    <div className="space-y-2">
+                        <Skeleton className="h-4 w-32" />
+                        <Skeleton className="h-10 w-full" />
+                    </div>
+                    <div className="space-y-2">
+                        <Skeleton className="h-4 w-32" />
+                        <Skeleton className="h-10 w-full" />
+                    </div>
+                    <Skeleton className="h-10 w-32 mt-4" />
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-6">
@@ -68,7 +93,15 @@ export default function BusinessDetailsPage() {
                         />
                     </div>
                     <div className="grid gap-2">
-                        <Label htmlFor="tax">Tax ID / VAT Number</Label>
+                        <Label htmlFor="tax" className="flex items-center gap-2">
+                            Tax ID / VAT Number
+                            <div className="group relative">
+                                <Info className="w-3 h-3 text-muted-foreground cursor-help" />
+                                <div className="absolute left-0 bottom-full mb-2 w-56 p-2 bg-slate-900 text-white text-xs rounded shadow-lg hidden group-hover:block z-50 pointer-events-none">
+                                    Enter your country-specific Tax ID (e.g., GSTIN for India, VAT for EU).
+                                </div>
+                            </div>
+                        </Label>
                         <Input
                             id="tax"
                             value={details.tax_id}

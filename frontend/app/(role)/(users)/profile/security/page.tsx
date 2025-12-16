@@ -5,6 +5,7 @@ import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
 import { Label } from "@/app/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/app/components/ui/card";
+import { Skeleton } from "@/app/components/ui/skeleton";
 import { Switch } from "@/app/components/ui/switch";
 import { Shield, Key, Smartphone, Lock } from "lucide-react";
 import { toast } from "sonner";
@@ -13,6 +14,7 @@ import { api } from "@/app/lib/api";
 export default function SecurityPage() {
     const [loading, setLoading] = useState(false);
     const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
+    const [statusLoading, setStatusLoading] = useState(true);
     const [twoFactorSetup, setTwoFactorSetup] = useState<any>(null);
     const [twoFactorToken, setTwoFactorToken] = useState("");
     const [setupLoading, setSetupLoading] = useState(false);
@@ -41,6 +43,8 @@ export default function SecurityPage() {
                 return;
             }
             console.error("Failed to load 2FA status", error);
+        } finally {
+            setStatusLoading(false);
         }
     };
 
@@ -177,7 +181,17 @@ export default function SecurityPage() {
                             <CardDescription>Add an extra layer of security to your account.</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
-                            {twoFactorEnabled ? (
+                            {statusLoading ? (
+                                <div className="space-y-4">
+                                    <div className="flex items-center justify-between">
+                                        <div className="space-y-2">
+                                            <Skeleton className="h-4 w-32" />
+                                            <Skeleton className="h-3 w-48" />
+                                        </div>
+                                    </div>
+                                    <Skeleton className="h-10 w-full" />
+                                </div>
+                            ) : twoFactorEnabled ? (
                                 <div className="space-y-4">
                                     <div className="flex items-center gap-2 text-green-600">
                                         <Lock className="w-4 h-4" />
@@ -253,7 +267,7 @@ export default function SecurityPage() {
                                             pattern="[0-9]*"
                                             placeholder="000000"
                                             value={twoFactorToken}
-                                            onChange={(e) => setTwoFactorToken(e.target.value.replace(/\D/g, '').slice(0,6))}
+                                            onChange={(e) => setTwoFactorToken(e.target.value.replace(/\D/g, '').slice(0, 6))}
                                             maxLength={6}
                                         />
                                     </div>
@@ -347,6 +361,11 @@ function SessionsList() {
             const data = await api.getSessions();
             setSessions(data);
         } catch (error) {
+            const msg = (error as any)?.message || '';
+            // Suppress 401 errors to avoid console noise when session expires or during initial load check
+            if (typeof msg === 'string' && msg.includes('Authentication credentials')) {
+                return;
+            }
             console.error("Failed to load sessions", error);
         } finally {
             setLoading(false);
@@ -363,12 +382,49 @@ function SessionsList() {
         }
     };
 
-    if (loading) return <div className="text-sm text-slate-500">Loading active sessions...</div>;
+    const handleRevokeAll = async () => {
+        try {
+            await api.revokeAllOtherSessions();
+            toast.success("All other sessions logged out");
+            loadSessions();
+        } catch (error) {
+            toast.error("Failed to revoke other sessions");
+        }
+    };
+
+    if (loading) {
+        return (
+            <div className="space-y-4">
+                {[1, 2, 3].map((i) => (
+                    <div key={i} className="flex items-center justify-between p-3 rounded-lg border bg-white">
+                        <div className="flex items-center gap-3">
+                            <Skeleton className="w-8 h-8 rounded" />
+                            <div className="space-y-1">
+                                <Skeleton className="h-4 w-32" />
+                                <Skeleton className="h-3 w-48" />
+                            </div>
+                        </div>
+                        <Skeleton className="h-8 w-16" />
+                    </div>
+                ))}
+            </div>
+        );
+    }
 
     if (sessions.length === 0) return <div className="text-sm text-slate-500">No active sessions found.</div>;
 
+    const currentSessionId = sessions.find(s => s.is_current)?.id;
+    const hasOtherSessions = sessions.length > 1;
+
     return (
         <div className="space-y-4">
+            {hasOtherSessions && (
+                <div className="flex justify-end border-b pb-4 mb-2">
+                    <Button variant="outline" size="sm" onClick={handleRevokeAll} className="text-red-600 hover:text-red-700 hover:bg-red-50">
+                        Logout of all other devices
+                    </Button>
+                </div>
+            )}
             {sessions.map((session) => (
                 <div key={session.id} className={`flex items-center justify-between p-3 rounded-lg border ${session.is_current ? 'bg-slate-50 border-green-200' : 'bg-white'}`}>
                     <div className="flex items-center gap-3">
