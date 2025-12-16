@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { api } from '@/app/lib/api';
 import { Badge } from '@/components/ui/badge';
 import { Download, Loader2, FileText, AlertCircle } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface Task {
     id: number;
@@ -15,13 +16,18 @@ interface Task {
     created_at: string;
 }
 
+import { useAuth } from '@/app/context/AuthContext'; // Import useAuth
+
 export const HistoryTable = () => {
     const [tasks, setTasks] = useState<Task[]>([]);
     const [loading, setLoading] = useState(true);
+    const { user } = useAuth(); // Get user from context
 
     useEffect(() => {
-        loadHistory();
-    }, []);
+        if (user) {
+            loadHistory();
+        }
+    }, [user]);
 
     const loadHistory = async () => {
         try {
@@ -31,15 +37,35 @@ export const HistoryTable = () => {
             } else if (data.results) {
                 setTasks(data.results);
             }
-        } catch (e) {
-            console.error(e);
+        } catch (e: any) {
+            // Suppress 401 errors as they are expected when session expires/not present
+            if (e?.status !== 401) {
+                console.error(e);
+            }
         } finally {
             setLoading(false);
         }
     };
 
     if (loading) {
-        return <div className="flex justify-center p-8"><Loader2 className="animate-spin text-orange-500" /></div>;
+        return (
+            <div className="w-full overflow-hidden rounded-xl border border-gray-200 bg-white/50 backdrop-blur-sm shadow-sm p-4">
+                <div className="space-y-4">
+                    {[1, 2, 3, 4, 5].map((i) => (
+                        <div key={i} className="flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                                <div className="h-8 w-8 rounded-full bg-muted animate-pulse" />
+                                <div className="space-y-2">
+                                    <Skeleton className="h-4 w-48" />
+                                    <Skeleton className="h-3 w-32" />
+                                </div>
+                            </div>
+                            <Skeleton className="h-6 w-24 rounded-full" />
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
     }
 
     if (tasks.length === 0) {

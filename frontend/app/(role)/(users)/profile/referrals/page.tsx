@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { api } from "@/app/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/app/components/ui/card";
 import { Button } from "@/app/components/ui/button";
+import { Skeleton } from "@/app/components/ui/skeleton";
 import { Gift, Copy, Loader2, Users, Star } from "lucide-react";
 import { Input } from "@/app/components/ui/input";
 import { toast } from "sonner";
@@ -71,7 +72,20 @@ export default function ReferralsPage() {
                     </CardHeader>
                     <CardContent className="space-y-6">
                         {loading ? (
-                            <Loader2 className="animate-spin mx-auto text-slate-400" />
+                            <div className="space-y-6">
+                                <div className="flex justify-between items-center border-b pb-4">
+                                    <div className="flex items-center gap-3"><Skeleton className="h-8 w-8 rounded-full" /><Skeleton className="h-4 w-32" /></div>
+                                    <Skeleton className="h-6 w-8" />
+                                </div>
+                                <div className="flex justify-between items-center border-b pb-4">
+                                    <div className="flex items-center gap-3"><Skeleton className="h-8 w-8 rounded-full" /><Skeleton className="h-4 w-32" /></div>
+                                    <Skeleton className="h-6 w-8" />
+                                </div>
+                                <div className="flex justify-between items-center">
+                                    <div className="flex items-center gap-3"><Skeleton className="h-8 w-8 rounded-full" /><Skeleton className="h-4 w-32" /></div>
+                                    <Skeleton className="h-6 w-16" />
+                                </div>
+                            </div>
                         ) : (
                             <>
                                 <div className="flex justify-between items-center border-b pb-4">
@@ -112,7 +126,7 @@ export default function ReferralsPage() {
                         </div>
                         <div className="flex gap-3">
                             <div className="font-bold text-slate-300">2</div>
-                            <p>They sign up for a Ninja PDF account.</p>
+                            <p>They sign up for an 18+ PDF account.</p>
                         </div>
                         <div className="flex gap-3">
                             <div className="font-bold text-slate-300">3</div>

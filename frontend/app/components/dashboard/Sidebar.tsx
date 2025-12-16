@@ -6,8 +6,9 @@ import { cn } from "@/app/lib/utils";
 import {
     User, Shield, Users, Workflow, History,
     PenTool, CreditCard,
-    ChevronDown, ChevronRight, FileText, Send, Inbox, CheckCircle, LayoutTemplate, Contact, Settings,
-    Receipt, Building, Trash2, Gift
+    ChevronDown, ChevronRight,
+    LayoutTemplate, Settings,
+    Receipt, Trash2, Gift, Folder
 } from "lucide-react";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -80,14 +81,15 @@ export function Sidebar() {
     const pathname = usePathname();
     const { user } = useAuth();
     const [signaturesOpen, setSignaturesOpen] = useState(pathname?.includes("/signatures") || false);
-    const [billingOpen, setBillingOpen] = useState(pathname?.includes("/billing") || false);
+    const [billingOpen, setBillingOpen] = useState(pathname?.includes("/profile/billing") || false);
 
     const isActive = (path: string) => pathname === path;
-    const isGroupActive = (path: string) => pathname?.startsWith(path);
 
     return (
-        <aside className="w-64 h-screen sticky top-0 border-r bg-background/50 backdrop-blur-xl flex flex-col py-6 overflow-y-auto no-scrollbar">
-            <div className="px-6 mb-8">
+        <aside className="w-full h-full border-r bg-background/50 backdrop-blur-xl flex flex-col py-6 overflow-y-auto no-scrollbar">
+
+            {/* Account Section */}
+            <div className="px-6 mb-2 mt-4">
                 <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Account</h2>
             </div>
 
@@ -97,6 +99,12 @@ export function Sidebar() {
                     icon={User}
                     label="My Account"
                     active={isActive("/profile")}
+                />
+                <SidebarItem
+                    href="/files"
+                    icon={Folder}
+                    label="My Files"
+                    active={isActive("/files")}
                 />
                 <SidebarItem
                     href="/profile/security"
@@ -123,62 +131,12 @@ export function Sidebar() {
                     active={isActive("/profile/tasks")}
                 />
 
-                {/* SUPER ADMIN: Special Section */}
-                {user?.role === 'SUPER_ADMIN' && (
-                    <>
-                        <div className="pt-4 pb-2 px-3">
-                            <h2 className="text-xs font-semibold text-violet-600 uppercase tracking-wider">Super Admin</h2>
-                        </div>
-                        <SidebarItem
-                            href="/super-admin"
-                            icon={LayoutTemplate}
-                            label="Dashboard"
-                            active={isActive("/super-admin")}
-                        />
-                        <SidebarItem
-                            href="/super-admin/plans"
-                            icon={Settings}
-                            label="Plan Management"
-                            active={isActive("/super-admin/plans")}
-                        />
-                        <SidebarItem
-                            href="/super-admin/payments"
-                            icon={Receipt}
-                            label="Global Payments"
-                            active={isActive("/super-admin/payments")}
-                        />
-                        {/* User Management is also available to SUPER_ADMIN via /admin/users path */}
-                        <SidebarItem
-                            href="/admin/users"
-                            icon={Users}
-                            label="User Management"
-                            active={isActive("/admin/users")}
-                        />
-                        <div className="pt-4 border-t mt-4 mx-2" />
-                    </>
-                )}
-
-                {/* ADMIN (Regular Admin) Section - If NOT Super Admin but IS Admin */}
-                {user?.role === 'ADMIN' && (
-                    <>
-                        <div className="pt-4 pb-2 px-3">
-                            <h2 className="text-xs font-semibold text-blue-600 uppercase tracking-wider">Admin</h2>
-                        </div>
-                        <SidebarItem
-                            href="/admin/users"
-                            icon={Users}
-                            label="User Management"
-                            active={isActive("/admin/users")}
-                        />
-                        <div className="pt-4 border-t mt-4 mx-2" />
-                    </>
-                )}
-
-                {/* Signatures Group */}
-                <div className="pt-4 pb-2 px-3">
+                {/* Productivity Section */}
+                <div className="pt-6 pb-2 px-3">
                     <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Productivity</h2>
                 </div>
 
+                {/* Signatures Group */}
                 <SidebarItem
                     icon={PenTool}
                     label="Signatures"
@@ -195,12 +153,11 @@ export function Sidebar() {
                             className="overflow-hidden space-y-0.5 mb-2"
                         >
                             <SubMenuItem href="/signatures" label="Overview" active={isActive("/signatures")} />
-                            <SubMenuItem href="/signatures/sent" label="Sent" active={isActive("/signatures/sent")} />
                             <SubMenuItem href="/signatures/inbox" label="Inbox" active={isActive("/signatures/inbox")} />
-                            <SubMenuItem href="/signatures/signed" label="Signed" active={isActive("/signatures/signed")} />
+                            <SubMenuItem href="/signatures/sent" label="Sent" active={isActive("/signatures/sent")} />
+                            <SubMenuItem href="/signatures/signed" label="Completed" active={isActive("/signatures/signed")} />
                             <SubMenuItem href="/signatures/templates" label="Templates" active={isActive("/signatures/templates")} />
                             <SubMenuItem href="/signatures/contacts" label="Contacts" active={isActive("/signatures/contacts")} />
-                            <SubMenuItem href="/signatures/settings" label="Settings" active={isActive("/signatures/settings")} />
                         </motion.div>
                     )}
                 </AnimatePresence>
@@ -221,14 +178,12 @@ export function Sidebar() {
                             exit={{ height: 0, opacity: 0 }}
                             className="overflow-hidden space-y-0.5 mb-2"
                         >
-                            <SubMenuItem href="/profile/billing" label="Plans & Packages" active={isActive("/profile/billing")} />
-                            <SubMenuItem href="/profile/billing/business" label="Business Details" active={isActive("/profile/billing/business")} />
+                            <SubMenuItem href="/profile/billing" label="Plans" active={isActive("/profile/billing")} />
                             <SubMenuItem href="/profile/billing/invoices" label="Invoices" active={isActive("/profile/billing/invoices")} />
+                            <SubMenuItem href="/profile/billing/business" label="Settings" active={isActive("/profile/billing/business")} />
                         </motion.div>
                     )}
                 </AnimatePresence>
-
-                <div className="pt-4 border-t mt-4 mx-2" />
 
                 <SidebarItem
                     href="/profile/trash"
@@ -243,9 +198,56 @@ export function Sidebar() {
                     active={isActive("/profile/referrals")}
                 />
 
-            </div>
 
-            {/* Bottom Profile/Logout area handled by Header usually, but can put simple logout here if requested */}
+                {/* SUPER ADMIN: Special Section */}
+                {user?.role === 'SUPER_ADMIN' && (
+                    <>
+                        <div className="pt-6 pb-2 px-3">
+                            <h2 className="text-xs font-semibold text-violet-600 uppercase tracking-wider">Super Admin</h2>
+                        </div>
+                        <SidebarItem
+                            href="/super-admin"
+                            icon={LayoutTemplate}
+                            label="Dashboard"
+                            active={isActive("/super-admin")}
+                        />
+                        <SidebarItem
+                            href="/super-admin/plans"
+                            icon={Settings}
+                            label="Plan Management"
+                            active={isActive("/super-admin/plans")}
+                        />
+                        <SidebarItem
+                            href="/super-admin/payments"
+                            icon={Receipt}
+                            label="Global Payments"
+                            active={isActive("/super-admin/payments")}
+                        />
+                        <SidebarItem
+                            href="/admin/users"
+                            icon={Users}
+                            label="User Management"
+                            active={isActive("/admin/users")}
+                        />
+                    </>
+                )}
+
+                {/* ADMIN (Regular Admin) Section */}
+                {user?.role === 'ADMIN' && (
+                    <>
+                        <div className="pt-6 pb-2 px-3">
+                            <h2 className="text-xs font-semibold text-blue-600 uppercase tracking-wider">Admin</h2>
+                        </div>
+                        <SidebarItem
+                            href="/admin/users"
+                            icon={Users}
+                            label="User Management"
+                            active={isActive("/admin/users")}
+                        />
+                    </>
+                )}
+
+            </div>
         </aside>
     );
 }

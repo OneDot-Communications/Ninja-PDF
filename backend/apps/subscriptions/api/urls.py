@@ -22,6 +22,9 @@ router.register(r'business-details', BusinessDetailsViewSet, basename='business-
 router.register(r'referrals', ReferralViewSet, basename='referrals')
 router.register(r'payments', PaymentViewSet, basename='payments')
 
+from apps.subscriptions.api.webhooks import stripe_webhook
+
 urlpatterns = [
     path('', include(router.urls)),
+    path('webhook/', stripe_webhook, name='stripe-webhook'),
 ]

@@ -18,6 +18,7 @@ urlpatterns = [
     path('api/workflows/', include('apps.workflows.api.urls')),
     path('api/tools/', include('apps.tools.api.urls')),
     path('api/signatures/', include('apps.signatures.api.urls')),
+    path('api/jobs/', include('apps.jobs.api.urls')),
     
     # Core system endpoints
     path('api/core/', include('core.api_urls')),
@@ -25,3 +26,10 @@ urlpatterns = [
     # Allauth social login
     path('accounts/', include('allauth.urls')),
 ]
+
+from django.conf import settings
+from django.conf.urls.static import static
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

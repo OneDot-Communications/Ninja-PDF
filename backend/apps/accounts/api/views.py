@@ -28,6 +28,22 @@ import base64
 
 User = get_user_model()
 
+class DataExportView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        """Request data export."""
+        user = request.user
+        # Trigger async task in real world.
+        # Here we just send the email with a mock link.
+        from core.services.email_service import EmailService
+        
+        # Mock link
+        link = f"{os.getenv('FRONTEND_HOST', 'https://18pluspdf.com')}/api/users/export/{user.id}/download"
+        EmailService.send_data_export_ready(user, link)
+        
+        return Response({'status': 'Export started. You will receive an email shortly.'})
+
 class SignupView(RegisterView):
     # Using dj-rest-auth's RegisterView which handles signal sending for email verification
     serializer_class = SignupSerializer
@@ -58,7 +74,27 @@ from django.utils.decorators import method_decorator
 from rest_framework import throttling
 from django.core.cache import cache
 from rest_framework_simplejwt.tokens import RefreshToken
-from django.conf import settings
+from dj_rest_auth.views import UserDetailsView
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
+
+class CustomUserDetailsView(UserDetailsView):
+    parser_classes = (MultiPartParser, FormParser, JSONParser)
+
+class UserAvatarUploadView(generics.UpdateAPIView):
+    serializer_class = UserSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = (MultiPartParser, FormParser)
+
+    def get_object(self):
+        return self.request.user
+
+    def delete(self, request, *args, **kwargs):
+        user = self.get_object()
+        user.avatar.delete(save=False) # delete file from storage
+        user.avatar = None
+        user.save()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
 from apps.accounts.models.audit import AuthAuditLog
 from apps.accounts.services.cookie_utils import set_auth_cookies, clear_auth_cookies
 
@@ -129,6 +165,28 @@ class CustomLoginView(LoginView):
                     except Exception:
                         pass
 
+            # Check if failure is due to unverified email
+            if email:
+                try:
+                    user_obj = User.objects.get(email=email)
+                    # Check if verified (using our custom field or allauth)
+                    from allauth.account.models import EmailAddress
+                    email_address = EmailAddress.objects.filter(user=user_obj, email=email).first()
+                    
+                    if email_address and not email_address.verified:
+                         # Auto-resend verification email
+                         from allauth.account.utils import send_email_confirmation
+                         send_email_confirmation(request, user_obj)
+                         
+                         return Response({
+                             'error': {
+                                 'code': 'email_not_verified', 
+                                 'message': 'Email not verified. A new verification link has been sent to your inbox.'
+                             }
+                         }, status=403)
+                except Exception:
+                    pass
+
             return response
 
         if response.status_code == 200:
@@ -177,15 +235,33 @@ class CustomLoginView(LoginView):
                     return Response({'error': {'code': 'invalid_2fa', 'message': 'Invalid 2FA token'}}, status=400)
 
             # --- FORTRESS SECURITY UPGRADE ---
-            # Create a Session Record
             from apps.accounts.models.session import UserSession
             from apps.accounts.services.security_utils import get_client_ip, get_device_fingerprint
+            
+            current_fingerprint = get_device_fingerprint(request)
+            client_ip = get_client_ip(request)
+            user_agent = request.META.get('HTTP_USER_AGENT', 'Unknown')
+            
+            # Check for New Device Login (Security Alert)
+            # If user has logged in before, but not with this fingerprint
+            if UserSession.objects.filter(user=user).exists() and not UserSession.objects.filter(user=user, device_fingerprint=current_fingerprint).exists():
+                from django.core.mail import send_mail
+                try:
+                    send_mail(
+                        subject='Security Alert: New Login to 18+ PDF',
+                        message=f"Hello {user.email},\n\nWe detected a new login to your account.\n\nTime: {os.environ.get('TZ', 'UTC')}\nIP Address: {client_ip}\nDevice: {user_agent}\n\nIf this was you, you can ignore this email.\nIf not, please reset your password immediately.\n\n18+ PDF Security Team",
+                        from_email=None, #/settings.DEFAULT_FROM_EMAIL
+                        recipient_list=[user.email],
+                        fail_silently=True
+                    )
+                except Exception:
+                    pass
 
-            UserSession.objects.create(
+            session = UserSession.objects.create(
                 user=user,
-                ip_address=get_client_ip(request),
-                user_agent=request.META.get('HTTP_USER_AGENT', ''),
-                device_fingerprint=get_device_fingerprint(request)
+                ip_address=client_ip,
+                user_agent=user_agent,
+                device_fingerprint=current_fingerprint
             )
             # -------------------------------
 
@@ -199,15 +275,30 @@ class CustomLoginView(LoginView):
 
             # Generate and set secure cookies for JWT tokens (explicitly)
             refresh = RefreshToken.for_user(user)
+            # Embed session_id into the token payload
+            refresh['session_id'] = str(session.id)
+            
             access = refresh.access_token
+            access['session_id'] = str(session.id)
+
             set_auth_cookies(response, str(access), str(refresh), request)
+            
+            # CRITICAL: Update the response data with the new tokens so the frontend uses them
+            if hasattr(response, 'data') and isinstance(response.data, dict):
+                response.data['access'] = str(access)
+                response.data['refresh'] = str(refresh)
+                if 'user' not in response.data:
+                    from apps.accounts.api.serializers import UserSerializer
+                    response.data['user'] = UserSerializer(user).data
 
         return response
 
 class GoogleLogin(SocialLoginView):
     adapter_class = GoogleOAuth2Adapter
     # Frontend callback page for Google login
-    callback_url = "http://127.0.0.1:3000/auth/google/callback"
+    @property
+    def callback_url(self):
+        return os.getenv('FRONTEND_HOST', 'http://127.0.0.1:3000') + '/auth/google/callback'
     client_class = OAuth2Client
 
 class GoogleRedirectView(APIView):
@@ -248,6 +339,9 @@ class UserManagementViewSet(viewsets.ModelViewSet):
         super().perform_destroy(instance)
 
 
+from rest_framework.decorators import action
+from apps.accounts.services.security_utils import get_device_fingerprint
+
 class UserSessionViewSet(viewsets.ModelViewSet):
     """
     ViewSet for users to view and revoke their own sessions.
@@ -265,6 +359,40 @@ class UserSessionViewSet(viewsets.ModelViewSet):
         instance = self.get_object()
         self.perform_destroy(instance)
         return Response({"message": "Session revoked successfully"}, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=['post'])
+    def revoke_others(self, request):
+        """Revoke all sessions except the current one"""
+        from apps.accounts.models.session import UserSession
+        
+        # Helper to safely get session_id from token
+        current_session_id = None
+        current_fingerprint = get_device_fingerprint(request) # Always get fingerprint for fallback/debug
+
+        try:
+            # request.auth is the AccessToken object
+            # Debug logging
+            print(f"DEBUG: revoke_others user={request.user.email} auth_type={type(request.auth)} auth={request.auth}")
+            
+            if request.auth and (isinstance(request.auth, dict) or hasattr(request.auth, 'get')):
+                 current_session_id = request.auth.get('session_id')
+                 print(f"DEBUG: Found session_id in token: {current_session_id}")
+            else:
+                 print("DEBUG: No session_id in token")
+        except Exception as e:
+            print(f"DEBUG: Error extracting session_id: {e}")
+            pass
+
+        if current_session_id:
+            # Precise revocation using session_id
+            count, _ = UserSession.objects.filter(user=request.user).exclude(id=current_session_id).delete()
+            print(f"DEBUG: Revoked {count} sessions using session_id exclusion. Kept {current_session_id}")
+        else:
+            # Fallback legacy behavior (device fingerprint)
+            count, _ = UserSession.objects.filter(user=request.user).exclude(device_fingerprint=current_fingerprint).delete()
+            print(f"DEBUG: Revoked {count} sessions using fingerprint exclusion. Kept fingerprint {current_fingerprint}")
+        
+        return Response({"message": f"Revoked {count} other sessions"}, status=status.HTTP_200_OK)
 
 
 class TwoFactorStatusView(APIView):

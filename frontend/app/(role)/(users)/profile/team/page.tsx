@@ -15,6 +15,7 @@ import {
     DialogTitle,
     DialogTrigger,
 } from "@/app/components/ui/dialog";
+import { Skeleton } from "@/app/components/ui/skeleton";
 import {
     Table,
     TableBody,
@@ -97,7 +98,35 @@ export default function TeamPage() {
             </div>
 
             {loading ? (
-                <div>Loading teams...</div>
+                <div className="grid gap-6 md:grid-cols-[250px_1fr]">
+                    <div className="space-y-4">
+                        {[1, 2, 3].map(i => (
+                            <Skeleton key={i} className="h-16 w-full rounded-lg" />
+                        ))}
+                    </div>
+                    <Card>
+                        <CardHeader>
+                            <Skeleton className="h-8 w-48 mb-2" />
+                            <Skeleton className="h-4 w-32" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="space-y-4">
+                                {[1, 2, 3].map(i => (
+                                    <div key={i} className="flex justify-between">
+                                        <div className="flex gap-3">
+                                            <Skeleton className="h-8 w-8 rounded-full" />
+                                            <div className="space-y-1">
+                                                <Skeleton className="h-4 w-32" />
+                                                <Skeleton className="h-3 w-48" />
+                                            </div>
+                                        </div>
+                                        <Skeleton className="h-6 w-16" />
+                                    </div>
+                                ))}
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
             ) : teams.length === 0 ? (
                 <Card className="text-center py-12">
                     <CardContent>
@@ -180,48 +209,106 @@ export default function TeamPage() {
                                     </DialogContent>
                                 </Dialog>
                             </CardHeader>
-                            <CardContent>
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Member</TableHead>
-                                            <TableHead>Role</TableHead>
-                                            <TableHead>Joined</TableHead>
-                                            <TableHead className="text-right">Actions</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {activeTeam.memberships?.map((member: any) => (
-                                            <TableRow key={member.id}>
-                                                <TableCell>
-                                                    <div className="flex items-center gap-3">
-                                                        <Avatar className="h-8 w-8">
-                                                            <AvatarImage src="" />
-                                                            <AvatarFallback className="bg-slate-100">{member.user_details?.first_name?.[0] || 'U'}</AvatarFallback>
-                                                        </Avatar>
-                                                        <div>
-                                                            <div className="font-medium text-sm">{member.user_details?.first_name} {member.user_details?.last_name}</div>
-                                                            <div className="text-xs text-slate-500">{member.user_details?.email}</div>
-                                                        </div>
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell>
-                                                    <Badge variant={member.role === 'ADMIN' ? 'default' : 'secondary'}>
-                                                        {member.role}
-                                                    </Badge>
-                                                </TableCell>
-                                                <TableCell className="text-xs text-slate-500">
-                                                    {new Date(member.joined_at).toLocaleDateString()}
-                                                </TableCell>
-                                                <TableCell className="text-right">
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-red-500">
-                                                        <Trash2 className="w-4 h-4" />
-                                                    </Button>
-                                                </TableCell>
+                            <CardContent className="space-y-6">
+                                {/* Members Table */}
+                                <div>
+                                    <h3 className="text-lg font-medium mb-4">Members</h3>
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>Member</TableHead>
+                                                <TableHead>Role</TableHead>
+                                                <TableHead>Joined</TableHead>
+                                                <TableHead className="text-right">Actions</TableHead>
                                             </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {activeTeam.memberships?.map((member: any) => (
+                                                <TableRow key={member.id}>
+                                                    <TableCell>
+                                                        <div className="flex items-center gap-3">
+                                                            <Avatar className="h-8 w-8">
+                                                                <AvatarImage src={member.user_details?.avatar || undefined} />
+                                                                <AvatarFallback className="bg-slate-100">{member.user_details?.first_name?.[0] || 'U'}</AvatarFallback>
+                                                            </Avatar>
+                                                            <div>
+                                                                <div className="font-medium text-sm">{member.user_details?.first_name} {member.user_details?.last_name}</div>
+                                                                <div className="text-xs text-slate-500">{member.user_details?.email}</div>
+                                                            </div>
+                                                        </div>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Badge variant={member.role === 'ADMIN' ? 'default' : 'secondary'}>
+                                                            {member.role}
+                                                        </Badge>
+                                                    </TableCell>
+                                                    <TableCell className="text-xs text-slate-500">
+                                                        {new Date(member.joined_at).toLocaleDateString()}
+                                                    </TableCell>
+                                                    <TableCell className="text-right">
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-red-500">
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </Button>
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                </div>
+
+                                {/* Pending Invitations Table */}
+                                {activeTeam.invitations && activeTeam.invitations.length > 0 && (
+                                    <div>
+                                        <h3 className="text-lg font-medium mb-4 pt-4 border-t">Pending Invitations</h3>
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead>Email</TableHead>
+                                                    <TableHead>Role</TableHead>
+                                                    <TableHead>Sent At</TableHead>
+                                                    <TableHead className="text-right">Actions</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {activeTeam.invitations.map((invite: any) => (
+                                                    <TableRow key={invite.id}>
+                                                        <TableCell>
+                                                            <div className="flex items-center gap-2">
+                                                                <Mail className="w-4 h-4 text-slate-400" />
+                                                                <span className="text-sm">{invite.email}</span>
+                                                            </div>
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <Badge variant="outline">{invite.role}</Badge>
+                                                        </TableCell>
+                                                        <TableCell className="text-xs text-slate-500">
+                                                            {new Date(invite.created_at).toLocaleDateString()}
+                                                        </TableCell>
+                                                        <TableCell className="text-right">
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                                                                onClick={async () => {
+                                                                    if (!confirm(`Revoke invitation for ${invite.email}?`)) return;
+                                                                    try {
+                                                                        await api.revokeTeamInvitation(activeTeam.id, invite.id);
+                                                                        toast.success("Invitation revoked");
+                                                                        fetchTeams();
+                                                                    } catch (err) {
+                                                                        toast.error("Failed to revoke invitation");
+                                                                    }
+                                                                }}
+                                                            >
+                                                                Revoke
+                                                            </Button>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    </div>
+                                )}
                             </CardContent>
                         </Card>
                     )}
