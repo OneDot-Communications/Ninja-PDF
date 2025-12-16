@@ -16,8 +16,8 @@ class WorkflowSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Workflow
-        fields = ['id', 'name', 'description', 'definition', 'tasks', 'task_count', 'is_active', 'created_at', 'updated_at']
-        read_only_fields = ['id', 'created_at', 'updated_at']
+        fields = ['id', 'name', 'description', 'definition', 'tasks', 'task_count', 'is_active', 'created_at', 'updated_at', 'last_run_at']
+        read_only_fields = ['id', 'created_at', 'updated_at', 'last_run_at']
     
     def get_task_count(self, obj):
         return obj.tasks.count()

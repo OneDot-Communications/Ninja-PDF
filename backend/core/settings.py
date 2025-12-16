@@ -254,12 +254,13 @@ REST_FRAMEWORK = {
     'DEFAULT_THROTTLE_RATES': {
         'login': '10/min',
         'anon': '20/min',
+        'user': '100/min',
         'password_reset': '5/hour',
         'registration': '5/hour',
         'otp': '10/min',
         'dj_rest_auth': '100/min',
     }
-}
+} 
 
 # JWT Configuration
 SIMPLE_JWT = {
@@ -344,13 +345,15 @@ SOCIALACCOUNT_AUTO_SIGNUP = True
 
 # CORS - Both localhost (development) and deployed URL (production)
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",  # Frontend dev URL
+    "http://localhost:3000",  # Frontend dev URL (standard)
     "http://127.0.0.1:3000",
+    # Additional dev server port (Next started on 3001 when 3000 was busy)
+    "http://localhost:3001",
+    "http://127.0.0.1:3001",
+    "http://192.168.0.8:3001",
     # Production URLs (add your deployed frontend URL here)
     "https://ninja-pdf.onrender.com",
     "https://ninjapdf.com",
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
     "https://18pluspdf.com",
     "https://www.18pluspdf.com",
 ]
@@ -362,6 +365,9 @@ ALLOWED_HOSTS = ["localhost", "127.0.0.1", "18pluspdf.com", "api.18pluspdf.com",
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
+    "http://localhost:3001",
+    "http://127.0.0.1:3001",
+    "http://192.168.0.8:3001",
     "https://18pluspdf.com",
     "https://www.18pluspdf.com",
 ]

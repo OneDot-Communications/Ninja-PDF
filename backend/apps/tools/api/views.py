@@ -121,7 +121,47 @@ class MarkdownToPDFView(PDFToolAPIView):
             return error
         
         try:
-            return Response({'error': 'Markdown to PDF not yet implemented'}, status=status.HTTP_501_NOT_IMPLEMENTED)
+            import markdown
+            from xhtml2pdf import pisa
+            
+            # Read markdown content
+            md_content = file.read().decode('utf-8')
+            
+            # Convert to HTML
+            html_content = markdown.markdown(md_content)
+            
+            # Add basic styling
+            full_html = f"""
+            <html>
+                <head>
+                    <style>
+                        body {{ font-family: sans-serif; padding: 20px; }}
+                        pre {{ background: #f4f4f4; padding: 10px; border-radius: 5px; }}
+                        code {{ font-family: monospace; }}
+                        blockquote {{ border-left: 4px solid #ccc; padding-left: 10px; color: #666; }}
+                        table {{ border-collapse: collapse; width: 100%; }}
+                        th, td {{ border: 1px solid #ddd; padding: 8px; }}
+                        th {{ background-color: #f2f2f2; }}
+                        img {{ max-width: 100%; }}
+                    </style>
+                </head>
+                <body>
+                    {html_content}
+                </body>
+            </html>
+            """
+            
+            output = io.BytesIO()
+            pisa_status = pisa.CreatePDF(io.BytesIO(full_html.encode('utf-8')), dest=output)
+            
+            if pisa_status.err:
+                return Response({'error': 'PDF generation failed'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            
+            output.seek(0)
+            
+            response = HttpResponse(output.read(), content_type='application/pdf')
+            response['Content-Disposition'] = f'attachment; filename="{file.name.rsplit(".", 1)[0]}.pdf"'
+            return response
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 

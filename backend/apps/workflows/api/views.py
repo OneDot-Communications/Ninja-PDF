@@ -2,6 +2,7 @@
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from django.utils import timezone
 from apps.workflows.models.workflow import Workflow, Task
 from apps.workflows.api.serializers import WorkflowSerializer, TaskSerializer
 
@@ -16,6 +17,14 @@ class WorkflowViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
+
+    @action(detail=True, methods=['post'])
+    def log_run(self, request, pk=None):
+        """Updates the last_run_at timestamp for the workflow."""
+        workflow = self.get_object()
+        workflow.last_run_at = timezone.now()
+        workflow.save(update_fields=['last_run_at'])
+        return Response({'status': 'timestamp updated', 'last_run_at': workflow.last_run_at})
 
     @action(detail=True, methods=['post'])
     def execute(self, request, pk=None):

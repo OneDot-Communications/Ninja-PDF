@@ -38,7 +38,7 @@ class InvoiceSerializer(serializers.Serializer):
 class FeatureSerializer(serializers.Serializer):
     id = serializers.IntegerField(read_only=True)
     name = serializers.CharField()
-    slug = serializers.CharField()
+    code = serializers.CharField()
     description = serializers.CharField(allow_blank=True)
 
 

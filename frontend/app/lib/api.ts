@@ -127,31 +127,50 @@ export const api = {
         options.body = JSON.stringify(data);
       }
     }
-    const response = await fetch(url, options);
+    let response: Response;
+    try {
+      response = await fetch(url, options);
+    } catch (e) {
+      const msg = (e as Error).message || String(e);
+      throw new Error(`Network request failed to ${url}: ${msg}. Possible causes: backend not running, network error, CORS policy blocking the request, or mixed-content (HTTP/HTTPS) when serving the frontend over HTTPS.`);
+    }
     if (!response.ok) {
-      const errorBody = await response.text();
-      let errorMessage = errorBody;
+      const contentType = response.headers.get("content-type") || "";
       let parsedBody: any = null;
-      try {
-        const jsonError = JSON.parse(errorBody);
-        parsedBody = jsonError;
-        // Handle Django Rest Framework standard error format
-        if (jsonError.non_field_errors && Array.isArray(jsonError.non_field_errors)) {
-          errorMessage = jsonError.non_field_errors.join(' ');
-        } else if (jsonError.detail) {
-          errorMessage = jsonError.detail;
-        } else if (jsonError.error && typeof jsonError.error === 'string') {
-          errorMessage = jsonError.error;
-        } else if (jsonError.error && typeof jsonError.error === 'object' && jsonError.error.message) {
-          errorMessage = jsonError.error.message;
-        } else if (typeof jsonError === 'object') {
-          // Fallback for object errors (values)
-          errorMessage = Object.values(jsonError).flat().join(' ');
+      let errorBody: string | null = null;
+      let errorMessage = `API error ${response.status}`;
+
+      if (contentType.includes("application/json")) {
+        try {
+          parsedBody = await response.json();
+          // Handle Django Rest Framework standard error format
+          if (parsedBody.non_field_errors && Array.isArray(parsedBody.non_field_errors)) {
+            errorMessage = parsedBody.non_field_errors.join(' ');
+          } else if (parsedBody.detail) {
+            errorMessage = parsedBody.detail;
+          } else if (parsedBody.error && typeof parsedBody.error === 'string') {
+            errorMessage = parsedBody.error;
+          } else if (parsedBody.error && typeof parsedBody.error === 'object' && parsedBody.error.message) {
+            errorMessage = parsedBody.error.message;
+          } else if (typeof parsedBody === 'object') {
+            try {
+              errorMessage = Object.values(parsedBody).flat().join(' ');
+            } catch (e) {
+              // leave default message
+            }
+          }
+        } catch (e) {
+          // JSON parse failed — fallback to text
+          errorBody = await response.text();
+          if (errorBody) errorMessage = errorBody;
         }
-      } catch (e) {
-        // Not JSON, keep text
+      } else {
+        // Not JSON, read as text
+        errorBody = await response.text();
+        if (errorBody) errorMessage = errorBody;
       }
-      const err = new Error(errorMessage || `API error ${response.status}`) as any;
+
+      const err = new Error(errorMessage) as any;
       err.status = response.status;
       err.body = parsedBody || errorBody;
       throw err;
@@ -175,31 +194,50 @@ export const api = {
     if (data) {
       options.body = JSON.stringify(data);
     }
-    const response = await fetch(url, options);
+    let response: Response;
+    try {
+      response = await fetch(url, options);
+    } catch (e) {
+      const msg = (e as Error).message || String(e);
+      throw new Error(`Network request failed to ${url}: ${msg}. Possible causes: backend not running, network error, CORS policy blocking the request, or mixed-content (HTTP/HTTPS) when serving the frontend over HTTPS.`);
+    }
     if (!response.ok) {
-      const errorBody = await response.text();
-      let errorMessage = errorBody;
+      const contentType = response.headers.get("content-type") || "";
       let parsedBody: any = null;
-      try {
-        const jsonError = JSON.parse(errorBody);
-        parsedBody = jsonError;
-        // Handle Django Rest Framework standard error format
-        if (jsonError.non_field_errors && Array.isArray(jsonError.non_field_errors)) {
-          errorMessage = jsonError.non_field_errors.join(' ');
-        } else if (jsonError.detail) {
-          errorMessage = jsonError.detail;
-        } else if (jsonError.error && typeof jsonError.error === 'string') {
-          errorMessage = jsonError.error;
-        } else if (jsonError.error && typeof jsonError.error === 'object' && jsonError.error.message) {
-          errorMessage = jsonError.error.message;
-        } else if (typeof jsonError === 'object') {
-          // Fallback for object errors (values)
-          errorMessage = Object.values(jsonError).flat().join(' ');
+      let errorBody: string | null = null;
+      let errorMessage = `API error ${response.status}`;
+
+      if (contentType.includes("application/json")) {
+        try {
+          parsedBody = await response.json();
+          // Handle Django Rest Framework standard error format
+          if (parsedBody.non_field_errors && Array.isArray(parsedBody.non_field_errors)) {
+            errorMessage = parsedBody.non_field_errors.join(' ');
+          } else if (parsedBody.detail) {
+            errorMessage = parsedBody.detail;
+          } else if (parsedBody.error && typeof parsedBody.error === 'string') {
+            errorMessage = parsedBody.error;
+          } else if (parsedBody.error && typeof parsedBody.error === 'object' && parsedBody.error.message) {
+            errorMessage = parsedBody.error.message;
+          } else if (typeof parsedBody === 'object') {
+            try {
+              errorMessage = Object.values(parsedBody).flat().join(' ');
+            } catch (e) {
+              // leave default
+            }
+          }
+        } catch (e) {
+          // JSON parse failed — fallback to text
+          errorBody = await response.text();
+          if (errorBody) errorMessage = errorBody;
         }
-      } catch (e) {
-        // Not JSON, keep text
+      } else {
+        // Not JSON, read as text
+        errorBody = await response.text();
+        if (errorBody) errorMessage = errorBody;
       }
-      const err = new Error(errorMessage || `API error ${response.status}`) as any;
+
+      const err = new Error(errorMessage) as any;
       err.status = response.status;
       err.body = parsedBody || errorBody;
       throw err;
@@ -434,6 +472,9 @@ export const api = {
   // Workflows
   getWorkflows: () => api.request("GET", "/api/workflows/workflows/"),
   createWorkflow: (data: any) => api.request("POST", "/api/workflows/workflows/", data),
+  updateWorkflow: (id: number, data: any) => api.request("PATCH", `/api/workflows/workflows/${id}/`, data),
+  deleteWorkflow: (id: number) => api.request("DELETE", `/api/workflows/workflows/${id}/`),
+  logRun: (id: number) => api.request("POST", `/api/workflows/workflows/${id}/log_run/`),
 
   // Tasks
   getTasks: () => api.request("GET", "/api/jobs/"),

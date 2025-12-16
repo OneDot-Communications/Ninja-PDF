@@ -20,6 +20,9 @@ urlpatterns = [
     path('api/signatures/', include('apps.signatures.api.urls')),
     path('api/jobs/', include('apps.jobs.api.urls')),
     
+    # Alias for legacy/v1 converter calls
+    path('api/v1/convert/', include('apps.tools.api.urls')),
+    
     # Core system endpoints
     path('api/core/', include('core.api_urls')),
     
