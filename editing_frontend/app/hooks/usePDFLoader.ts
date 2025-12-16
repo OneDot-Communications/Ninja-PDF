@@ -3,12 +3,13 @@
 
 import { useState } from 'react';
 import { loadPDF, extractTextItems, renderPDFPageWithoutText } from '@/app/lib/pdf-extractor';
-import { PDFTextItem, PDFPageDimensions } from '@/app/types/pdf-editor';
+import { PDFTextItem, PDFPageDimensions, PDFLineItem } from '@/app/types/pdf-editor';
 import { calculateScale } from '@/app/lib/coordinate-transform';
 
 interface UsePDFLoaderReturn {
     loadFile: (file: File) => Promise<void>;
     textItems: PDFTextItem[];
+    lineItems: PDFLineItem[];
     pageDimensions: PDFPageDimensions | null;
     backgroundImageUrl: string | null;
     originalFile: File | null;
@@ -19,6 +20,7 @@ interface UsePDFLoaderReturn {
 
 export function usePDFLoader(): UsePDFLoaderReturn {
     const [textItems, setTextItems] = useState<PDFTextItem[]>([]);
+    const [lineItems, setLineItems] = useState<PDFLineItem[]>([]);
     const [pageDimensions, setPageDimensions] = useState<PDFPageDimensions | null>(null);
     const [backgroundImageUrl, setBackgroundImageUrl] = useState<string | null>(null);
     const [originalFile, setOriginalFile] = useState<File | null>(null);
@@ -100,6 +102,7 @@ export function usePDFLoader(): UsePDFLoaderReturn {
     return {
         loadFile,
         textItems,
+        lineItems,
         pageDimensions,
         backgroundImageUrl,
         originalFile,
