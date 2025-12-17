@@ -1,8 +1,8 @@
 "use client";
 
 import { useRef } from "react";
-import Toaster, { ToasterRef } from "./components/ui/toast";
-import { AuthProvider } from './context/AuthContext';
+import Toaster, { ToasterRef } from "@/components/ui/toast";
+import { AuthProvider } from '@/lib/context/AuthContext';
 
 export const toast = {
   show: (data: Parameters<ToasterRef['show']>[0]) => {

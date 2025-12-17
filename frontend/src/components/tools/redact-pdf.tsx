@@ -51,9 +51,9 @@ import {
     Palette,
     Trash2
 } from "lucide-react";
-import { pdfStrategyManager, getPdfJs } from "../../lib/pdf-service";
-import { toast } from "../../lib/use-toast";
-import { cn } from "../../lib/utils";
+import { pdfStrategyManager, getPdfJs } from "@/lib/services/pdf-service";
+import { toast } from "@/lib/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 // Redaction element interface
 interface RedactionElement {

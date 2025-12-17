@@ -2,9 +2,9 @@
 
 import * as React from 'react';
 import { X } from 'lucide-react';
-import { cn } from '@/app/lib/utils';
+import { cn } from '@/lib/utils';
 import { cva, type VariantProps } from 'class-variance-authority';
-import { Button } from './ui/button';
+import { Button } from "@/components/ui/button";
 
 const bannerVariants = cva(
 	'relative overflow-hidden rounded-md border shadow-lg text-sm',

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { api } from "@/app/lib/api";
+import { api } from "@/lib/services/api";
 import {
     Users,
     ShieldCheck,
@@ -19,9 +19,9 @@ import {
     Zap,
     DollarSign
 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/app/components/ui/card";
-import { Skeleton } from "@/app/components/ui/skeleton";
-import { Badge } from "@/app/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 

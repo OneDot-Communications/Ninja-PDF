@@ -1,5 +1,5 @@
-import { ToolShell } from "@/app/components/layout/tool-shell";
-import { CropPdfTool } from "@/app/components/tools/crop-pdf";
+import { ToolShell } from "@/components/layout/tool-shell";
+import { CropPdfTool } from "@/components/tools/crop-pdf";
 
 export const metadata = {
     title: "Crop PDF - 18+ PDF",

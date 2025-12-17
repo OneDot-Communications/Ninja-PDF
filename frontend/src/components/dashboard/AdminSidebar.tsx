@@ -1,7 +1,7 @@
 "use client";
 
-import { cn } from "@/app/lib/utils";
-import { Button } from "@/app/components/ui/button";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import {
     LayoutDashboard,
     Users,
@@ -15,7 +15,7 @@ import {
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { useAuth } from "@/app/context/AuthContext";
+import { useAuth } from "@/lib/context/AuthContext";
 
 interface AdminSidebarProps extends React.HTMLAttributes<HTMLDivElement> { }
 

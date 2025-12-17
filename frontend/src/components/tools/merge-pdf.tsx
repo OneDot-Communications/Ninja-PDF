@@ -7,8 +7,8 @@ import { Button } from "../ui/button";
 import { ArrowRight, Download, Trash2, FileText, Settings, CheckSquare, Square } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
-import { pdfApi } from "../../lib/pdf-api";
-import { toast } from "../../lib/use-toast";
+import { pdfApi } from "@/lib/services/pdf-api";
+import { toast } from "@/lib/hooks/use-toast";
 
 interface MergeFile {
     id: string;

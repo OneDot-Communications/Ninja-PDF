@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { api } from "@/app/lib/api";
+import { api } from "@/lib/services/api";
 import {
     ArrowLeft,
     Download,
@@ -9,7 +9,7 @@ import {
     FileText,
     Loader2
 } from "lucide-react";
-import { Button } from "@/app/components/ui/button";
+import { Button } from "@/components/ui/button";
 import {
     Table,
     TableBody,
@@ -17,9 +17,9 @@ import {
     TableHead,
     TableHeader,
     TableRow,
-} from "@/app/components/ui/table";
-import { Badge } from "@/app/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/app/components/ui/card";
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 

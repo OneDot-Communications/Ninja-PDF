@@ -1,7 +1,7 @@
 "use client";
 
 // import { useSearchParams } from "next/navigation";
-import { Button } from "@/app/components/ui/button";
+import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Hammer } from "lucide-react";
 

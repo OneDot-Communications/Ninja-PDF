@@ -3,7 +3,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { api } from "@/app/lib/api";
+import { api } from "@/lib/services/api";
 
 interface Session {
     id: number;

@@ -1,5 +1,5 @@
-import { ToolShell } from "@/app/components/layout/tool-shell";
-import { RotatePdfTool } from "@/app/components/tools/rotate-pdf";
+import { ToolShell } from "@/components/layout/tool-shell";
+import { RotatePdfTool } from "@/components/tools/rotate-pdf";
 
 export const metadata = {
     title: "Rotate PDF - 18+ PDF",

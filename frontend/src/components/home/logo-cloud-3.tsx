@@ -1,5 +1,5 @@
-import { InfiniteSlider } from "@/app/components/ui/infinite-slider";
-import { cn } from "@/app/lib/utils";
+import { InfiniteSlider } from "@/components/ui/infinite-slider";
+import { cn } from "@/lib/utils";
 
 type Logo = {
   src: string;

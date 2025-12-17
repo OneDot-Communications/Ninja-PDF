@@ -2,8 +2,8 @@
 
 import { motion } from "framer-motion";
 import { Download, Scan, PenTool, Cloud, Share2, Smartphone, Apple, Play, Check } from "lucide-react";
-import { Button } from "@/app/components/ui/button";
-import { Header } from "@/app/components/layout/header";
+import { Button } from "@/components/ui/button";
+import { Header } from "@/components/layout/header";
 
 export default function MobilePage() {
     const fadeIn = {

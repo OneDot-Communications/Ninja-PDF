@@ -50,9 +50,9 @@ import {
     ArrowLeft,
     ArrowRight
 } from "lucide-react";
-import { pdfStrategyManager, getPdfJs } from "../../lib/pdf-service";
-import { toast } from "../../lib/use-toast";
-import { cn } from "../../lib/utils";
+import { pdfStrategyManager, getPdfJs } from "@/lib/services/pdf-service";
+import { toast } from "@/lib/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 // Page number element interface
 interface PageNumberElement {

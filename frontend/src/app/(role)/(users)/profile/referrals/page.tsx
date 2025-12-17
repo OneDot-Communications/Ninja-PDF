@@ -1,14 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { api } from "@/app/lib/api";
-import { Card, CardContent, CardHeader, CardTitle } from "@/app/components/ui/card";
-import { Button } from "@/app/components/ui/button";
-import { Skeleton } from "@/app/components/ui/skeleton";
+import { api } from "@/lib/services/api";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Gift, Copy, Loader2, Users, Star } from "lucide-react";
-import { Input } from "@/app/components/ui/input";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { useAuth } from "@/app/context/AuthContext";
+import { useAuth } from "@/lib/context/AuthContext";
 
 export default function ReferralsPage() {
     const { user } = useAuth();

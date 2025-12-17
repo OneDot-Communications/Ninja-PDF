@@ -1,8 +1,8 @@
 "use client";
 
-import { Header } from "../components/layout/header";
-import { Footer } from "../components/layout/footer";
-import { useTools } from "../lib/useTools";
+import { Header } from "@/components/layout/header";
+import { Footer } from "@/components/layout/footer";
+import { useTools } from "@/lib/hooks/useTools";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { ArrowRight, Search } from "lucide-react";

@@ -1,15 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Button } from "@/app/components/ui/button";
-import { Input } from "@/app/components/ui/input";
-import { Label } from "@/app/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/app/components/ui/card";
-import { Skeleton } from "@/app/components/ui/skeleton";
-import { Switch } from "@/app/components/ui/switch";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
 import { Shield, Key, Smartphone, Lock } from "lucide-react";
 import { toast } from "sonner";
-import { api } from "@/app/lib/api";
+import { api } from "@/lib/services/api";
 
 export default function SecurityPage() {
     const [loading, setLoading] = useState(false);

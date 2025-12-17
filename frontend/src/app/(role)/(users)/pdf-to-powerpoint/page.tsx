@@ -1,5 +1,5 @@
-import { ToolShell } from "@/app/components/layout/tool-shell";
-import { PdfToPowerPointTool } from "@/app/components/tools/pdf-to-powerpoint";
+import { ToolShell } from "@/components/layout/tool-shell";
+import { PdfToPowerPointTool } from "@/components/tools/pdf-to-powerpoint";
 
 export default function PdfToPowerPointPage() {
     return (

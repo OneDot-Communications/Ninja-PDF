@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { api } from "@/app/lib/api";
+import { api } from "@/lib/services/api";
 import {
     Search,
     Filter,
@@ -13,8 +13,8 @@ import {
     Mail,
     Zap
 } from "lucide-react";
-import { Button } from "@/app/components/ui/button";
-import { Input } from "@/app/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
     Table,
     TableBody,
@@ -22,7 +22,7 @@ import {
     TableHead,
     TableHeader,
     TableRow,
-} from "@/app/components/ui/table";
+} from "@/components/ui/table";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -30,8 +30,8 @@ import {
     DropdownMenuLabel,
     DropdownMenuSeparator,
     DropdownMenuTrigger,
-} from "@/app/components/ui/dropdown-menu";
-import { Badge } from "@/app/components/ui/badge";
+} from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 

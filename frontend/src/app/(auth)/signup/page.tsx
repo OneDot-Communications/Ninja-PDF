@@ -6,12 +6,12 @@ import React, { useState, Suspense } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useAuth } from "@/app/context/AuthContext";
-import GoogleLoginButton from "@/app/components/ui/GoogleLoginButton";
-import { Button } from "@/app/components/ui/button";
-import { Label } from "@/app/components/ui/label";
+import { useAuth } from "@/lib/context/AuthContext";
+import GoogleLoginButton from "@/components/ui/GoogleLoginButton";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { api } from "@/app/lib/api";
+import { api } from "@/lib/services/api";
 
 const SignupContent = () => {
     const router = useRouter();

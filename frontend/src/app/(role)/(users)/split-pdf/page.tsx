@@ -1,5 +1,5 @@
-import { ToolShell } from "@/app/components/layout/tool-shell";
-import { SplitPdfTool } from "@/app/components/tools/split-pdf";
+import { ToolShell } from "@/components/layout/tool-shell";
+import { SplitPdfTool } from "@/components/tools/split-pdf";
 
 export const metadata = {
     title: "Split PDF - 18+ PDF",

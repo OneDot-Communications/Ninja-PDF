@@ -1,6 +1,6 @@
 "use client";
 
-import { useAuth } from "@/app/context/AuthContext";
+import { useAuth } from "@/lib/context/AuthContext";
 import {
     Bell,
     Search,
@@ -10,8 +10,8 @@ import {
     Settings,
     ChevronDown
 } from "lucide-react";
-import { Button } from "@/app/components/ui/button";
-import { Input } from "@/app/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -19,8 +19,8 @@ import {
     DropdownMenuLabel,
     DropdownMenuSeparator,
     DropdownMenuTrigger,
-} from "@/app/components/ui/dropdown-menu";
-import { Sheet, SheetContent, SheetTrigger } from "@/app/components/ui/sheet";
+} from "@/components/ui/dropdown-menu";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Sidebar } from "./Sidebar";
 import { SharedSidebar } from "./SharedSidebar";
 import { useRouter } from "next/navigation";

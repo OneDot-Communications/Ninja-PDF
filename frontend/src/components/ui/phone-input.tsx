@@ -3,9 +3,9 @@
 import * as React from "react";
 import { Check, ChevronsUpDown } from "lucide-react";
 
-import { cn } from "@/app/lib/utils";
-import { Button } from "@/app/components/ui/button";
-import { Input } from "@/app/components/ui/input";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
     Command,
     CommandEmpty,
@@ -13,13 +13,13 @@ import {
     CommandInput,
     CommandItem,
     CommandList,
-} from "@/app/components/ui/command";
+} from "@/components/ui/command";
 import {
     Popover,
     PopoverContent,
     PopoverTrigger,
-} from "@/app/components/ui/popover";
-import { countries } from "@/app/lib/countries";
+} from "@/components/ui/popover";
+import { countries } from "@/lib/countries";
 
 interface PhoneInputProps {
     value?: string;

@@ -1,5 +1,5 @@
-import { ToolShell } from "@/app/components/layout/tool-shell";
-import { UnlockPdfTool } from "@/app/components/tools/unlock-pdf";
+import { ToolShell } from "@/components/layout/tool-shell";
+import { UnlockPdfTool } from "@/components/tools/unlock-pdf";
 
 export const metadata = {
     title: "Unlock PDF - 18+ PDF",

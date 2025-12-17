@@ -1,8 +1,8 @@
 "use client";
 
-import { useAuth } from "@/app/context/AuthContext";
-import { SharedSidebar } from "@/app/components/dashboard/SharedSidebar";
-import { Header } from "@/app/components/layout/header";
+import { useAuth } from "@/lib/context/AuthContext";
+import { SharedSidebar } from "@/components/dashboard/SharedSidebar";
+import { Header } from "@/components/layout/header";
 import { Toaster } from "sonner";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";

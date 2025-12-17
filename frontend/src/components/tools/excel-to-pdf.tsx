@@ -10,8 +10,8 @@ import autoTable from "jspdf-autotable";
 import { Label } from "../ui/label";
 import { Switch } from "../ui/switch";
 import { saveAs } from "file-saver";
-import { pdfApi } from "../../lib/pdf-api";
-import { toast } from "../../client-layout";
+import { pdfApi } from "@/lib/services/pdf-api";
+import { toast } from "@/app/client-layout";
 import { useRouter } from "next/navigation";
 
 export function ExcelToPdfTool() {

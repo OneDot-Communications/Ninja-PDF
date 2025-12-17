@@ -7,9 +7,9 @@ import { ArrowRight, FileText, Settings, Layout, Type } from "lucide-react";
 import mammoth from "mammoth";
 import jsPDF from "jspdf";
 import { saveAs } from "file-saver";
-import { toast } from "../../client-layout";
+import { toast } from "@/app/client-layout";
 import { useRouter } from "next/navigation";
-import { pdfApi } from "../../lib/pdf-api";
+import { pdfApi } from "@/lib/services/pdf-api";
 
 export function WordToPdfTool() {
     const router = useRouter();

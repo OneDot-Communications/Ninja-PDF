@@ -11,7 +11,7 @@ import {
   Settings,
   Monitor,
 } from "lucide-react";
-import { pdfApi } from "../../lib/pdf-api";
+import { pdfApi } from "@/lib/services/pdf-api";
 import { Label } from "../ui/label";
 import PptxGenJS from "pptxgenjs";
 import { saveAs } from "file-saver";

@@ -212,6 +212,15 @@ export const api = {
   },
 
   // ─────────────────────────────────────────────────────────────────────────────
+  // HTTP HELPER METHODS
+  // ─────────────────────────────────────────────────────────────────────────────
+  get: (endpoint: string, data?: any) => api.request("GET", endpoint, data),
+  post: (endpoint: string, data?: any) => api.request("POST", endpoint, data),
+  put: (endpoint: string, data?: any) => api.request("PUT", endpoint, data),
+  patch: (endpoint: string, data?: any) => api.request("PATCH", endpoint, data),
+  delete: (endpoint: string, data?: any) => api.request("DELETE", endpoint, data),
+
+  // ─────────────────────────────────────────────────────────────────────────────
   // AUTH ENDPOINTS (/api/auth/)
   // ─────────────────────────────────────────────────────────────────────────────
   signup: (email: string, password: string, confirmPassword?: string, first_name?: string, last_name?: string, referral_code?: string) =>
@@ -234,6 +243,7 @@ export const api = {
     api.request("POST", "/api/auth/login/", otp_token ? { email, password, otp_token } : { email, password }),
   logout: () => api.request("POST", "/api/auth/logout/"),
   getUser: () => api.request("GET", "/api/auth/user/"),
+  getUserDetails: (id?: string | number) => (!id || id === 'me') ? api.getUser() : api.request("GET", `/api/auth/users/${id}/`),
   updateCurrentUser: (data: any) => api.request("PATCH", "/api/auth/user/", data),
   updateAvatar: (formData: FormData) => api.request("PATCH", "/api/auth/users/me/avatar/", formData),
   deleteAvatar: () => api.request("DELETE", "/api/auth/users/me/avatar/"),
@@ -261,6 +271,11 @@ export const api = {
   getTwoFactorBackupCodes: () => api.request("GET", "/api/auth/2fa/backup_codes/"),
   regenerateTwoFactorBackupCodes: (password: string) => api.request("POST", "/api/auth/2fa/backup_codes/regenerate/", { password }),
 
+  // API Keys
+  getAPIKeys: () => api.request("GET", "/api/auth/api-keys/"),
+  createAPIKey: (name: string, scopes?: string[]) => api.request("POST", "/api/auth/api-keys/", { name, scopes }),
+  deleteAPIKey: (id: string | number) => api.request("DELETE", `/api/auth/api-keys/${id}/`),
+
   // ─────────────────────────────────────────────────────────────────────────────
   // BILLING ENDPOINTS (/api/billing/)
   // ─────────────────────────────────────────────────────────────────────────────
@@ -278,6 +293,18 @@ export const api = {
   },
   updateBusinessDetails: (data: any) => api.request("PUT", "/api/billing/business-details/", data),
   getInvoices: () => api.request("GET", "/api/billing/invoices/"),
+  regenerateInvoice: (id: number | string) => api.request("POST", `/api/billing/invoices/${id}/regenerate/`),
+  emailInvoice: (id: number | string) => api.request("POST", `/api/billing/invoices/${id}/send_email/`),
+  deleteInvoice: (id: number | string) => api.request("DELETE", `/api/billing/invoices/${id}/`),
+
+  // Job Endpoints
+  retryJob: (id: number | string) => api.request("POST", `/api/jobs/${id}/retry/`),
+  getJobLogs: (id: number | string) => api.request("GET", `/api/jobs/${id}/logs/`),
+
+  // Admin Reports & Payments methods moved to relevant sections below to avoid duplicates
+  exportPayments: () => api.request("POST", "/api/billing/payments/export/"),
+  refundPayment: (id: number | string) => api.request("POST", `/api/billing/payments/${id}/refund/`),
+  chargebackPayment: (id: number | string) => api.request("POST", `/api/billing/payments/${id}/chargeback/`),
 
   // ─────────────────────────────────────────────────────────────────────────────
   // SIGNATURE ENDPOINTS (/api/signatures/)
@@ -399,6 +426,11 @@ export const api = {
   getAdminDatabase: async () => {
     return api.request("GET", "/api/auth/admin/database/");
   },
+  getAuditLogs: (page: number = 1, action?: string) => {
+    let url = `/api/core/audit-logs/?page=${page}`;
+    if (action && action !== 'ALL') url += `&action=${action}`;
+    return api.request("GET", url);
+  },
   getUsers: async (search?: string, page: number = 1) => {
     let url = `/api/auth/admin/users/?page=${page}`;
     if (search) url += `&search=${search}`;
@@ -413,6 +445,36 @@ export const api = {
   assignUserPlan: async (userId: number, planSlug: string) => {
     return api.request("POST", "/api/billing/admin/subscriptions/assign_plan/", { user_id: userId, plan_slug: planSlug });
   },
+  impersonateUser: (id: number) => api.request("POST", `/api/auth/super-admin/users/${id}/impersonate/`),
+  forceLogout: (id: number) => api.request("POST", `/api/auth/super-admin/users/${id}/force-logout/`),
+  banUser: (id: number) => api.request("POST", `/api/auth/super-admin/users/${id}/ban/`),
+  reset2FA: (id: number) => api.request("POST", `/api/auth/super-admin/users/${id}/reset-2fa/`),
+  forcePasswordReset: (id: number) => api.request("POST", `/api/auth/super-admin/users/${id}/force-password-reset/`),
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // CONTENT MANAGEMENT (Announcements, FAQs)
+  // ─────────────────────────────────────────────────────────────────────────────
+  getAnnouncements: async (activeOnly: boolean = false) => {
+    let url = "/api/core/announcements/";
+    if (activeOnly) url += "?is_active=true";
+    return api.request("GET", url);
+  },
+  createAnnouncement: (data: any) => api.request("POST", "/api/core/announcements/", data),
+  updateAnnouncement: (id: number, data: any) => api.request("PATCH", `/api/core/announcements/${id}/`, data),
+  deleteAnnouncement: (id: number) => api.request("DELETE", `/api/core/announcements/${id}/`),
+
+  getHelpArticles: async (search?: string, category?: string) => {
+    let url = "/api/core/faqs/";
+    const params = new URLSearchParams();
+    if (search) params.append("search", search);
+    if (category) params.append("category", category);
+    if (params.toString()) url += `?${params.toString()}`;
+    return api.request("GET", url);
+  },
+  createHelpArticle: (data: any) => api.request("POST", "/api/core/faqs/", data),
+  updateHelpArticle: (id: number, data: any) => api.request("PATCH", `/api/core/faqs/${id}/`, data),
+  deleteHelpArticle: (id: number) => api.request("DELETE", `/api/core/faqs/${id}/`),
+
 
   // ─────────────────────────────────────────────────────────────────────────────
   // CORE / SYSTEM ENDPOINTS
@@ -435,6 +497,37 @@ export const api = {
   getWorkflows: () => api.request("GET", "/api/workflows/workflows/"),
   createWorkflow: (data: any) => api.request("POST", "/api/workflows/workflows/", data),
 
+  // ─────────────────────────────────────────────────────────────────────────────
+  // SUPPORT TICKETS
+  // ─────────────────────────────────────────────────────────────────────────────
+  getSupportTickets: async (params?: { status?: string, priority?: string, assigned?: string }) => {
+    let url = "/api/core/support-tickets/";
+    if (params) {
+      const q = new URLSearchParams(params as any);
+      url += `?${q.toString()}`;
+    }
+    return api.request("GET", url);
+  },
+  createSupportTicket: (data: any) => {
+    if (data.attachments && data.attachments.length > 0) {
+      // Handle attachments if backend expects file uploads vs JSON
+      // Backend seems to expect 'attachments' as list in JSON or similar, let's assume JSON first based on viewset
+      // But usually file uploads need FormData. ViewSet uses `SupportTicketSerializer`.
+      // If attachments are files, we might need separate upload or FormData.
+      // Assuming JSON with pre-uploaded Attachment IDs or similar for now, usually
+      // simple implementation sends text. If file upload needed we use uploadFileAsset first.
+    }
+    return api.request("POST", "/api/core/support-tickets/", data);
+  },
+  getSupportTicket: (id: number | string) => api.request("GET", `/api/core/support-tickets/${id}/`),
+  closeTicket: (id: number | string) => api.request("POST", `/api/core/support-tickets/${id}/close/`),
+  reopenTicket: (id: number | string) => api.request("POST", `/api/core/support-tickets/${id}/reopen/`),
+  assignTicket: (id: number | string, adminId: number | string) => api.request("POST", `/api/core/support-tickets/${id}/assign/`, { admin_id: adminId }),
+
+  getTicketMessages: (id: number | string) => api.request("GET", `/api/core/support-tickets/${id}/messages/`),
+  replyToTicket: (id: number | string, message: string, isInternal: boolean = false) =>
+    api.request("POST", `/api/core/support-tickets/${id}/messages/`, { message, is_internal: isInternal }),
+
   // Tasks
   getTasks: () => api.request("GET", "/api/jobs/"),
 
@@ -445,7 +538,11 @@ export const api = {
   createOrder: (planSlug: string, provider: string = 'razorpay') => api.request("POST", "/api/billing/payments/create_order/", { plan_slug: planSlug, provider }),
   verifyPayment: (data: any) => api.request("POST", "/api/billing/payments/verify_payment/", data),
   // getPlans, updatePlan, getSubscription are defined above under Billing Endpoints
-  getPayments: () => api.request("GET", "/api/billing/payments/"),
+  getPayments: (userId?: number | string) => {
+    let url = "/api/billing/payments/";
+    if (userId) url += `?user=${userId}`;
+    return api.request("GET", url);
+  },
   getAdminPayments: () => api.request("GET", "/api/billing/payments/"), // Super admin sees all by default via same endpoint
   downloadReceipt: (id: number) => {
     const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -527,7 +624,11 @@ export const api = {
     }
     return api.request("PATCH", `/api/billing/features/${id}/`, data);
   },
-  getFeatureOverrides: () => api.request("GET", "/api/billing/feature-overrides/"),
+  getFeatureOverrides: (userId?: number | string) => {
+    let url = "/api/billing/feature-overrides/";
+    if (userId) url += `?user=${userId}`;
+    return api.request("GET", url);
+  },
   setFeatureOverride: (userId: number, featureId: number, isEnabled: boolean) =>
     api.request("POST", "/api/billing/feature-overrides/", { user: userId, feature: featureId, is_enabled: isEnabled }),
   getHistory: () => api.request("GET", "/api/core/history/"),

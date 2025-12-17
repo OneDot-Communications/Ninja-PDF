@@ -1,9 +1,9 @@
 "use client";
 
-import { Sidebar } from "@/app/components/dashboard/Sidebar";
-import { Header } from "@/app/components/layout/header";
+import { Sidebar } from "@/components/dashboard/Sidebar";
+import { Header } from "@/components/layout/header";
 import { Toaster } from "sonner";
-import { useAuth } from "@/app/context/AuthContext";
+import { useAuth } from "@/lib/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";

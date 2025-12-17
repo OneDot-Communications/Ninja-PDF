@@ -70,6 +70,24 @@ class FileAsset(models.Model):
     
     expires_at = models.DateTimeField(null=True, blank=True, db_index=True)
     
+    # Virus Scanning
+    is_scanned = models.BooleanField(default=False, help_text="Whether file has been scanned for viruses")
+    scan_result = models.CharField(
+        max_length=50, 
+        blank=True,
+        choices=[
+            ('PENDING', 'Pending'),
+            ('CLEAN', 'Clean'),
+            ('INFECTED', 'Infected'),
+            ('ERROR', 'Scan Error'),
+            ('SKIPPED', 'Skipped'),
+        ],
+        default='',
+        help_text="Result of virus scan"
+    )
+    scan_message = models.TextField(blank=True, help_text="Details from virus scan")
+    scanned_at = models.DateTimeField(null=True, blank=True)
+    
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     updated_at = models.DateTimeField(auto_now=True)
     

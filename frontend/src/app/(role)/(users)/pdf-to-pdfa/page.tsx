@@ -1,5 +1,5 @@
-import { ToolShell } from "@/app/components/layout/tool-shell";
-import { PdfToPdfATool } from "@/app/components/tools/pdf-to-pdfa";
+import { ToolShell } from "@/components/layout/tool-shell";
+import { PdfToPdfATool } from "@/components/tools/pdf-to-pdfa";
 
 export const metadata = {
     title: "PDF to PDF/A - 18+ PDF",

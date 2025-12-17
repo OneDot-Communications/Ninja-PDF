@@ -6,6 +6,147 @@ from django.utils import timezone
 from django.utils.text import slugify
 
 
+class LegalDocument(models.Model):
+    """
+    Legal policy documents (Terms of Service, Privacy Policy, etc.)
+    Super Admin can edit and version these documents.
+    """
+    class DocType(models.TextChoices):
+        TERMS_OF_SERVICE = 'TERMS', _('Terms of Service')
+        PRIVACY_POLICY = 'PRIVACY', _('Privacy Policy')
+        COOKIE_POLICY = 'COOKIES', _('Cookie Policy')
+        REFUND_POLICY = 'REFUND', _('Refund Policy')
+        ACCEPTABLE_USE = 'AUP', _('Acceptable Use Policy')
+        DATA_PROCESSING = 'DPA', _('Data Processing Agreement')
+        SLA = 'SLA', _('Service Level Agreement')
+    
+    doc_type = models.CharField(
+        max_length=20, 
+        choices=DocType.choices, 
+        unique=True,
+        help_text="Type of legal document"
+    )
+    title = models.CharField(max_length=200)
+    slug = models.SlugField(unique=True)
+    
+    # Content (Markdown format)
+    content = models.TextField(help_text="Full document content in Markdown format")
+    summary = models.TextField(blank=True, help_text="Brief summary of key points")
+    
+    # Versioning
+    version = models.CharField(max_length=20, default='1.0')
+    effective_date = models.DateField(help_text="When this version becomes effective")
+    
+    # Status
+    is_published = models.BooleanField(default=False)
+    requires_consent = models.BooleanField(
+        default=False, 
+        help_text="Whether users must explicitly agree to this document"
+    )
+    
+    # SEO
+    meta_title = models.CharField(max_length=255, blank=True)
+    meta_description = models.TextField(blank=True, max_length=500)
+    
+    # Audit
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, 
+        on_delete=models.SET_NULL, 
+        null=True,
+        related_name='created_legal_docs'
+    )
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, 
+        on_delete=models.SET_NULL, 
+        null=True,
+        related_name='updated_legal_docs'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        app_label = 'core'
+        db_table = 'legal_documents'
+        ordering = ['doc_type']
+    
+    def __str__(self):
+        return f"{self.title} (v{self.version})"
+    
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.title)
+        super().save(*args, **kwargs)
+    
+    @classmethod
+    def get_published(cls):
+        """Get all published legal documents"""
+        return cls.objects.filter(is_published=True)
+    
+    @classmethod
+    def get_by_type(cls, doc_type: str):
+        """Get a specific legal document by type"""
+        return cls.objects.filter(doc_type=doc_type, is_published=True).first()
+
+
+class LegalDocumentVersion(models.Model):
+    """
+    Historical versions of legal documents for audit trail.
+    Created automatically when a LegalDocument is updated.
+    """
+    document = models.ForeignKey(LegalDocument, on_delete=models.CASCADE, related_name='versions')
+    version = models.CharField(max_length=20)
+    content = models.TextField()
+    effective_date = models.DateField()
+    
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, 
+        on_delete=models.SET_NULL, 
+        null=True
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        app_label = 'core'
+        db_table = 'legal_document_versions'
+        ordering = ['-created_at']
+        unique_together = ['document', 'version']
+    
+    def __str__(self):
+        return f"{self.document.title} - v{self.version}"
+
+
+class UserLegalConsent(models.Model):
+    """
+    Track user consent to legal documents.
+    Required for GDPR compliance.
+    """
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, 
+        on_delete=models.CASCADE, 
+        related_name='legal_consents'
+    )
+    document = models.ForeignKey(LegalDocument, on_delete=models.CASCADE)
+    version = models.CharField(max_length=20)
+    
+    consented_at = models.DateTimeField(auto_now_add=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.TextField(blank=True)
+    
+    # Withdrawal
+    is_withdrawn = models.BooleanField(default=False)
+    withdrawn_at = models.DateTimeField(null=True, blank=True)
+    
+    class Meta:
+        app_label = 'core'
+        db_table = 'user_legal_consents'
+        unique_together = ['user', 'document', 'version']
+    
+    def __str__(self):
+        return f"{self.user.email} consented to {self.document.title} v{self.version}"
+
+
+
+
 class ContentCategory(models.Model):
     """Categories for organizing content"""
     name = models.CharField(max_length=100)

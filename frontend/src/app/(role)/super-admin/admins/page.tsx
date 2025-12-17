@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { api } from "@/app/lib/api";
+import { api } from "@/lib/services/api";
 import {
     Table,
     TableBody,
@@ -9,8 +9,8 @@ import {
     TableHead,
     TableHeader,
     TableRow
-} from "@/app/components/ui/table";
-import { Badge } from "@/app/components/ui/badge";
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import { Loader2, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 

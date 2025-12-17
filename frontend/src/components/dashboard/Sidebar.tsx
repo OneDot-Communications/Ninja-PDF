@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { cn } from "@/app/lib/utils";
+import { cn } from "@/lib/utils";
 import {
     User, Shield, Users, Workflow, History,
     PenTool, CreditCard,
@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useAuth } from "@/app/context/AuthContext";
+import { useAuth } from "@/lib/context/AuthContext";
 
 const SidebarItem = ({ href, icon: Icon, label, active, hasSubmenu, isOpen, onClick }: any) => {
     return (

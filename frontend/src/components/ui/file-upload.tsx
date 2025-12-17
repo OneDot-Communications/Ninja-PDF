@@ -1,4 +1,4 @@
-import { cn } from "../../../lib/utils";
+import { cn } from "@/lib/utils";
 import React, { useRef, useState } from "react";
 import { UploadCloud } from "lucide-react";
 import { useDropzone } from "react-dropzone";

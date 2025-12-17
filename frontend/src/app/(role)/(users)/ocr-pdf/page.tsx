@@ -1,5 +1,5 @@
-import { ToolShell } from "@/app/components/layout/tool-shell";
-import { OcrPdfTool } from "@/app/components/tools/ocr-pdf";
+import { ToolShell } from "@/components/layout/tool-shell";
+import { OcrPdfTool } from "@/components/tools/ocr-pdf";
 
 export default function OcrPdfPage() {
     return (

@@ -7,7 +7,7 @@ import { createPortal } from "react-dom";
 import { Grip, Menu, X, Check } from "lucide-react";
 import { FaFilePdf, FaRobot, FaSignature, FaUserGroup, FaDesktop, FaMobile, FaGithub } from "react-icons/fa6";
 import { motion, AnimatePresence } from "framer-motion";
-import { useAuth } from '@/app/context/AuthContext';
+import { useAuth } from '@/lib/context/AuthContext';
 import { FaUser } from 'react-icons/fa6';
 
 export function Header() {

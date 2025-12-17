@@ -6,8 +6,8 @@ import { FileUpload } from "../ui/file-upload";
 import { Button } from "../ui/button";
 import { ArrowRight, Trash2, Settings } from "lucide-react";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
-import { pdfApi } from "../../lib/pdf-api";
-import { toast } from "../../lib/use-toast";
+import { pdfApi } from "@/lib/services/pdf-api";
+import { toast } from "@/lib/hooks/use-toast";
 import { useRouter } from "next/navigation";
 
 export function JpgToPdfTool() {

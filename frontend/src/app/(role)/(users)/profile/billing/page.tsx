@@ -1,14 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { api } from "@/app/lib/api";
-import { Button } from "@/app/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/app/components/ui/card";
-import { Badge } from "@/app/components/ui/badge";
+import { api } from "@/lib/services/api";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { CreditCard, CheckCircle, Package, Receipt } from "lucide-react";
 import { toast } from "sonner";
-import { useAuth } from "@/app/context/AuthContext";
-import { Skeleton } from "@/app/components/ui/skeleton";
+import { useAuth } from "@/lib/context/AuthContext";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function BillingPage() {
     const { user } = useAuth();

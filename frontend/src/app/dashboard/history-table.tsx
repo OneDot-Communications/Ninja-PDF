@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { api } from '@/app/lib/api';
+import { api } from '@/lib/services/api';
 import { Badge } from '@/components/ui/badge';
 import { Download, Loader2, FileText, AlertCircle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -16,7 +16,7 @@ interface Task {
     created_at: string;
 }
 
-import { useAuth } from '@/app/context/AuthContext'; // Import useAuth
+import { useAuth } from '@/lib/context/AuthContext'; // Import useAuth
 
 export const HistoryTable = () => {
     const [tasks, setTasks] = useState<Task[]>([]);
