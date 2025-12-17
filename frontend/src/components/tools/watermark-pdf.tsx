@@ -43,10 +43,10 @@ import {
     Check,
     ChevronDown
 } from "lucide-react";
-import { pdfStrategyManager, getPdfJs } from "../../lib/pdf-service";
-import { pdfApi } from "../../lib/pdf-api";
-import { toast } from "../../lib/use-toast";
-import { cn } from "../../lib/utils";
+import { pdfStrategyManager, getPdfJs } from "@/lib/services/pdf-service";
+import { pdfApi } from "@/lib/services/pdf-api";
+import { toast } from "@/lib/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 // Watermark element interface
 interface WatermarkElement {

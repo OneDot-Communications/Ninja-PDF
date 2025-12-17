@@ -1,6 +1,6 @@
 "use client";
 
-import { useTools } from "@/app/lib/useTools";
+import { useTools } from "@/lib/hooks/useTools";
 import { ToolShell } from "./tool-shell";
 import { Loader2 } from "lucide-react";
 

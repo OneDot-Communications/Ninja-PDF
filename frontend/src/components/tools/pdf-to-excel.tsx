@@ -8,7 +8,7 @@ import { Switch } from "../ui/switch";
 import { Label } from "../ui/label";
 import { Slider } from "../ui/slider";
 import { saveAs } from "file-saver";
-import { pdfApi } from "../../lib/pdf-api";
+import { pdfApi } from "@/lib/services/pdf-api";
 
 export function PdfToExcelTool() {
     const [files, setFiles] = useState<File[]>([]);

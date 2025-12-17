@@ -1,7 +1,7 @@
 "use client";
 
-import { cn } from "@/app/lib/utils";
-import { Button } from "@/app/components/ui/button";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import {
     LayoutDashboard,
     Users,
@@ -29,7 +29,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useAuth } from "@/app/context/AuthContext";
+import { useAuth } from "@/lib/context/AuthContext";
 
 interface SharedSidebarProps extends React.HTMLAttributes<HTMLDivElement> {
     type: 'ADMIN' | 'SUPER_ADMIN';

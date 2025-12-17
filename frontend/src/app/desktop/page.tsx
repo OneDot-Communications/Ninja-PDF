@@ -2,8 +2,8 @@
 
 import { motion } from "framer-motion";
 import { Download, Zap, Shield, Layers, Command, Monitor, Laptop, Check, ArrowRight, Github } from "lucide-react";
-import { Button } from "@/app/components/ui/button";
-import { Header } from "@/app/components/layout/header";
+import { Button } from "@/components/ui/button";
+import { Header } from "@/components/layout/header";
 
 export default function DesktopPage() {
     // Animation variants

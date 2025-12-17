@@ -1,5 +1,5 @@
-import { ToolShell } from "@/app/components/layout/tool-shell";
-import { CreateWorkflowTool } from "@/app/components/tools/create-workflow";
+import { ToolShell } from "@/components/layout/tool-shell";
+import { CreateWorkflowTool } from "@/components/tools/create-workflow";
 
 export default function CreateWorkflowPage() {
     return (

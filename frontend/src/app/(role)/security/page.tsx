@@ -1,7 +1,7 @@
 "use client";
 
 import { Shield, Lock, Eye, Server, FileCheck, Users, CheckCircle } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/app/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 
 export default function SecurityPage() {
     const securityFeatures = [

@@ -8,11 +8,11 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "../ui/button"; // Adjusted import path
-import { GlowCard } from "@/components/spotlight-card";
+import { GlowCard } from "@/components/home/spotlight-card";
 import { motion, useScroll, useTransform, useInView, useSpring } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useRef, useState } from "react";
-import { useTools } from "@/app/lib/useTools";
+import { useTools } from "@/lib/hooks/useTools";
 
 // Scroll-triggered animation component - optimized
 const ScrollReveal = ({

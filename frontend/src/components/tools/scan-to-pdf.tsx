@@ -5,7 +5,7 @@ import { Button } from "../ui/button";
 import { Camera, ArrowRight, Trash2, Image as ImageIcon, Settings, X, Check } from "lucide-react";
 import { PDFDocument } from "pdf-lib";
 import { saveAs } from "file-saver";
-import { cn } from "../../lib/utils";
+import { cn } from "@/lib/utils";
 
 export function ScanToPdfTool() {
     const videoRef = useRef<HTMLVideoElement>(null);

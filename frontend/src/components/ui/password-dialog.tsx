@@ -1,6 +1,6 @@
 "use client";
 
-import { PromptDialog } from "@/app/components/ui/prompt-dialog";
+import { PromptDialog } from "@/components/ui/prompt-dialog";
 
 interface PasswordDialogProps {
     open: boolean;

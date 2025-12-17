@@ -7,10 +7,10 @@ import { ArrowRight, Presentation, Loader2, RefreshCw, Settings, LayoutTemplate 
 import JSZip from "jszip";
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import { saveAs } from "file-saver";
-import { pdfApi } from "../../lib/pdf-api";
+import { pdfApi } from "@/lib/services/pdf-api";
 import { Switch } from "../ui/switch";
 import { Label } from "../ui/label";
-import { toast } from "../../client-layout";
+import { toast } from "@/app/client-layout";
 import { useRouter } from "next/navigation";
 
 export function PowerPointToPdfTool() {

@@ -1,24 +1,27 @@
 import type { Metadata } from "next";
-import { Montserrat, Kalam, Caveat } from "next/font/google";
+// import { Montserrat, Kalam, Caveat } from "next/font/google"; // Fonts disabled due to network restriction in build env
 import "./globals.css";
-import { cn } from "./lib/utils";
+import { cn } from "@/lib/utils";
 import { ClientLayout } from "./client-layout";
 
-const montserrat = Montserrat({
-  subsets: ["latin"],
-  variable: "--font-sans",
-});
+// const montserrat = Montserrat({
+//     subsets: ["latin", "cyrillic"],
+//     variable: "--font-montserrat",
+//     display: "swap",
+// });
 
-const kalam = Kalam({
-  weight: ["300", "400", "700"],
-  subsets: ["latin"],
-  variable: "--font-handwriting",
-});
+// const kalam = Kalam({
+//     weight: ["300", "400", "700"],
+//     subsets: ["latin", "devanagari"],
+//     variable: "--font-kalam",
+//     display: "swap",
+// });
 
-const caveat = Caveat({
-  subsets: ["latin"],
-  variable: "--font-caveat",
-});
+// const caveat = Caveat({
+//     subsets: ["latin", "cyrillic"],
+//     variable: "--font-caveat",
+//     display: "swap",
+// });
 
 import JsonLd from "../components/seo/json-ld";
 
@@ -122,12 +125,7 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={cn(
-          "min-h-screen bg-background font-sans antialiased",
-          montserrat.variable,
-          kalam.variable,
-          caveat.variable
-        )}
+        className="min-h-screen bg-background font-sans antialiased"
       >
         <JsonLd />
         <ClientLayout>{children}</ClientLayout>

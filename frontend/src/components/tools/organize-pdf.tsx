@@ -44,10 +44,10 @@ import {
     ArrowDown,
     GripVertical
 } from "lucide-react";
-import { pdfApi } from "../../lib/pdf-api";
-import { getPdfJs } from "../../lib/pdf-service";
-import { toast } from "../../lib/use-toast";
-import { cn } from "../../lib/utils";
+import { pdfApi } from "@/lib/services/pdf-api";
+import { getPdfJs } from "@/lib/services/pdf-service";
+import { toast } from "@/lib/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 // Page item interface
 interface PageItem {

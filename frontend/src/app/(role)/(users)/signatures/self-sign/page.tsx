@@ -2,14 +2,14 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { api } from "@/app/lib/api";
-import { Button } from "@/app/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/app/components/ui/card";
-import { Input } from "@/app/components/ui/input";
-import { Label } from "@/app/components/ui/label";
+import { api } from "@/lib/services/api";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Upload, FileText, CheckCircle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { pdfStrategyManager } from "@/app/lib/pdf-service";
+import { pdfStrategyManager } from "@/lib/services/pdf-service";
 
 export default function SelfSignPage() {
     const router = useRouter();

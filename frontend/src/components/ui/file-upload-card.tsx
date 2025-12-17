@@ -2,7 +2,7 @@ import * as React from "react";
 import { UploadCloud, X, File as FileIcon, CheckCircle2, Trash2 } from "lucide-react";
 import { motion, AnimatePresence, HTMLMotionProps } from "framer-motion";
 
-import { cn } from "../../lib/utils";
+import { cn } from "@/lib/utils";
 import { Button } from "./button";
 import { Progress } from "./progress";
 

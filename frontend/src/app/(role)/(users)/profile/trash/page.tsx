@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { api } from "@/app/lib/api";
-import { Card, CardContent } from "@/app/components/ui/card";
-import { Button } from "@/app/components/ui/button";
+import { api } from "@/lib/services/api";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Trash2, AlertTriangle, RotateCcw, FileSignature } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -13,8 +13,8 @@ import {
     TableHead,
     TableHeader,
     TableRow,
-} from "@/app/components/ui/table";
-import { Skeleton } from "@/app/components/ui/skeleton";
+} from "@/components/ui/table";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function TrashPage() {
     const [deletedItems, setDeletedItems] = useState<any[]>([]);

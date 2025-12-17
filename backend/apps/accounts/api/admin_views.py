@@ -410,6 +410,47 @@ class ChangeUserRoleView(APIView):
         })
 
 
+class ImpersonateUserView(APIView):
+    """Task 17: Impersonate user (Login as)"""
+    permission_classes = [IsSuperAdmin]
+    
+    def post(self, request, user_id):
+        try:
+            target_user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+            
+        if target_user.is_superuser or target_user.role == 'SUPER_ADMIN':
+             return Response({'error': 'Cannot impersonate another Super Admin'}, status=status.HTTP_403_FORBIDDEN)
+             
+        # Generate tokens for the target user
+        from rest_framework_simplejwt.tokens import RefreshToken
+        refresh = RefreshToken.for_user(target_user)
+        
+        # Log the action (CRITICAL for audit)
+        from apps.accounts.models import AuditLog
+        AuditLog.objects.create(
+            user=request.user,
+            action_type='SECURITY_ACTION',
+            resource_type='User',
+            resource_id=str(target_user.id),
+            description=f'Super Admin {request.user.email} impersonated {target_user.email}',
+            ip_address=request.META.get('REMOTE_ADDR', ''),
+        )
+        
+        return Response({
+            'success': True,
+            'refresh': str(refresh),
+            'access': str(refresh.access_token),
+            'user': {
+                'id': target_user.id,
+                'email': target_user.email,
+                'role': target_user.role
+            },
+            'message': f'You are now logged in as {target_user.email}'
+        })
+
+
 # =============================================================================
 # ANALYTICS DASHBOARD (Tasks 101-107)
 # =============================================================================
@@ -588,4 +629,189 @@ class JobQueueHealthView(APIView):
             ).count() < 10  # Alert if more than 10 jobs stuck for over an hour
         })
 
+
+
+class ApiUsageAnalyticsView(APIView):
+    """Task 88: Monitor API usage per user/token"""
+    permission_classes = [IsSuperAdmin]
+    
+    def get(self, request):
+        from apps.jobs.models import Job
+        from django.db.models import Count
+        from django.utils import timezone
+        import datetime
+        
+        # Top API Users (by job submission)
+        top_users = Job.objects.values('user__email').annotate(
+            count=Count('id')
+        ).order_by('-count')[:10]
+        
+        # Recent API Errors
+        recent_errors = Job.objects.filter(
+            status='FAILED'
+        ).values('error_message', 'operation', 'user__email', 'created_at').order_by('-created_at')[:20]
+        
+        return Response({
+            'top_users': list(top_users),
+            'recent_errors': list(recent_errors),
+            'total_requests_24h': Job.objects.filter(
+                created_at__gte=timezone.now() - datetime.timedelta(hours=24)
+            ).count()
+        })
+
+
+class DDoSToggleView(APIView):
+    """Task 95: Global DDoS protection toggle"""
+    permission_classes = [IsSuperAdmin]
+    
+    def get(self, request):
+        from django.core.cache import cache
+        is_enabled = cache.get('ddos_protection_enabled', False)
+        return Response({'enabled': is_enabled})
+        
+    def post(self, request):
+        from django.core.cache import cache
+        enabled = request.data.get('enabled', True)
+        # Set with native boolean, no expiry (indefinite)
+        cache.set('ddos_protection_enabled', enabled, timeout=None)
+        
+        # Log action
+        from apps.accounts.models import AuditLog
+        AuditLog.objects.create(
+            user=request.user,
+            action_type='SECURITY_ACTION',
+            resource_type='System',
+            resource_id='DDoS',
+            description=f'DDoS protection {"enabled" if enabled else "disabled"}',
+            ip_address=request.META.get('REMOTE_ADDR', ''),
+        )
+        
+        return Response({
+            'success': True, 
+            'message': f'DDoS protection is now {"ENABLED" if enabled else "DISABLED"}',
+            'enabled': enabled
+        })
+
+
+# Phase 2: Account Flagging for Admin Review
+class FlagUserView(APIView):
+    """Flag a user account for review"""
+    permission_classes = [IsAdmin]
+    
+    def post(self, request, user_id):
+        reason = request.data.get('reason', '')
+        
+        if not reason:
+            return Response(
+                {'error': 'Reason is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response(
+                {'error': 'User not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Can't flag super admins
+        if user.is_super_admin and not request.user.is_super_admin:
+            return Response(
+                {'error': 'Cannot flag a Super Admin'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        from django.utils import timezone
+        user.is_flagged = True
+        user.flagged_reason = reason
+        user.flagged_by = request.user
+        user.flagged_at = timezone.now()
+        user.save(update_fields=['is_flagged', 'flagged_reason', 'flagged_by', 'flagged_at'])
+        
+        # Log action
+        from apps.accounts.models import AuditLog
+        AuditLog.objects.create(
+            user=request.user,
+            action_type='ADMIN_ACTION',
+            resource_type='User',
+            resource_id=str(user.id),
+            description=f'Flagged user {user.email}: {reason}',
+            ip_address=request.META.get('REMOTE_ADDR', ''),
+        )
+        
+        return Response({
+            'success': True,
+            'message': f'User {user.email} has been flagged for review'
+        })
+
+
+class UnflagUserView(APIView):
+    """Remove flag from a user account"""
+    permission_classes = [IsAdmin]
+    
+    def post(self, request, user_id):
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response(
+                {'error': 'User not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        if not user.is_flagged:
+            return Response(
+                {'error': 'User is not flagged'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        user.is_flagged = False
+        user.flagged_reason = ''
+        user.flagged_by = None
+        user.flagged_at = None
+        user.save(update_fields=['is_flagged', 'flagged_reason', 'flagged_by', 'flagged_at'])
+        
+        # Log action
+        from apps.accounts.models import AuditLog
+        AuditLog.objects.create(
+            user=request.user,
+            action_type='ADMIN_ACTION',
+            resource_type='User',
+            resource_id=str(user.id),
+            description=f'Removed flag from user {user.email}',
+            ip_address=request.META.get('REMOTE_ADDR', ''),
+        )
+        
+        return Response({
+            'success': True,
+            'message': f'Flag removed from user {user.email}'
+        })
+
+
+class FlaggedUsersListView(APIView):
+    """List all flagged users for admin review"""
+    permission_classes = [IsAdmin]
+    
+    def get(self, request):
+        flagged_users = User.objects.filter(is_flagged=True).select_related('flagged_by').order_by('-flagged_at')
+        
+        data = []
+        for user in flagged_users:
+            data.append({
+                'id': user.id,
+                'email': user.email,
+                'name': f'{user.first_name} {user.last_name}'.strip() or user.email,
+                'role': user.role,
+                'is_flagged': user.is_flagged,
+                'flagged_reason': user.flagged_reason,
+                'flagged_by': user.flagged_by.email if user.flagged_by else None,
+                'flagged_at': user.flagged_at,
+                'is_banned': user.is_banned,
+                'subscription_tier': user.subscription_tier,
+            })
+        
+        return Response({
+            'count': len(data),
+            'results': data,
+        })
 

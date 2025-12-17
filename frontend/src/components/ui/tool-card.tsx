@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { GlowCard } from "@/components/spotlight-card";
+import { GlowCard } from "@/components/home/spotlight-card";
 import { motion } from "framer-motion";
 
 interface ToolCardProps {
@@ -27,7 +27,7 @@ const getCategoryColor = (category?: string) => {
 
 export function ToolCard({ title, description, icon, href, isNew, category }: ToolCardProps) {
     const { glow, color } = getCategoryColor(category);
-    
+
     return (
         <Link href={href} className="block h-full">
             <motion.div
@@ -42,7 +42,7 @@ export function ToolCard({ title, description, icon, href, isNew, category }: To
                 >
                     <div className="flex flex-col h-full">
                         <div className="mb-4 flex items-center justify-between">
-                            <div 
+                            <div
                                 className="flex h-10 w-10 items-center justify-center rounded-lg"
                                 style={{ backgroundColor: `${color}1A`, color: color }}
                             >

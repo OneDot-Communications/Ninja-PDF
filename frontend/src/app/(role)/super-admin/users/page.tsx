@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { api } from "@/app/lib/api";
+import { api } from "@/lib/services/api";
 import {
     Table,
     TableBody,
@@ -9,11 +9,11 @@ import {
     TableHead,
     TableHeader,
     TableRow
-} from "@/app/components/ui/table";
-import { Button } from "@/app/components/ui/button";
-import { Badge } from "@/app/components/ui/badge";
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Loader2, Search, Shield, ShieldAlert, User, MoreVertical } from "lucide-react";
-import { Input } from "@/app/components/ui/input";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import {
     DropdownMenu,
@@ -22,8 +22,8 @@ import {
     DropdownMenuLabel,
     DropdownMenuSeparator,
     DropdownMenuTrigger,
-} from "@/app/components/ui/dropdown-menu";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/app/components/ui/dialog";
+} from "@/components/ui/dropdown-menu";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export default function SuperAdminUsersPage() {
     const [users, setUsers] = useState<any[]>([]);
@@ -79,6 +79,28 @@ export default function SuperAdminUsersPage() {
                 return <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-200 border-blue-200">Admin</Badge>;
             default:
                 return <Badge variant="secondary">User</Badge>;
+        }
+    };
+
+    const handleImpersonate = async (userId: number) => {
+        try {
+            const data = await api.impersonateUser(userId);
+            // Save tokens and redirect
+            localStorage.setItem('access_token', data.access);
+            localStorage.setItem('refresh_token', data.refresh);
+            // Force reload to pick up new user context
+            window.location.href = '/dashboard';
+        } catch (error: any) {
+            toast.error(error.message || "Impersonation failed");
+        }
+    };
+
+    const handleForceLogout = async (userId: number) => {
+        try {
+            await api.forceLogout(userId);
+            toast.success("User logged out from all devices");
+        } catch (error) {
+            toast.error("Failed to force logout");
         }
     };
 
@@ -152,6 +174,16 @@ export default function SuperAdminUsersPage() {
                                             <DropdownMenuItem onClick={() => { setSelectedUser(user); setIsManageOpen(true); }}>
                                                 Manage Roles
                                             </DropdownMenuItem>
+                                            <DropdownMenuSeparator />
+                                            {user.role !== 'SUPER_ADMIN' && (
+                                                <DropdownMenuItem onClick={() => handleImpersonate(user.id)}>
+                                                    Impersonate
+                                                </DropdownMenuItem>
+                                            )}
+                                            <DropdownMenuItem onClick={() => handleForceLogout(user.id)}>
+                                                Force Logout
+                                            </DropdownMenuItem>
+                                            <DropdownMenuSeparator />
                                             <DropdownMenuItem className="text-red-600">
                                                 Ban User
                                             </DropdownMenuItem>

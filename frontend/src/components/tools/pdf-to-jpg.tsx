@@ -6,8 +6,8 @@ import { FileUpload } from "../ui/file-upload";
 import { Button } from "../ui/button";
 import { ArrowRight, Settings, Loader2 } from "lucide-react";
 import { PdfPreview } from "../ui/pdf-preview";
-import { toast } from "../../lib/use-toast";
-import { pdfApi } from "../../lib/pdf-api";
+import { toast } from "@/lib/hooks/use-toast";
+import { pdfApi } from "@/lib/services/pdf-api";
 
 export function PdfToJpgTool() {
     const [file, setFile] = useState<File | null>(null);

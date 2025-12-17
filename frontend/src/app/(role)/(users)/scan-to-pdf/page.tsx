@@ -1,5 +1,5 @@
-import { ToolShell } from "@/app/components/layout/tool-shell";
-import { ScanToPdfTool } from "@/app/components/tools/scan-to-pdf";
+import { ToolShell } from "@/components/layout/tool-shell";
+import { ScanToPdfTool } from "@/components/tools/scan-to-pdf";
 
 export default function ScanToPdfPage() {
     return (

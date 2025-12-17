@@ -5,8 +5,8 @@ import { saveAs } from "file-saver";
 import { FileUpload } from "../ui/file-upload";
 import { Button } from "../ui/button";
 import { Wrench, AlertTriangle, CheckCircle, FileText, Eye, RefreshCw } from "lucide-react";
-import { pdfStrategyManager } from "../../lib/pdf-service";
-import { toast } from "../../lib/use-toast";
+import { pdfStrategyManager } from "@/lib/services/pdf-service";
+import { toast } from "@/lib/hooks/use-toast";
 
 export function RepairPdfTool() {
     const [file, setFile] = useState<File | null>(null);

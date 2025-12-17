@@ -1,5 +1,5 @@
-import { ToolShell } from "@/app/components/layout/tool-shell";
-import { CompressPdfTool } from "@/app/components/tools/compress-pdf";
+import { ToolShell } from "@/components/layout/tool-shell";
+import { CompressPdfTool } from "@/components/tools/compress-pdf";
 
 export const metadata = {
     title: "Compress PDF - 18+ PDF",

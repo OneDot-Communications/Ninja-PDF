@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { tools as staticTools } from "./tools";
-import { api } from "./api";
+import { tools as staticTools } from "@/lib/tools";
+import { api } from "@/lib/services/api";
 
 export function useTools() {
     const [tools, setTools] = useState(staticTools);

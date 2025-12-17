@@ -24,6 +24,7 @@ class Plan(models.Model):
 class Subscription(models.Model):
     class Status(models.TextChoices):
         FREE = 'FREE', _('Free')
+        TRIAL = 'TRIAL', _('Trial')
         PENDING_PAYMENT = 'PENDING_PAYMENT', _('Pending Payment')
         ACTIVE = 'ACTIVE', _('Active')
         GRACE_PERIOD = 'GRACE_PERIOD', _('Grace Period')
@@ -37,8 +38,13 @@ class Subscription(models.Model):
     current_period_start = models.DateTimeField(auto_now_add=True)
     current_period_end = models.DateTimeField()
     cancel_at_period_end = models.BooleanField(default=False)
-    cancel_at_period_end = models.BooleanField(default=False)
     stripe_subscription_id = models.CharField(max_length=100, blank=True, null=True)
+    
+    # Trial Period Fields
+    is_trial = models.BooleanField(default=False, help_text="Whether subscription is in trial period")
+    trial_started_at = models.DateTimeField(null=True, blank=True, help_text="When trial started")
+    trial_ends_at = models.DateTimeField(null=True, blank=True, help_text="When trial ends")
+    trial_converted = models.BooleanField(default=False, help_text="Whether trial was converted to paid")
     
     # Storage Quotas (in Bytes)
     storage_used = models.BigIntegerField(default=0, help_text="Current storage usage in bytes")

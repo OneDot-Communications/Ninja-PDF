@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Loader2, CheckCircle, XCircle } from 'lucide-react';
-import { Progress } from '@/app/components/ui/progress'; // Ensure this exists or use standard
+import { Progress } from '@/components/ui/progress'; // Ensure this exists or use standard
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 

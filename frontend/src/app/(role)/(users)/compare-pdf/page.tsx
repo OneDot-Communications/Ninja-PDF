@@ -1,5 +1,5 @@
-import { ToolShell } from "@/app/components/layout/tool-shell";
-import { ComparePdfTool } from "@/app/components/tools/compare-pdf";
+import { ToolShell } from "@/components/layout/tool-shell";
+import { ComparePdfTool } from "@/components/tools/compare-pdf";
 
 export const metadata = {
     title: "Compare PDF - 18+ PDF",

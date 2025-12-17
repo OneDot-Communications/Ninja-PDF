@@ -2,14 +2,14 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Button } from "@/app/components/ui/button";
-import { Input } from "@/app/components/ui/input";
-import { Label } from "@/app/components/ui/label";
-import { Textarea } from "@/app/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Save, RefreshCw, LayoutTemplate, Upload, Image as ImageIcon } from "lucide-react";
 import { toast } from "sonner";
-import { api } from "@/app/lib/api";
-import { HomeView } from "@/app/components/home/HomeView";
+import { api } from "@/lib/services/api";
+import { HomeView } from "@/components/home/HomeView";
 
 export default function ContentPage() {
     const [loading, setLoading] = useState(true);

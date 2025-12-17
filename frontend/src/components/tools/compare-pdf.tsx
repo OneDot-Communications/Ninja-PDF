@@ -48,9 +48,9 @@ import {
     Type,
     Circle
 } from "lucide-react";
-import { pdfStrategyManager, getPdfJs } from "../../lib/pdf-service";
-import { toast } from "../../lib/use-toast";
-import { cn } from "../../lib/utils";
+import { pdfStrategyManager, getPdfJs } from "@/lib/services/pdf-service";
+import { toast } from "@/lib/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 // Comparison mode
 type ComparisonMode = "side-by-side" | "overlay" | "diff" | "slide";

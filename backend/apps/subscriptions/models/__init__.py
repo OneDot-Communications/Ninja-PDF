@@ -21,6 +21,8 @@ from .coupon import (
     TrialConfiguration,
 )
 from .tool_change_request import ToolChangeRequest
+from .tax import TaxRule, TaxExemption, BillingConfiguration
+from .feature_flags import FeatureFlag, FeatureFlagAudit
 
 __all__ = [
     'Plan',
@@ -42,5 +44,10 @@ __all__ = [
     'TaxConfiguration',
     'TrialConfiguration',
     'ToolChangeRequest',
+    'TaxRule',
+    'TaxExemption',
+    'BillingConfiguration',
+    'FeatureFlag',
+    'FeatureFlagAudit',
 ]
 

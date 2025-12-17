@@ -1,8 +1,8 @@
 "use client";
 
-import { HomeView } from "./components/home/HomeView";
+import { HomeView } from "@/components/home/HomeView";
 import { useEffect, useState } from "react";
-import { api } from "./lib/api";
+import { api } from "@/lib/services/api";
 
 export default function Home() {
   const [settings, setSettings] = useState({

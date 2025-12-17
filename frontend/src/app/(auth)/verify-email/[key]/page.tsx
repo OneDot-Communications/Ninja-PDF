@@ -3,8 +3,8 @@
 import React, { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { motion } from "framer-motion";
-import { api } from "@/app/lib/api";
-import { Button } from "@/app/components/ui/button";
+import { api } from "@/lib/services/api";
+import { Button } from "@/components/ui/button";
 
 const VerifyEmailPage = () => {
     const router = useRouter();

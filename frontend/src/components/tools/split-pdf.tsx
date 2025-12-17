@@ -6,9 +6,9 @@ import { FileUpload } from "../ui/file-upload";
 import { Button } from "../ui/button";
 import { ArrowRight, CheckCircle2, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { pdfApi } from "../../lib/pdf-api";
-import { getPdfJs } from "../../lib/pdf-service";
-import { toast } from "../../lib/use-toast";
+import { pdfApi } from "@/lib/services/pdf-api";
+import { getPdfJs } from "@/lib/services/pdf-service";
+import { toast } from "@/lib/hooks/use-toast";
 
 export function SplitPdfTool() {
     const [file, setFile] = useState<File | null>(null);

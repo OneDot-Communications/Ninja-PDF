@@ -102,8 +102,8 @@ class CloudConnection(models.Model):
 
     def refresh_access_token(self):
         """Refresh OAuth token using refresh_token"""
-        # Implementation depends on provider
-        pass
+        from apps.files.services.cloud_storage import CloudStorageService
+        return CloudStorageService.refresh_access_token(self)
 
 
 class CloudSyncJob(models.Model):

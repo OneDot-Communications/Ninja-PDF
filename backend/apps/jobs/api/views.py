@@ -7,6 +7,8 @@ from core.views import IsSuperAdmin
 from django.db import models
 
 
+from apps.subscriptions.services.entitlements import EntitlementService
+
 class JobViewSet(viewsets.ModelViewSet):
     """
     ViewSet to list user's jobs (processing history) with batch processing support.
@@ -29,6 +31,29 @@ class JobViewSet(viewsets.ModelViewSet):
             qs = qs.filter(operation=operation)
             
         return qs
+
+    def create(self, request, *args, **kwargs):
+        """
+        Override create to check entitlements.
+        """
+        user = request.user
+        operation = request.data.get('operation')
+        
+        if operation:
+            # Check availability
+            if not EntitlementService.check_usage(user, operation):
+                 return Response(
+                    {'error': f'Usage limit reached for {operation}. Upgrade to Premium for more.'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+        
+        response = super().create(request, *args, **kwargs)
+        
+        if operation and response.status_code == 201:
+            EntitlementService.record_usage(user, operation)
+            
+        return response
+
     
     @action(detail=False, methods=['post'])
     def batch(self, request):
@@ -37,10 +62,10 @@ class JobViewSet(viewsets.ModelViewSet):
         """
         user = request.user
         
-        # Check premium status
-        if not hasattr(user, 'subscription') or not user.subscription.plan or user.subscription.plan.price == 0:
+        # 1. Check Batch Processing Permission
+        if not EntitlementService.check_usage(user, 'BATCH_PROCESSING'):
             return Response(
-                {'error': 'Batch processing requires premium subscription'},
+                {'error': 'Batch processing requires premium subscription or is not enabled for your plan.'},
                 status=status.HTTP_403_FORBIDDEN
             )
         
@@ -59,6 +84,14 @@ class JobViewSet(viewsets.ModelViewSet):
                 {'error': 'Maximum 50 files per batch'},
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+        # 2. Check Operation Limits (Bulk)
+        remaining, is_unlimited = EntitlementService.get_remaining_usage(user, operation)
+        if not is_unlimited and remaining < len(files):
+             return Response(
+                {'error': f'Not enough quota for {len(files)} files. Remaining: {remaining}'},
+                status=status.HTTP_403_FORBIDDEN
+            )
         
         # Create batch jobs
         batch_id = f"batch_{user.id}_{int(__import__('time').time())}"
@@ -75,6 +108,9 @@ class JobViewSet(viewsets.ModelViewSet):
                 priority=2,  # Higher priority for premium
             )
             jobs.append(job.id)
+        
+        # Record Usage
+        EntitlementService.record_usage(user, operation, count=len(files))
         
         return Response({
             'batch_id': batch_id,

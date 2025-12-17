@@ -39,6 +39,12 @@ from apps.accounts.api.admin_views import (
     PlatformAnalyticsView,
     ToolUsageAnalyticsView,
     JobQueueHealthView,
+    ApiUsageAnalyticsView,
+    DDoSToggleView,
+    ImpersonateUserView,
+    FlagUserView,
+    UnflagUserView,
+    FlaggedUsersListView,
 )
 from dj_rest_auth.views import (
     PasswordChangeView,
@@ -123,11 +129,21 @@ urlpatterns = [
     path('super-admin/users/<int:user_id>/force-password-reset/', ForcePasswordResetView.as_view(), name='force-password-reset'),
     path('super-admin/users/<int:user_id>/reset-2fa/', Reset2FAView.as_view(), name='reset-2fa'),
     path('super-admin/users/<int:user_id>/change-role/', ChangeUserRoleView.as_view(), name='change-role'),
+    path('super-admin/users/<int:user_id>/impersonate/', ImpersonateUserView.as_view(), name='impersonate-user'),
     
     # Super Admin: Analytics Dashboard (Tasks 101-107)
     path('super-admin/analytics/', PlatformAnalyticsView.as_view(), name='platform-analytics'),
     path('super-admin/analytics/tools/', ToolUsageAnalyticsView.as_view(), name='tool-usage-analytics'),
     path('super-admin/analytics/queue/', JobQueueHealthView.as_view(), name='job-queue-health'),
+    path('super-admin/analytics/api-usage/', ApiUsageAnalyticsView.as_view(), name='api-usage-analytics'),
+    
+    # Super Admin: Security (Task 95)
+    path('super-admin/security/ddos/', DDoSToggleView.as_view(), name='ddos-protection-toggle'),
+    
+    # Admin: User Flagging (Phase 2 - Admin Review)
+    path('admin/users/<int:user_id>/flag/', FlagUserView.as_view(), name='flag-user'),
+    path('admin/users/<int:user_id>/unflag/', UnflagUserView.as_view(), name='unflag-user'),
+    path('admin/flagged-users/', FlaggedUsersListView.as_view(), name='flagged-users-list'),
 
     # ViewSets
     path('', include(router.urls)),

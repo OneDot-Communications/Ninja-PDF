@@ -2,8 +2,8 @@
 
 import React from 'react';
 import { HistoryTable } from './history-table';
-import { FeatureGuard } from '@/app/components/auth/FeatureGuard';
-import { useAuth } from '@/app/context/AuthContext';
+import { FeatureGuard } from '@/components/auth/FeatureGuard';
+import { useAuth } from '@/lib/context/AuthContext';
 
 export default function DashboardPage() {
     const { user } = useAuth();

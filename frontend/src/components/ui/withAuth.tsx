@@ -4,7 +4,7 @@
 
 import React, { useEffect, ComponentType } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/app/context/AuthContext";
+import { useAuth } from "@/lib/context/AuthContext";
 
 /**
  * Higher-order component that redirects unauthenticated users to /login.

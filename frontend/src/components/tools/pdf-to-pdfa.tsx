@@ -5,9 +5,9 @@ import { saveAs } from "file-saver";
 import { FileUpload } from "../ui/file-upload";
 import { Button } from "../ui/button";
 import { Archive, Check, Info } from "lucide-react";
-import { cn } from "../../lib/utils";
-import { pdfApi } from "../../lib/pdf-api";
-import { toast } from "../../lib/use-toast";
+import { cn } from "@/lib/utils";
+import { pdfApi } from "@/lib/services/pdf-api";
+import { toast } from "@/lib/hooks/use-toast";
 
 export function PdfToPdfATool() {
     const [file, setFile] = useState<File | null>(null);

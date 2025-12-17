@@ -57,6 +57,19 @@ class User(AbstractUser):
     # 2FA Fields (Task 19)
     is_2fa_enabled = models.BooleanField(default=False)
     totp_secret = models.CharField(max_length=100, blank=True, null=True)
+    
+    # Account Flagging (Phase 2 - Admin Review)
+    is_flagged = models.BooleanField(default=False, help_text="Whether account is flagged for review")
+    flagged_reason = models.TextField(blank=True, help_text="Reason for flagging")
+    flagged_by = models.ForeignKey(
+        'self', 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True, 
+        related_name='flagged_users',
+        help_text="Admin who flagged this account"
+    )
+    flagged_at = models.DateTimeField(null=True, blank=True)
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['first_name', 'last_name']

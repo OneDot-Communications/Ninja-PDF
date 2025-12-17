@@ -1,6 +1,6 @@
 import { Metadata } from "next";
-import { MetadataCleanerTool } from "@/app/components/tools/metadata-cleaner";
-import { ToolShell } from "@/app/components/layout/tool-shell";
+import { MetadataCleanerTool } from "@/components/tools/metadata-cleaner";
+import { ToolShell } from "@/components/layout/tool-shell";
 
 export const metadata: Metadata = {
     title: "Metadata Cleaner - Remove Hidden Data from PDF | 18+ PDF",

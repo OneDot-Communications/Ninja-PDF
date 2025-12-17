@@ -5,8 +5,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSearchParams } from 'next/navigation';
-import { api } from '@/app/lib/api';
-import { useAuth } from '@/app/context/AuthContext';
+import { api } from '@/lib/services/api';
+import { useAuth } from '@/lib/context/AuthContext';
 
 import { Suspense } from "react";
 

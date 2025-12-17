@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Button } from "@/app/components/ui/button";
-import { Input } from "@/app/components/ui/input";
-import { Label } from "@/app/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/app/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/app/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
     Dialog,
     DialogContent,
@@ -14,8 +14,8 @@ import {
     DialogHeader,
     DialogTitle,
     DialogTrigger,
-} from "@/app/components/ui/dialog";
-import { Skeleton } from "@/app/components/ui/skeleton";
+} from "@/components/ui/dialog";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
     Table,
     TableBody,
@@ -23,12 +23,12 @@ import {
     TableHead,
     TableHeader,
     TableRow,
-} from "@/app/components/ui/table";
-import { Badge } from "@/app/components/ui/badge";
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import { Plus, Users, Mail, Trash2, MoreHorizontal, UserPlus } from "lucide-react";
 import { toast } from "sonner";
-import { api } from "@/app/lib/api";
-import { useAuth } from "@/app/context/AuthContext";
+import { api } from "@/lib/services/api";
+import { useAuth } from "@/lib/context/AuthContext";
 
 export default function TeamPage() {
     const { user } = useAuth();

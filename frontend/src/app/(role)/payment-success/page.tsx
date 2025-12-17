@@ -2,9 +2,9 @@
 
 import { useEffect, useState, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { api } from "@/app/lib/api";
+import { api } from "@/lib/services/api";
 import { Loader2, CheckCircle, XCircle } from "lucide-react";
-import { Button } from "@/app/components/ui/button";
+import { Button } from "@/components/ui/button";
 
 const PaymentSuccessContent = () => {
     const router = useRouter();

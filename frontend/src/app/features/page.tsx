@@ -1,7 +1,7 @@
-import { Header } from "../components/layout/header";
-import { Footer } from "../components/layout/footer";
-import { ToolCard } from "../components/ui/tool-card";
-import { tools } from "../lib/tools";
+import { Header } from "@/components/layout/header";
+import { Footer } from "@/components/layout/footer";
+import { ToolCard } from "@/components/ui/tool-card";
+import { tools } from "@/lib/tools";
 
 export default function FeaturesPage() {
   const categories = [

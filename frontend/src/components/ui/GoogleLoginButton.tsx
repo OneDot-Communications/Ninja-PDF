@@ -3,7 +3,7 @@
 "use client";
 
 import React from "react";
-import { api } from "@/app/lib/api";
+import { api } from "@/lib/services/api";
 import { useRouter } from "next/navigation";
 
 const GoogleLoginButton = () => {

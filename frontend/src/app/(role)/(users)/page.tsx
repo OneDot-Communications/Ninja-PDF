@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { api } from "@/app/lib/api";
-import { ProfileCard } from "@/app/components/dashboard/profile/ProfileCard";
-import { Card, CardContent, CardHeader, CardTitle } from "@/app/components/ui/card";
-import { Button } from "@/app/components/ui/button";
-import { Badge } from "@/app/components/ui/badge"; // Ensure you have Badge or remove
+import { api } from "@/lib/services/api";
+import { ProfileCard } from "@/components/dashboard/profile/ProfileCard";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge"; // Ensure you have Badge or remove
 import { Loader2, Mail, ExternalLink, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";

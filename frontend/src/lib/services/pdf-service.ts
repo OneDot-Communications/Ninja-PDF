@@ -1,7 +1,7 @@
 // PDF Service for handling various PDF operations
 // Replaces pdf-strategies.ts to resolve caching issues
 
-import { PDFDocument, degrees, StandardFonts, rgb } from './external/pdf-lib.esm';
+import { PDFDocument, degrees, StandardFonts, rgb } from '../external/pdf-lib.esm.js';
 
 export interface StrategyResult {
     blob: Blob;
@@ -585,7 +585,7 @@ async function repairPdf(file: File, options: any): Promise<StrategyResult> {
 
 async function redactPdf(file: File, options: any): Promise<StrategyResult> {
     const { searchText, useRegex, caseSensitive, redactionColor = '#000000', redactions } = options;
-    
+
     if (!searchText && (!redactions || redactions.length === 0)) {
         throw new Error("No search text or redaction areas provided");
     }
@@ -614,7 +614,7 @@ async function redactPdf(file: File, options: any): Promise<StrategyResult> {
                 const x = (redaction.x / 100) * width;
                 const w = (redaction.width / 100) * width;
                 const h = (redaction.height / 100) * height;
-                
+
                 // Convert web coordinates (top-left) to PDF coordinates (bottom-left)
                 const y = height - ((redaction.y + redaction.height) / 100 * height);
 
@@ -1185,17 +1185,17 @@ async function editPdf(file: File, options: any): Promise<StrategyResult> {
             // We need to construct an SVG path string or draw lines
             // pdf-lib supports drawSvgPath, but constructing it from points is easier with drawLine for now
             // OR we can construct a path string "M x y L x y ..."
-            
+
             // Let's use drawSvgPath if we can construct the string, but coordinates need scaling
             // Actually, drawing individual lines might be safer for coordinate transformation
-            
+
             if (el.pathData.length > 1) {
                 const pathColor = rgb(r, g, b);
                 const thickness = el.strokeWidth || 2;
 
                 for (let i = 0; i < el.pathData.length - 1; i++) {
                     const p1 = el.pathData[i];
-                    const p2 = el.pathData[i+1];
+                    const p2 = el.pathData[i + 1];
 
                     const x1 = (p1.x / 100) * width;
                     const y1 = height - (p1.y / 100) * height;
@@ -1238,7 +1238,7 @@ async function editPdf(file: File, options: any): Promise<StrategyResult> {
                 const cx = x + w / 2;
                 const cy = y + h / 2;
                 const radius = Math.min(w, h) / 2;
-                
+
                 page.drawCircle({
                     x: cx,
                     y: cy,

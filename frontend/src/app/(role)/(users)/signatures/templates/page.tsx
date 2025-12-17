@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { api } from "@/app/lib/api";
-import { Card, CardContent } from "@/app/components/ui/card";
+import { api } from "@/lib/services/api";
+import { Card, CardContent } from "@/components/ui/card";
 import { Plus } from "lucide-react";
-import { Button } from "@/app/components/ui/button";
-import { Skeleton } from "@/app/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function SignatureTemplatesPage() {
     const router = useRouter();

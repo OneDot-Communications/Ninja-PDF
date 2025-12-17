@@ -74,9 +74,9 @@ import {
     Smartphone,
     Tablet
 } from "lucide-react";
-import { pdfStrategyManager, getPdfJs } from "../../lib/pdf-service";
-import { toast } from "../../lib/use-toast";
-import { cn } from "../../lib/utils";
+import { pdfStrategyManager, getPdfJs } from "@/lib/services/pdf-service";
+import { toast } from "@/lib/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 // Google Fonts API key should be provided via environment variable NEXT_PUBLIC_GOOGLE_FONTS_API_KEY
 const GOOGLE_FONTS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_FONTS_API_KEY || undefined;

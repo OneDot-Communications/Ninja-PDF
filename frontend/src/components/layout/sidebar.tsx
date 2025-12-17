@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { cn } from "@/app/lib/utils";
+import { cn } from "@/lib/utils";
 import { 
     LayoutDashboard, 
     Users, 
@@ -12,7 +12,7 @@ import {
     FileText, 
     Star 
 } from "lucide-react";
-import { Button } from "@/app/components/ui/button";
+import { Button } from "@/components/ui/button";
 
 interface AdminSidebarProps extends React.HTMLAttributes<HTMLDivElement> {}
 

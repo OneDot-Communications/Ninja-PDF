@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { cn } from "../../lib/utils";
-import { getPdfJs } from "../../lib/pdf-service";
+import { cn } from "@/lib/utils";
+import { getPdfJs } from "@/lib/services/pdf-service";
 
 interface PdfPreviewProps {
     file: File;

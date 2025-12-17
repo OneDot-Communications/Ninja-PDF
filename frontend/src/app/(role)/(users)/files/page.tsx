@@ -1,24 +1,24 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useAuth } from "@/app/context/AuthContext";
-import { api } from "@/app/lib/api";
-import { Card, CardContent } from "@/app/components/ui/card";
-import { Button } from "@/app/components/ui/button";
-import { Input } from "@/app/components/ui/input";
-import { Label } from "@/app/components/ui/label";
-import { Progress } from "@/app/components/ui/progress";
+import { useAuth } from "@/lib/context/AuthContext";
+import { api } from "@/lib/services/api";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
 import {
     Table, TableBody, TableCell, TableHead, TableHeader, TableRow
-} from "@/app/components/ui/table";
+} from "@/components/ui/table";
 import {
     Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter
-} from "@/app/components/ui/dialog";
+} from "@/components/ui/dialog";
 import {
     FileIcon, Lock, Unlock, Share2, Trash2, Download, Eye, Plus, Copy, Loader2
 } from "lucide-react";
 import { toast } from "sonner";
-import { Skeleton } from "@/app/components/ui/skeleton";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function MyFilesPage() {
     const { user, refreshUser } = useAuth();

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { api } from "@/app/lib/api";
+import { api } from "@/lib/services/api";
 import {
     Table,
     TableBody,
@@ -9,18 +9,18 @@ import {
     TableHead,
     TableHeader,
     TableRow
-} from "@/app/components/ui/table";
-import { Button } from "@/app/components/ui/button";
-import { Badge } from "@/app/components/ui/badge";
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Loader2, Check, X, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import {
     Popover,
     PopoverContent,
     PopoverTrigger,
-} from "@/app/components/ui/popover";
-import { Input } from "@/app/components/ui/input";
-import { useAuth } from "@/app/context/AuthContext";
+} from "@/components/ui/popover";
+import { Input } from "@/components/ui/input";
+import { useAuth } from "@/lib/context/AuthContext";
 
 export default function AdminRequestsPage() {
     const [requests, setRequests] = useState<any[]>([]);
