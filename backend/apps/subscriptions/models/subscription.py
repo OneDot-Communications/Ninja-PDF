@@ -85,12 +85,22 @@ class Feature(models.Model):
     """
     Represents a specific system capability (e.g. 'MERGE_PDF').
     """
+    class Category(models.TextChoices):
+        TOOL = 'TOOL', _('PDF Tool')
+        PERMISSION = 'PERMISSION', _('Permission')
+        SYSTEM_CONFIG = 'SYSTEM_CONFIG', _('System Configuration')
+    
     name = models.CharField(max_length=100)
     code = models.SlugField(unique=True, help_text="Unique code used in code checks")
     description = models.TextField(blank=True)
     icon = models.ImageField(upload_to='features/', null=True, blank=True, help_text="Feature icon/logo for frontend")
     is_premium_default = models.BooleanField(default=False, help_text="If true, strictly Premium by default")
     free_limit = models.IntegerField(default=0, help_text="Number of free uses allowed per day/month (0 = unlimited or strictly premium if is_premium_default is True)")
+    
+    # RBAC Fields
+    category = models.CharField(max_length=20, choices=Category.choices, default=Category.PERMISSION)
+    permission_id = models.PositiveIntegerField(null=True, blank=True, help_text="Maps to RBAC specification task ID (1-203)")
+    is_active = models.BooleanField(default=True, help_text="Global toggle to enable/disable this feature")
 
     def __str__(self):
         return self.name
@@ -155,3 +165,66 @@ class UserFeatureUsage(models.Model):
 
     def __str__(self):
         return f"{self.user} - {self.feature} - {self.date}: {self.count}"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# RBAC Models (Added for 203-task RBAC specification)
+# ─────────────────────────────────────────────────────────────────────────────
+
+class PremiumRequest(models.Model):
+    """User request for premium access (proof-based approval)."""
+    class Status(models.TextChoices):
+        PENDING = 'PENDING', _('Pending')
+        APPROVED = 'APPROVED', _('Approved')
+        REJECTED = 'REJECTED', _('Rejected')
+    
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='premium_requests')
+    proof_file = models.FileField(upload_to='premium_proofs/', null=True, blank=True)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
+    admin_notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    reviewed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='reviewed_premium_requests')
+    
+    def __str__(self):
+        return f"{self.user.email} - {self.status}"
+
+
+class SystemSetting(models.Model):
+    """Global system configuration settings."""
+    key = models.CharField(max_length=100, unique=True)
+    value = models.TextField()
+    description = models.TextField(blank=True)
+    is_public = models.BooleanField(default=False, help_text="Whether this setting is visible to non-admin users")
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return f"{self.key}: {self.value[:50]}"
+
+
+class PlanFeature(models.Model):
+    """Links a Feature to a Plan with specific entitlements."""
+    plan = models.ForeignKey(Plan, on_delete=models.CASCADE, related_name='plan_features')
+    feature = models.ForeignKey(Feature, on_delete=models.CASCADE, related_name='plan_assignments')
+    is_enabled = models.BooleanField(default=True)
+    daily_limit = models.PositiveIntegerField(default=0, help_text="0 = unlimited")
+    monthly_limit = models.PositiveIntegerField(default=0, help_text="0 = unlimited")
+    
+    class Meta:
+        unique_together = ('plan', 'feature')
+    
+    def __str__(self):
+        return f"{self.plan.name} - {self.feature.code}"
+
+
+class RolePermission(models.Model):
+    """Maps a role to a feature/permission."""
+    role = models.CharField(max_length=20, help_text="USER, ADMIN, or SUPER_ADMIN")
+    feature = models.ForeignKey(Feature, on_delete=models.CASCADE, related_name='role_assignments')
+    
+    class Meta:
+        unique_together = ('role', 'feature')
+    
+    def __str__(self):
+        return f"{self.role} - {self.feature.code}"
+

@@ -54,6 +54,12 @@ class Job(models.Model):
     max_retries = models.PositiveSmallIntegerField(default=3)
     retry_count = models.PositiveSmallIntegerField(default=0)
     
+    # Batch Processing Fields (Tasks 181-184)
+    batch_id = models.CharField(max_length=100, blank=True, null=True, db_index=True)
+    batch_index = models.PositiveIntegerField(default=0)
+    is_batch = models.BooleanField(default=False)
+    operation = models.CharField(max_length=100, blank=True, db_index=True)  # User-friendly operation name
+    
     result = models.JSONField(default=dict, blank=True)
     error_message = models.TextField(blank=True)
     

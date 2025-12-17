@@ -9,7 +9,7 @@ from apps.subscriptions.api.views import (
     UserFeatureOverrideViewSet,
     BusinessDetailsViewSet,
     ReferralViewSet,
-    PaymentViewSet
+    PaymentViewSet,
 )
 
 router = DefaultRouter()
@@ -22,9 +22,32 @@ router.register(r'business-details', BusinessDetailsViewSet, basename='business-
 router.register(r'referrals', ReferralViewSet, basename='referrals')
 router.register(r'payments', PaymentViewSet, basename='payments')
 
+# Conditionally add ViewSets if they exist
+try:
+    from apps.subscriptions.api.coupon_views import (
+        CouponViewSet,
+        RegionalPricingViewSet,
+        TaxConfigurationViewSet,
+        TrialConfigurationViewSet
+    )
+    router.register(r'coupons', CouponViewSet, basename='coupons')
+    router.register(r'regional-pricing', RegionalPricingViewSet, basename='regional-pricing')
+    router.register(r'tax-config', TaxConfigurationViewSet, basename='tax-config')
+    router.register(r'trial-config', TrialConfigurationViewSet, basename='trial-config')
+except ImportError:
+    pass
+
+try:
+    from apps.subscriptions.api.tool_change_views import ToolChangeRequestViewSet
+    router.register(r'tool-change-requests', ToolChangeRequestViewSet, basename='tool-change-requests')
+except ImportError:
+    pass
+
 from apps.subscriptions.api.webhooks import stripe_webhook
 
 urlpatterns = [
     path('', include(router.urls)),
     path('webhook/', stripe_webhook, name='stripe-webhook'),
 ]
+
+

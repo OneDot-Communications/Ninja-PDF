@@ -5,6 +5,7 @@ from django.contrib.auth import get_user_model
 from apps.accounts.services.permissions import IsAdmin
 from apps.subscriptions.models.subscription import Subscription, Plan, Invoice, Feature
 from django.db.models import Sum, Count
+from core.views import IsSuperAdmin
 
 User = get_user_model()
 
@@ -125,7 +126,7 @@ class AdminDatabaseStatsView(APIView):
                 row = cursor.fetchone()
                 cache_hit = round(row[0] * 100, 2) if row and row[0] else 0
 
-        except Exception as e:
+        except Exception:
             # Fallback for non-postgres or permission errors
             db_size = "Unknown"
             connections = 0
@@ -145,4 +146,446 @@ class AdminDatabaseStatsView(APIView):
                 'features': Feature.objects.count(),
             }
         })
+
+
+# =============================================================================
+# SUPER ADMIN USER ACTIONS (Tasks 14-19)
+# =============================================================================
+
+class ForceLogoutView(APIView):
+    """Task 17: Force logout from all sessions for a user"""
+    permission_classes = [IsSuperAdmin]
+    
+    def post(self, request, user_id):
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        # Delete all sessions for this user
+        from apps.accounts.models import UserSession
+        deleted_count = UserSession.objects.filter(user=user).delete()[0]
+        
+        # Blacklist all refresh tokens
+        try:
+            from rest_framework_simplejwt.token_blacklist.models import OutstandingToken, BlacklistedToken
+            tokens = OutstandingToken.objects.filter(user=user)
+            for token in tokens:
+                BlacklistedToken.objects.get_or_create(token=token)
+        except Exception:
+            pass  # Token blacklist not configured
+        
+        # Log the action
+        from apps.accounts.models import AuditLog
+        AuditLog.objects.create(
+            user=request.user,
+            action_type='ADMIN_ACTION',
+            resource_type='User',
+            resource_id=str(user.id),
+            description=f'Force logged out user {user.email}',
+            ip_address=request.META.get('REMOTE_ADDR', ''),
+        )
+        
+        return Response({
+            'success': True,
+            'sessions_terminated': deleted_count,
+            'message': f'User {user.email} has been logged out from all devices'
+        })
+
+
+class BanUserView(APIView):
+    """Tasks 14-15: Lock or permanently ban any account"""
+    permission_classes = [IsSuperAdmin]
+    
+    def post(self, request, user_id):
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        # Prevent banning super admins
+        if user.role == 'SUPER_ADMIN' and request.user.id != user.id:
+            return Response({'error': 'Cannot ban another Super Admin'}, status=status.HTTP_403_FORBIDDEN)
+        
+        ban_type = request.data.get('type', 'temporary')  # 'temporary' or 'permanent'
+        reason = request.data.get('reason', '')
+        duration_days = request.data.get('duration_days', 7)
+        
+        user.is_active = False
+        
+        if ban_type == 'permanent':
+            user.is_banned = True
+            user.ban_reason = reason
+        else:
+            from django.utils import timezone
+            import datetime
+            user.banned_until = timezone.now() + datetime.timedelta(days=duration_days)
+        
+        user.save()
+        
+        # Force logout
+        from apps.accounts.models import UserSession
+        UserSession.objects.filter(user=user).delete()
+        
+        # Log the action
+        from apps.accounts.models import AuditLog
+        AuditLog.objects.create(
+            user=request.user,
+            action_type='ADMIN_ACTION',
+            resource_type='User',
+            resource_id=str(user.id),
+            description=f'{ban_type.title()} ban applied to {user.email}: {reason}',
+            ip_address=request.META.get('REMOTE_ADDR', ''),
+        )
+        
+        return Response({
+            'success': True,
+            'ban_type': ban_type,
+            'message': f'User {user.email} has been {ban_type}ly banned'
+        })
+
+
+class UnbanUserView(APIView):
+    """Reactivate a banned user"""
+    permission_classes = [IsSuperAdmin]
+    
+    def post(self, request, user_id):
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        user.is_active = True
+        user.is_banned = False
+        user.banned_until = None
+        user.ban_reason = ''
+        user.save()
+        
+        from apps.accounts.models import AuditLog
+        AuditLog.objects.create(
+            user=request.user,
+            action_type='ADMIN_ACTION',
+            resource_type='User',
+            resource_id=str(user.id),
+            description=f'Unbanned user {user.email}',
+            ip_address=request.META.get('REMOTE_ADDR', ''),
+        )
+        
+        return Response({
+            'success': True,
+            'message': f'User {user.email} has been unbanned and can now login'
+        })
+
+
+class ForcePasswordResetView(APIView):
+    """Task 16: Force password reset for any account"""
+    permission_classes = [IsSuperAdmin]
+    
+    def post(self, request, user_id):
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        # Generate reset token and send email
+        import uuid
+        from django.utils import timezone
+        import datetime
+        
+        reset_token = str(uuid.uuid4())
+        user.password_reset_token = reset_token
+        user.password_reset_expires = timezone.now() + datetime.timedelta(hours=24)
+        user.force_password_change = True
+        user.save()
+        
+        # Send email notification
+        try:
+            from django.core.mail import send_mail
+            from django.conf import settings
+            
+            reset_url = f"{settings.FRONTEND_URL}/reset-password?token={reset_token}"
+            send_mail(
+                subject='Password Reset Required',
+                message=f'Your password has been reset by an administrator. Please set a new password using this link: {reset_url}',
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[user.email],
+                fail_silently=True,
+            )
+        except Exception:
+            pass
+        
+        from apps.accounts.models import AuditLog
+        AuditLog.objects.create(
+            user=request.user,
+            action_type='ADMIN_ACTION',
+            resource_type='User',
+            resource_id=str(user.id),
+            description=f'Forced password reset for {user.email}',
+            ip_address=request.META.get('REMOTE_ADDR', ''),
+        )
+        
+        return Response({
+            'success': True,
+            'message': f'Password reset email sent to {user.email}'
+        })
+
+
+class Reset2FAView(APIView):
+    """Task 19: Reset MFA/2FA for any account"""
+    permission_classes = [IsSuperAdmin]
+    
+    def post(self, request, user_id):
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        # Disable 2FA for the user
+        user.is_2fa_enabled = False
+        user.totp_secret = None
+        user.save()
+        
+        # Delete backup codes if they exist
+        try:
+            from django_otp.plugins.otp_totp.models import TOTPDevice
+            TOTPDevice.objects.filter(user=user).delete()
+        except Exception:
+            pass
+        
+        from apps.accounts.models import AuditLog
+        AuditLog.objects.create(
+            user=request.user,
+            action_type='ADMIN_ACTION',
+            resource_type='User',
+            resource_id=str(user.id),
+            description=f'Reset 2FA for {user.email}',
+            ip_address=request.META.get('REMOTE_ADDR', ''),
+        )
+        
+        return Response({
+            'success': True,
+            'message': f'2FA has been disabled for {user.email}. They can set it up again.'
+        })
+
+
+class ChangeUserRoleView(APIView):
+    """Tasks 10-13: Assign/change roles, force upgrade/downgrade"""
+    permission_classes = [IsSuperAdmin]
+    
+    def post(self, request, user_id):
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        new_role = request.data.get('role')
+        if new_role not in ['USER', 'ADMIN', 'SUPER_ADMIN']:
+            return Response({'error': 'Invalid role'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Prevent removing last super admin
+        if user.role == 'SUPER_ADMIN' and new_role != 'SUPER_ADMIN':
+            super_admin_count = User.objects.filter(role='SUPER_ADMIN').count()
+            if super_admin_count <= 1:
+                return Response({'error': 'Cannot remove the last Super Admin'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        old_role = user.role
+        user.role = new_role
+        user.save()
+        
+        from apps.accounts.models import AuditLog
+        AuditLog.objects.create(
+            user=request.user,
+            action_type='ADMIN_ACTION',
+            resource_type='User',
+            resource_id=str(user.id),
+            description=f'Changed role from {old_role} to {new_role} for {user.email}',
+            ip_address=request.META.get('REMOTE_ADDR', ''),
+        )
+        
+        return Response({
+            'success': True,
+            'old_role': old_role,
+            'new_role': new_role,
+            'message': f'User {user.email} role changed to {new_role}'
+        })
+
+
+# =============================================================================
+# ANALYTICS DASHBOARD (Tasks 101-107)
+# =============================================================================
+
+class PlatformAnalyticsView(APIView):
+    """Tasks 101-107: DAU/MAU, conversion, churn, tool usage, performance"""
+    permission_classes = [IsSuperAdmin]
+    
+    def get(self, request):
+        from django.utils import timezone
+        from django.db.models import Count
+        from django.db.models.functions import TruncDate
+        import datetime
+        
+        now = timezone.now()
+        today = now.date()
+        
+        # Task 101: DAU/MAU
+        dau = UserSession.objects.filter(
+            created_at__date=today
+        ).values('user').distinct().count()
+        
+        thirty_days_ago = now - datetime.timedelta(days=30)
+        mau = UserSession.objects.filter(
+            created_at__gte=thirty_days_ago
+        ).values('user').distinct().count()
+        
+        # Task 102: Conversion rates (Free → Premium)
+        total_users = User.objects.filter(role='USER').count()
+        premium_users = Subscription.objects.filter(
+            status__in=['ACTIVE', 'active'],
+            plan__price__gt=0
+        ).count()
+        conversion_rate = (premium_users / total_users * 100) if total_users > 0 else 0
+        
+        # Task 103: Churn rate (last 30 days)
+        canceled_last_30 = Subscription.objects.filter(
+            status='CANCELED',
+            current_period_end__gte=thirty_days_ago
+        ).count()
+        active_start = Subscription.objects.filter(
+            current_period_start__lte=thirty_days_ago,
+            status__in=['ACTIVE', 'active']
+        ).count()
+        churn_rate = (canceled_last_30 / active_start * 100) if active_start > 0 else 0
+        
+        # Task 104: Tool usage analytics
+        from apps.jobs.models import Job
+        tool_usage = Job.objects.values('operation').annotate(
+            count=Count('id')
+        ).order_by('-count')[:10]
+        
+        # Task 105: System performance metrics
+        avg_processing_time = Job.objects.filter(
+            status='COMPLETED'
+        ).aggregate(
+            avg_time=models.Avg(models.F('completed_at') - models.F('created_at'))
+        )
+        
+        # Task 106: Job queue health
+        pending_jobs = Job.objects.filter(status='PENDING').count()
+        processing_jobs = Job.objects.filter(status='PROCESSING').count()
+        
+        # Task 107: Failure rates
+        total_jobs = Job.objects.count()
+        failed_jobs = Job.objects.filter(status='FAILED').count()
+        failure_rate = (failed_jobs / total_jobs * 100) if total_jobs > 0 else 0
+        
+        # 7-day trends
+        user_trend = []
+        revenue_trend = []
+        for i in range(6, -1, -1):
+            date = today - datetime.timedelta(days=i)
+            user_trend.append({
+                'date': date.isoformat(),
+                'count': User.objects.filter(date_joined__date=date).count()
+            })
+            revenue_trend.append({
+                'date': date.isoformat(),
+                'amount': float(Invoice.objects.filter(
+                    created_at__date=date, status='PAID'
+                ).aggregate(total=Sum('amount_paid'))['total'] or 0)
+            })
+        
+        return Response({
+            'dau': dau,
+            'mau': mau,
+            'conversion_rate': round(conversion_rate, 2),
+            'churn_rate': round(churn_rate, 2),
+            'tool_usage': list(tool_usage),
+            'pending_jobs': pending_jobs,
+            'processing_jobs': processing_jobs,
+            'failure_rate': round(failure_rate, 2),
+            'user_trend': user_trend,
+            'revenue_trend': revenue_trend,
+            'total_users': User.objects.count(),
+            'total_revenue': float(Invoice.objects.filter(status='PAID').aggregate(
+                total=Sum('amount_paid'))['total'] or 0),
+        })
+
+
+class ToolUsageAnalyticsView(APIView):
+    """Task 104: Detailed tool usage analytics"""
+    permission_classes = [IsAdmin]
+    
+    def get(self, request):
+        from apps.jobs.models import Job
+        from django.db.models import Count, Avg
+        from django.db.models.functions import TruncDate
+        from django.utils import timezone
+        import datetime
+        
+        # Last 30 days
+        thirty_days_ago = timezone.now() - datetime.timedelta(days=30)
+        
+        # Tool popularity
+        by_tool = Job.objects.filter(
+            created_at__gte=thirty_days_ago
+        ).values('operation').annotate(
+            count=Count('id'),
+            success_count=Count('id', filter=models.Q(status='COMPLETED')),
+            fail_count=Count('id', filter=models.Q(status='FAILED'))
+        ).order_by('-count')
+        
+        # Daily trend
+        daily_usage = Job.objects.filter(
+            created_at__gte=thirty_days_ago
+        ).annotate(
+            date=TruncDate('created_at')
+        ).values('date').annotate(
+            count=Count('id')
+        ).order_by('date')
+        
+        # Average processing time by tool
+        processing_times = Job.objects.filter(
+            status='COMPLETED',
+            completed_at__isnull=False
+        ).values('operation').annotate(
+            avg_seconds=Avg(models.F('completed_at') - models.F('created_at'))
+        )
+        
+        return Response({
+            'by_tool': list(by_tool),
+            'daily_trend': list(daily_usage),
+            'processing_times': list(processing_times)
+        })
+
+
+class JobQueueHealthView(APIView):
+    """Task 106: Monitor job queue health"""
+    permission_classes = [IsAdmin]
+    
+    def get(self, request):
+        from apps.jobs.models import Job
+        from django.utils import timezone
+        import datetime
+        
+        now = timezone.now()
+        one_hour_ago = now - datetime.timedelta(hours=1)
+        
+        return Response({
+            'pending': Job.objects.filter(status='PENDING').count(),
+            'processing': Job.objects.filter(status='PROCESSING').count(),
+            'completed_last_hour': Job.objects.filter(
+                status='COMPLETED', completed_at__gte=one_hour_ago
+            ).count(),
+            'failed_last_hour': Job.objects.filter(
+                status='FAILED', completed_at__gte=one_hour_ago
+            ).count(),
+            'oldest_pending': Job.objects.filter(
+                status='PENDING'
+            ).order_by('created_at').values('id', 'created_at', 'operation').first(),
+            'queue_healthy': Job.objects.filter(
+                status='PENDING', 
+                created_at__lt=one_hour_ago
+            ).count() < 10  # Alert if more than 10 jobs stuck for over an hour
+        })
+
 
