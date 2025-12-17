@@ -43,6 +43,20 @@ class User(AbstractUser):
     phone_number = models.CharField(max_length=20, blank=True, null=True)
     country = models.CharField(max_length=100, blank=True, null=True)
     timezone = models.CharField(max_length=50, default='UTC')
+    
+    # Ban / Lock Fields (Tasks 14-15)
+    is_banned = models.BooleanField(default=False, help_text="Permanently banned")
+    banned_until = models.DateTimeField(null=True, blank=True, help_text="Temporary ban expiry")
+    ban_reason = models.TextField(blank=True, help_text="Reason for ban")
+    
+    # Password Reset Fields (Task 16)
+    password_reset_token = models.CharField(max_length=100, blank=True, null=True)
+    password_reset_expires = models.DateTimeField(null=True, blank=True)
+    force_password_change = models.BooleanField(default=False)
+    
+    # 2FA Fields (Task 19)
+    is_2fa_enabled = models.BooleanField(default=False)
+    totp_secret = models.CharField(max_length=100, blank=True, null=True)
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['first_name', 'last_name']

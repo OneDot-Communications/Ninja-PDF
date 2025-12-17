@@ -346,6 +346,106 @@ class PaymentViewSet(viewsets.ReadOnlyModelViewSet):
 
         return Response({'error': 'Invalid data'}, status=400)
 
+    # ─────────────────────────────────────────────────────────────────────────
+    # TASK 53: Retry Failed Payments
+    # ─────────────────────────────────────────────────────────────────────────
+    @action(detail=True, methods=['post'], permission_classes=[IsSuperAdmin])
+    def retry(self, request, pk=None):
+        """Retry a failed payment by creating a new order."""
+        try:
+            payment = self.get_object()
+        except Exception:
+            return Response({'error': 'Payment not found'}, status=404)
+        
+        if payment.status != 'FAILED':
+            return Response({'error': 'Can only retry failed payments'}, status=400)
+        
+        # Create a new order for the same plan
+        try:
+            import razorpay
+            from django.conf import settings
+            
+            client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
+            order = client.order.create({
+                'amount': int(payment.amount * 100),
+                'currency': payment.currency,
+                'notes': {'retry_of': str(payment.id)}
+            })
+            
+            # Create new payment record
+            new_payment = Payment.objects.create(
+                user=payment.user,
+                plan=payment.plan,
+                amount=payment.amount,
+                currency=payment.currency,
+                status='PENDING',
+                razorpay_order_id=order['id']
+            )
+            
+            return Response({
+                'status': 'retry_initiated',
+                'new_payment_id': new_payment.id,
+                'razorpay_order_id': order['id'],
+            })
+        except Exception as e:
+            return Response({'error': str(e)}, status=500)
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # TASKS 54-55: Issue Refunds (Partial & Full)
+    # ─────────────────────────────────────────────────────────────────────────
+    @action(detail=True, methods=['post'], permission_classes=[IsSuperAdmin])
+    def refund(self, request, pk=None):
+        """Issue a full or partial refund for a payment."""
+        try:
+            payment = self.get_object()
+        except Exception:
+            return Response({'error': 'Payment not found'}, status=404)
+        
+        if payment.status != 'SUCCESS':
+            return Response({'error': 'Can only refund successful payments'}, status=400)
+        
+        refund_amount = request.data.get('amount')
+        is_full_refund = refund_amount is None or float(refund_amount) >= float(payment.amount)
+        
+        try:
+            import razorpay
+            from django.conf import settings
+            
+            client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
+            
+            refund_data = {'payment_id': payment.razorpay_payment_id}
+            if not is_full_refund:
+                refund_data['amount'] = int(float(refund_amount) * 100)
+            
+            refund = client.payment.refund(payment.razorpay_payment_id, refund_data)
+            
+            # Update payment status
+            payment.status = 'REFUNDED'
+            payment.save()
+            
+            # If full refund, cancel subscription
+            if is_full_refund:
+                Subscription.objects.filter(user=payment.user, status='ACTIVE').update(status='CANCELED')
+            
+            # Send notification email
+            from django.core.mail import send_mail
+            send_mail(
+                subject='Refund Processed - 18+ PDF',
+                message=f"Hello,\n\nYour refund of {payment.currency} {refund_amount or payment.amount} has been processed.\n\nRefund ID: {refund.get('id')}\n\nThank you,\n18+ PDF Team",
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[payment.user.email],
+                fail_silently=True
+            )
+            
+            return Response({
+                'status': 'refunded',
+                'refund_id': refund.get('id'),
+                'amount': refund_amount or str(payment.amount),
+                'is_full_refund': is_full_refund,
+            })
+        except Exception as e:
+            return Response({'error': str(e)}, status=500)
+
     @action(detail=True, methods=['get'])
     def download_receipt(self, request, pk=None):
         """Generate and download PDF receipt"""

@@ -11,6 +11,7 @@ class PlanSerializer(serializers.Serializer):
     stripe_price_id = serializers.CharField(allow_blank=True, required=False)
     features = serializers.JSONField(required=False)
     is_active = serializers.BooleanField()
+    storage_limit = serializers.IntegerField(required=False) # Task 74-82
 
 
 class SubscriptionSerializer(serializers.Serializer):
@@ -21,6 +22,8 @@ class SubscriptionSerializer(serializers.Serializer):
     current_period_start = serializers.DateTimeField(read_only=True)
     current_period_end = serializers.DateTimeField(read_only=True)
     stripe_subscription_id = serializers.CharField(allow_blank=True, required=False)
+    user_email = serializers.EmailField(source='user.email', read_only=True)
+    user_name = serializers.CharField(source='user.first_name', read_only=True)
 
 
 class InvoiceSerializer(serializers.Serializer):
@@ -38,8 +41,13 @@ class InvoiceSerializer(serializers.Serializer):
 class FeatureSerializer(serializers.Serializer):
     id = serializers.IntegerField(read_only=True)
     name = serializers.CharField()
-    slug = serializers.CharField()
+    code = serializers.CharField()
     description = serializers.CharField(allow_blank=True)
+    category = serializers.CharField(read_only=True)
+    permission_id = serializers.IntegerField(read_only=True, allow_null=True)
+    is_active = serializers.BooleanField(default=True)
+    is_premium_default = serializers.BooleanField(default=False)
+    icon = serializers.ImageField(allow_null=True, required=False)
 
 
 class UserFeatureOverrideSerializer(serializers.Serializer):
@@ -77,3 +85,13 @@ class ReferralSerializer(serializers.Serializer):
     status = serializers.CharField()
     reward_granted = serializers.BooleanField()
     created_at = serializers.DateTimeField(read_only=True)
+
+
+class PremiumRequestSerializer(serializers.ModelSerializer):
+    user_email = serializers.EmailField(source='user.email', read_only=True)
+    
+    class Meta:
+        from apps.subscriptions.models.subscription import PremiumRequest
+        model = PremiumRequest
+        fields = ['id', 'user', 'user_email', 'proof_file', 'status', 'admin_notes', 'created_at']
+        read_only_fields = ['status', 'admin_notes', 'created_at']
