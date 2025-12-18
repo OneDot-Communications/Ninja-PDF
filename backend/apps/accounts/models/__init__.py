@@ -10,6 +10,7 @@ from .security import (
     SystemConfiguration
 )
 from .api_key import APIKey
+from .twofactor_backup import TwoFactorBackupCode
 
 __all__ = [
     'User', 
@@ -23,6 +24,7 @@ __all__ = [
     'AuditLog',
     'SystemConfiguration',
     'APIKey',
+    'TwoFactorBackupCode',
 ]
 
 

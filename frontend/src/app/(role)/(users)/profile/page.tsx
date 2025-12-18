@@ -12,6 +12,7 @@ import { User, Lock, Mail, Phone, MapPin, Building, Save } from "lucide-react";
 import { toast } from "sonner";
 
 import { Skeleton } from "@/components/ui/skeleton";
+import { PhoneInput } from "@/components/ui/phone-input";
 
 export default function ProfilePage() {
     const { user, refreshUser, loading: authLoading } = useAuth();
@@ -57,6 +58,7 @@ export default function ProfilePage() {
     const [lastName, setLastName] = useState(user?.last_name || "");
     const [email, setEmail] = useState(user?.email || "");
     const [phone, setPhone] = useState(user?.phone_number || "");
+    const [country, setCountry] = useState(user?.country || "");
 
     const handleSave = async () => {
         setLoading(true);
@@ -65,7 +67,8 @@ export default function ProfilePage() {
                 first_name: firstName,
                 last_name: lastName,
                 email: email,
-                phone_number: phone
+                phone_number: phone,
+                country: country
             });
             toast.success("Profile updated successfully");
             await refreshUser(); // Refresh local user context
@@ -181,23 +184,20 @@ export default function ProfilePage() {
                                 <Input
                                     id="email"
                                     value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    className="pl-9"
+                                    readOnly
+                                    disabled
+                                    className="pl-9 bg-slate-50 text-slate-500 cursor-not-allowed"
                                 />
                             </div>
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="phone">Phone Number</Label>
-                            <div className="relative">
-                                <Phone className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-500" />
-                                <Input
-                                    id="phone"
-                                    value={phone}
-                                    onChange={(e) => setPhone(e.target.value)}
-                                    placeholder="+1 (555) 000-0000"
-                                    className="pl-9"
-                                />
-                            </div>
+                            <PhoneInput
+                                id="phone"
+                                value={phone}
+                                onValueChange={setPhone}
+                                onCountryChange={setCountry}
+                            />
                         </div>
                     </div>
 

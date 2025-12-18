@@ -3,9 +3,9 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme {
-    --font-sans: 'Montserrat', sans-serif;
-    --font-handwriting: 'Kalam', cursive;
-    --font-caveat: 'Caveat', cursive;
+    --font-sans: var(--font-montserrat), sans-serif;
+    --font-handwriting: var(--font-kalam), cursive;
+    --font-caveat: var(--font-caveat), cursive;
     /* Brand Colors */
     --color-brand-red: #FF0000;
     --color-brand-green: #089949;
