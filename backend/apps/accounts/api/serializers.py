@@ -81,6 +81,8 @@ class UserSerializer(serializers.ModelSerializer):
             'avatar', 
             'is_verified', 
             'date_joined',
+            'phone_number',
+            'country',
             'storage_used', 
             'storage_limit'
         )

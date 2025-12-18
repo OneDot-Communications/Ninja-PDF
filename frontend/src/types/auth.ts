@@ -20,6 +20,8 @@ export interface User {
     subscription_tier: SubscriptionTier;
     avatar?: string;
     is_verified: boolean;
+    phone_number?: string;
+    country?: string;
 }
 
 export interface AuthState {
