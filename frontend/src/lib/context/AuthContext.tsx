@@ -12,6 +12,7 @@ export interface User {
     subscription_tier: 'FREE' | 'PRO' | 'PREMIUM' | 'ENTERPRISE';
     avatar?: string;
     phone_number?: string;
+    country?: string;
     is_verified: boolean;
     date_joined: string;
     storage_used?: number;
