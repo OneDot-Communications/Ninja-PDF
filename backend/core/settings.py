@@ -108,8 +108,8 @@ INSTALLED_APPS = [
     'apps.teams',
     'apps.workflows',
     'apps.signatures',
-    'apps.admin_panel',
 ]
+
 
 SITE_ID = 1
 
