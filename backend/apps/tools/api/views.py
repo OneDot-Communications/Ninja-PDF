@@ -902,7 +902,7 @@ class EditPDFView(PDFToolAPIView):
     """Add text, highlights, and shapes to PDF. Premium feature."""
     
     def post(self, request):
-        if not request.user.is_premium:
+        if not getattr(request.user, 'is_premium', False):
             return Response(
                 {'error': 'Edit PDF is a premium feature. Please upgrade your subscription.'},
                 status=status.HTTP_403_FORBIDDEN
