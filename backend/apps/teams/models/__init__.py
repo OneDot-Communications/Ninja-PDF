@@ -9,6 +9,13 @@ class Team(models.Model):
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='owned_teams')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    
+    # Enterprise/Organization Features (Tasks 197-199)
+    is_organization = models.BooleanField(default=False, help_text="Enterprise organization account")
+    storage_quota = models.BigIntegerField(default=0, help_text="Storage quota in bytes (0 = unlimited)")
+    operations_quota = models.PositiveIntegerField(default=0, help_text="Monthly operations quota (0 = unlimited)")
+    shared_plan = models.ForeignKey('subscriptions.Plan', on_delete=models.SET_NULL, null=True, blank=True, 
+                                     help_text="Shared subscription plan for all team members")
 
     class Meta:
         ordering = ['-created_at']

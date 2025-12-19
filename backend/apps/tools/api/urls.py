@@ -25,6 +25,10 @@ from apps.tools.api.views import (
     # Security
     ProtectPDFView,
     UnlockPDFView,
+    # Premium/AI Tools
+    OCRPDFView,
+    EditPDFView,
+    RedactPDFView,
 )
 
 urlpatterns = [
@@ -63,4 +67,12 @@ urlpatterns = [
     # ─────────────────────────────────────────────────────────────────────────
     path('protect-pdf/', ProtectPDFView.as_view(), name='protect-pdf'),
     path('unlock-pdf/', UnlockPDFView.as_view(), name='unlock-pdf'),
+    
+    # ─────────────────────────────────────────────────────────────────────────
+    # PREMIUM/AI TOOLS
+    # ─────────────────────────────────────────────────────────────────────────
+    path('ocr/', OCRPDFView.as_view(), name='ocr-pdf'),
+    path('edit/', EditPDFView.as_view(), name='edit-pdf'),
+    path('redact/', RedactPDFView.as_view(), name='redact-pdf'),
 ]
+

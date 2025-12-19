@@ -1,0 +1,22 @@
+<svg
+  class="shrink-0 w-14 h-[42px] relative overflow-visible"
+  width="60"
+  height="49"
+  viewBox="0 0 60 49"
+  fill="none"
+  xmlns="http://www.w3.org/2000/svg"
+>
+  <path
+    d="M50.495 26.9277C40.5422 20.4105 29.1879 29.5798 12.128 20.0692"
+    stroke="var(--color-red-50, #ff0000)"
+    stroke-width="2.09987"
+    stroke-linecap="round"
+  />
+  <path
+    d="M19.9836 14.6966L10.0444 19.812L18.7689 28.2924"
+    stroke="var(--color-red-50, #ff0000)"
+    stroke-width="2.09987"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+</svg>
