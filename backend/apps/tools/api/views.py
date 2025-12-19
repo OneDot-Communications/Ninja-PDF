@@ -830,8 +830,8 @@ class OCRPDFView(PDFToolAPIView):
     """Perform OCR on scanned PDF to make it searchable. Premium feature."""
     
     def post(self, request):
-        # Premium check
-        if not request.user.is_premium:
+        # Premium check: require authenticated and premium user
+        if not (request.user.is_authenticated and getattr(request.user, "is_premium", False)):
             return Response(
                 {'error': 'OCR is a premium feature. Please upgrade your subscription.'},
                 status=status.HTTP_403_FORBIDDEN
