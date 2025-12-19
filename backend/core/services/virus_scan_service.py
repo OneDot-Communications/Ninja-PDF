@@ -105,7 +105,10 @@ class VirusScanService:
             md5 = hashlib.md5()
             
             with open(file_path, 'rb') as f:
-                while chunk := f.read(8192):
+                while True:
+                    chunk = f.read(8192)
+                    if not chunk:
+                        break
                     sha256.update(chunk)
                     md5.update(chunk)
             
