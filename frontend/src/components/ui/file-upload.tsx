@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
 import React, { useRef, useState } from "react";
 import { UploadCloud } from "lucide-react";
+import { FaGoogleDrive, FaDropbox } from "react-icons/fa";
 import { useDropzone } from "react-dropzone";
 import { Button } from "./button";
 
@@ -50,48 +51,70 @@ export const FileUpload = ({
     );
   }
 
+  const handleIntegrationClick = (e: React.MouseEvent, type: string) => {
+    e.stopPropagation();
+    alert(`${type} integration coming soon!`);
+  };
+
+  // Clean layout: No glow, just shadow. Larger icons. Better gap.
   return (
-    <div className="w-full bg-background rounded-xl border border-slate-200 shadow-sm">
-      <div className="p-4 md:p-6">
-        <div className="hidden md:flex items-start justify-between mb-6">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 flex items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800">
-              <UploadCloud className="w-6 h-6 text-[#714B67]" />
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Upload files</h3>
-              <p className="text-sm text-slate-500 mt-1">
-                Select and upload the files of your choice
-              </p>
-            </div>
+    <div className="w-full p-8 md:p-10 flex justify-center">
+      <div
+        {...getRootProps()}
+        className={cn(
+          "group relative flex flex-col items-center justify-center min-h-[280px] w-full max-w-5xl mx-auto transition-all focus:outline-none cursor-pointer",
+          isDragActive && "scale-[1.01]"
+        )}
+      >
+        <input {...getInputProps()} />
+
+        {/* Main Interface Wrapper - Relative for absolute positioning of icons */}
+        <div className="relative flex flex-col items-center justify-center">
+
+          {/* Main Action Button - Centered */}
+          <Button
+            type="button" // Prevent form submission if any
+            className={cn(
+              "h-24 px-12 text-3xl font-bold rounded-xl shadow-xl transition-all duration-300 relative z-10",
+              "bg-[#0057B7] hover:bg-[#004494] text-white border-0 ring-0 outline-none" // Krishna Blue
+            )}
+          >
+            Select PDF files
+          </Button>
+
+          {/* Integration Icons - Absolute Positioned to the right of the button */}
+          <div className="absolute left-[100%] top-1/2 -translate-y-1/2 -mt-8 ml-6 flex flex-col gap-2 z-20">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                alert("Google Drive integration coming soon!");
+              }}
+              className="p-2 bg-white rounded-full shadow-lg hover:shadow-xl hover:scale-110 transition-all group/icon"
+              title="Google Drive"
+            >
+              <FaGoogleDrive className="w-5 h-5 text-slate-600 group-hover/icon:text-[#0057B7]" />
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                alert("Dropbox integration coming soon!");
+              }}
+              className="p-2 bg-white rounded-full shadow-lg hover:shadow-xl hover:scale-110 transition-all group/icon"
+              title="Dropbox"
+            >
+              <FaDropbox className="w-5 h-5 text-slate-600 group-hover/icon:text-[#0061FF]" />
+            </button>
           </div>
+
+          {/* Bottom Text */}
+          <p className="mt-8 text-slate-400 text-lg font-medium">
+            or drop PDFs here
+          </p>
         </div>
 
-        <div
-          {...getRootProps()}
-          className={cn(
-            "border-2 border-dashed rounded-lg p-6 md:p-8 flex flex-col items-center justify-center text-center transition-colors duration-200 cursor-pointer",
-            isDragActive || isDragOver
-              ? "border-[#714B67] bg-[#714B67]/5"
-              : "border-slate-200 hover:border-[#714B67]/50 hover:bg-slate-50"
-          )}
-        >
-          <input {...getInputProps()} />
-          <UploadCloud className={cn(
-            "hidden md:block w-10 h-10 mb-4 transition-colors",
-            isDragActive ? "text-[#714B67]" : "text-slate-400"
-          )} />
-          <p className="hidden md:block font-semibold text-slate-900">{isDragActive ? "Drop files here" : "Choose a file or drag & drop"}</p>
-          <p className="hidden md:block text-xs text-slate-500 mt-1 mb-4">
-            {description}
-          </p>
-          <Button variant={isDragActive ? "default" : "outline"} size="lg" className="w-full md:w-auto pointer-events-none md:pointer-events-auto">
-            <UploadCloud className="w-4 h-4 mr-2 md:hidden" />
-            {isDragActive ? "Drop to Upload" : "Browse Files"}
-          </Button>
-        </div>
       </div>
     </div>
   );
 };
-

@@ -172,6 +172,24 @@ class UserFeatureUsage(models.Model):
     def __str__(self):
         return f"{self.user} - {self.feature} - {self.date}: {self.count}"
 
+class GuestFeatureUsage(models.Model):
+    """
+    Tracks daily usage of features per IP address for guests.
+    """
+    ip_address = models.GenericIPAddressField(db_index=True)
+    feature = models.ForeignKey(Feature, on_delete=models.CASCADE, related_name='guest_usage_records')
+    date = models.DateField(auto_now_add=True)
+    count = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        unique_together = ('ip_address', 'feature', 'date')
+        indexes = [
+            models.Index(fields=['ip_address', 'feature', 'date']),
+        ]
+
+    def __str__(self):
+        return f"{self.ip_address} - {self.feature} - {self.date}: {self.count}"
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # RBAC Models (Added for 203-task RBAC specification)

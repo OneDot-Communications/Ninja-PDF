@@ -13,7 +13,7 @@ import os
 class PDFToolAPIView(APIView):
     """Base class for PDF tool endpoints with file upload handling."""
     parser_classes = [MultiPartParser, FormParser]
-    permission_classes = [permissions.IsAuthenticated]  # Strict RBAC: No Guests
+    permission_classes = [permissions.AllowAny]  # Allow Guests (Limits enforced in check_usage_limit)
 
     def get_file_from_request(self, request):
         """Extract uploaded file from request."""
@@ -31,7 +31,7 @@ class WordToPDFView(PDFToolAPIView):
     
     def post(self, request):
         # Specific check
-        allowed, error = check_usage_limit(request.user, 'WORD_TO_PDF')
+        allowed, error = check_usage_limit(request, 'WORD_TO_PDF')
         if not allowed: return error
 
         file, error = self.get_file_from_request(request)
@@ -52,7 +52,7 @@ class ExcelToPDFView(PDFToolAPIView):
     """Convert Excel spreadsheets to PDF."""
     
     def post(self, request):
-        allowed, error = check_usage_limit(request.user, 'EXCEL_TO_PDF')
+        allowed, error = check_usage_limit(request, 'EXCEL_TO_PDF')
         if not allowed: return error
 
         file, error = self.get_file_from_request(request)
@@ -73,7 +73,7 @@ class PowerpointToPDFView(PDFToolAPIView):
     """Convert PowerPoint presentations to PDF."""
     
     def post(self, request):
-        allowed, error = check_usage_limit(request.user, 'PPT_TO_PDF')
+        allowed, error = check_usage_limit(request, 'PPT_TO_PDF')
         if not allowed: return error
 
         file, error = self.get_file_from_request(request)
@@ -94,7 +94,7 @@ class JPGToPDFView(PDFToolAPIView):
     """Convert JPG images to PDF."""
     
     def post(self, request):
-        allowed, error = check_usage_limit(request.user, 'JPG_TO_PDF')
+        allowed, error = check_usage_limit(request, 'JPG_TO_PDF')
         if not allowed: return error
 
         file, error = self.get_file_from_request(request)
@@ -122,7 +122,7 @@ class HTMLToPDFView(PDFToolAPIView):
     """Convert HTML to PDF."""
     
     def post(self, request):
-        allowed, error = check_usage_limit(request.user, 'HTML_TO_PDF')
+        allowed, error = check_usage_limit(request, 'HTML_TO_PDF')
         if not allowed: return error
 
         file, error = self.get_file_from_request(request)
@@ -143,7 +143,7 @@ class MarkdownToPDFView(PDFToolAPIView):
     """Convert Markdown to PDF."""
     
     def post(self, request):
-        allowed, error = check_usage_limit(request.user, 'MARKDOWN_TO_PDF')
+        allowed, error = check_usage_limit(request, 'MARKDOWN_TO_PDF')
         if not allowed: return error
 
         file, error = self.get_file_from_request(request)
@@ -168,7 +168,7 @@ class PDFToJPGView(PDFToolAPIView):
     """Convert PDF to JPG images."""
     
     def post(self, request):
-        allowed, error = check_usage_limit(request.user, 'PDF_TO_JPG')
+        allowed, error = check_usage_limit(request, 'PDF_TO_JPG')
         if not allowed: return error
 
         file, error = self.get_file_from_request(request)
@@ -198,7 +198,7 @@ class PDFToWordView(PDFToolAPIView):
     """Convert PDF to Word document."""
     
     def post(self, request):
-        allowed, error = check_usage_limit(request.user, 'PDF_TO_WORD')
+        allowed, error = check_usage_limit(request, 'PDF_TO_WORD')
         if not allowed: return error
 
         file, error = self.get_file_from_request(request)
@@ -242,7 +242,7 @@ class PDFToExcelView(PDFToolAPIView):
     """Convert PDF to Excel."""
     
     def post(self, request):
-        allowed, error = check_usage_limit(request.user, 'PDF_TO_EXCEL')
+        allowed, error = check_usage_limit(request, 'PDF_TO_EXCEL')
         if not allowed: return error
 
         file, error = self.get_file_from_request(request)
@@ -290,7 +290,7 @@ class PDFToPowerpointView(PDFToolAPIView):
     """Convert PDF to PowerPoint."""
     
     def post(self, request):
-        allowed, error = check_usage_limit(request.user, 'PDF_TO_PPT')
+        allowed, error = check_usage_limit(request, 'PDF_TO_PPT')
         if not allowed: return error
 
         file, error = self.get_file_from_request(request)
@@ -362,7 +362,7 @@ class PDFToHTMLView(PDFToolAPIView):
     """Convert PDF to HTML."""
     
     def post(self, request):
-        allowed, error = check_usage_limit(request.user, 'PDF_TO_HTML')
+        allowed, error = check_usage_limit(request, 'PDF_TO_HTML')
         if not allowed: return error
 
         file, error = self.get_file_from_request(request)
@@ -396,7 +396,7 @@ class PDFToPDFAView(PDFToolAPIView):
     """Convert PDF to PDF/A format."""
     
     def post(self, request):
-        allowed, error = check_usage_limit(request.user, 'PDF_TO_PDFA')
+        allowed, error = check_usage_limit(request, 'PDF_TO_PDFA')
         if not allowed: return error
 
         file, error = self.get_file_from_request(request)
@@ -452,24 +452,61 @@ class PDFToPDFAView(PDFToolAPIView):
 # UTILS
 # ─────────────────────────────────────────────────────────────────────────────
 
-def check_usage_limit(user, feature_code):
+def get_client_ip(request):
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded_for:
+        ip = x_forwarded_for.split(',')[0]
+    else:
+        ip = request.META.get('REMOTE_ADDR')
+    return ip
+
+def check_usage_limit(request, feature_code):
     """
     Checks if user has reached limit for feature.
+    Supports usage tracking for both Authenticated Users and Guests (via IP).
     Returns (allowed: bool, response: Response | None)
     """
-    # STRICT RBAC: No Guests allowed
-    if not user.is_authenticated:
-        return False, Response({'error': 'Authentication required'}, status=status.HTTP_401_UNAUTHORIZED)
-        
     try:
-        from apps.subscriptions.models.subscription import Feature, UserFeatureUsage, UserFeatureOverride
+        from apps.subscriptions.models.subscription import Feature, UserFeatureUsage, UserFeatureOverride, GuestFeatureUsage
         from django.utils import timezone
         
         # Get Feature
         feature = Feature.objects.filter(code=feature_code).first()
         if not feature:
             return True, None # Feature not restricted or unknown
+
+        # 1. GUEST ACCESS
+        if not request.user.is_authenticated:
+            # Check Premium-Only Restriction for Guests
+            if feature.is_premium_default:
+                return False, Response(
+                    {'error': 'This is a premium feature. Please login or upgrade.'}, 
+                    status=status.HTTP_403_FORBIDDEN
+                )
             
+            # Check Host/IP Limit
+            ip = get_client_ip(request)
+            if not ip:
+                 return False, Response({'error': 'Cannot identify client.'}, status=status.HTTP_400_BAD_REQUEST)
+
+            today = timezone.now().date()
+            usage, created = GuestFeatureUsage.objects.get_or_create(ip_address=ip, feature=feature, date=today)
+            
+            limit = feature.free_limit
+            
+            if limit > 0 and usage.count >= limit:
+                 return False, Response(
+                     {'error': f'Daily guest limit of {limit} reached. Please sign up for more.'}, 
+                     status=status.HTTP_403_FORBIDDEN
+                 )
+            
+            usage.count += 1
+            usage.save()
+            return True, None
+
+        # 2. LOGGED-IN USER ACCESS
+        user = request.user
+        
         # Check Override
         override = UserFeatureOverride.objects.filter(user=user, feature=feature).first()
         if override:
@@ -478,34 +515,34 @@ def check_usage_limit(user, feature_code):
             else:
                 return False, Response({'error': 'Feature disabled for your account'}, status=status.HTTP_403_FORBIDDEN)
         
-        # Check Plan Limits (Simplification: Pro = 1000, Free = limit)
-        # Ideally Plan has limits.
-        # Assuming Subscription Tier check:
-        if user.subscription_tier in ['PRO', 'ENTERPRISE', 'PREMIUM']:
+        # Check Subscription Tier (Premium Bypass)
+        is_premium = False
+        if hasattr(user, 'subscription') and user.subscription:
+             pass
+        
+        # If user model has subscription_tier (e.g. from property)
+        if getattr(user, 'subscription_tier', 'FREE') in ['PRO', 'ENTERPRISE', 'PREMIUM']:
              return True, None # Unlimited for paid
-             
-        # Check Daily Usage
+
+        # If User is Free and Feature is Premium Only
+        if feature.is_premium_default:
+             return False, Response(
+                 {'error': 'This feature requires a premium subscription.'}, 
+                 status=status.HTTP_403_FORBIDDEN
+             )
+
+        # Check Free User Limits
         today = timezone.now().date()
         usage, created = UserFeatureUsage.objects.get_or_create(user=user, feature=feature, date=today)
         
         limit = feature.free_limit
         if limit > 0:
-            # Check for 80% Usage Alert
-            threshold_80 = int(limit * 0.8)
-            if usage.count == threshold_80 and threshold_80 > 0:
-                 from core.services.email_service import EmailService
-                 EmailService.send_usage_alert_80(user, feature.name)
-
             if usage.count >= limit:
-                # Limit Reached
-                from core.services.email_service import EmailService
-                # Only email once per day per feature to avoid spam
-                if usage.count == limit:
-                     EmailService.send_limit_reached(user, feature.name)
-                
-                return False, Response({'error': f'Daily limit of {limit} reached for {feature.name}. Upgrade for unlimited.'}, status=status.HTTP_403_FORBIDDEN)
+                return False, Response(
+                    {'error': f'Daily limit of {limit} reached. Upgrade for unlimited access.'}, 
+                    status=status.HTTP_403_FORBIDDEN
+                )
 
-            
         # Increment
         usage.count += 1
         usage.save()

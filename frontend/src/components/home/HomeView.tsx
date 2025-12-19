@@ -2,7 +2,7 @@
 
 import { Header } from "../layout/header"; // Adjusted import path
 import {
-    ArrowRight, Check, Star, Zap, Shield, Users, Globe, Layout, FileText, Settings,
+    ArrowRight, Check, Star, Zap, Shield, Users, User, Heart, Globe, Layout, FileText, Settings,
     Play, Download, ChevronRight, ArrowDown, MessageCircle, Github, Twitter, Linkedin,
     Youtube, Instagram, Facebook
 } from "lucide-react";
@@ -115,6 +115,123 @@ const ScaleOnScroll = ({ children, className = "" }: { children: React.ReactNode
     );
 };
 
+// Tool Content Overrides
+const toolOverrides: Record<string, string> = {
+    "Merge PDF": "Merging PDFs is easy, merging plans… not always.",
+    "Split PDF": "Breaking pages apart is fine breaking hearts is not.",
+    "Compress PDF": "Making PDFs lighter—because life is heavy enough.",
+    "PDF to Word": "PDFs open up in Word; hearts don’t open that easily.",
+    "PDF to PowerPoint": "Turn your PDF files into easy to edit PPT and PPTX slideshows.",
+    "PDF to Excel": "Extracting data is easy, extracting feelings isn’t.",
+    "Word to PDF": "Converting Word is simple, converting emotions is not.",
+    "PowerPoint to PDF": "Converting slides is simple, converting feelings is not.",
+    "Excel to PDF": "Excel has formulas; PDF has its life together.",
+    "Edit PDF": "Editing PDFs made easy—unlike editing your past decisions.",
+    "PDF to JPG": "Convert to JPG so your file loads before you lose patience.",
+    "JPG to PDF": "One click and your JPG puts on its “I’m important” outfit.",
+    "Sign PDF": "PDFs can be signed in seconds; life decisions take forever.",
+    "Watermark": "Put a watermark on it—like a tattoo, but for documents.",
+    "Rotate PDF": "Fix that sideways PDF before your neck files a complaint.",
+    "Unlock PDF": "Your PDF is locked—probably for no good reason. Fix that.",
+    "Protect PDF": "Guard your document—because trust issues apply to files too.",
+    "Organize PDF": "Organize your PDF because smth’ng in your life should be in order.",
+    "PDF to PDF/A": "Convert to PDF/A because even files need to get their life together.",
+    "Repair PDF": "PDFs break too luckily, theirs is easier to fix.",
+    "Page Numbers": "Add page numbers into PDFs with ease.",
+    "Scan to PDF": "Scan to PDF because your papers deserve a digital retirement plan.",
+    "OCR PDF": "Make your PDF readable; it’s been ignoring you long enough.",
+    "Compare PDF": "Compare two PDFs and finally prove you weren’t imagining things.",
+    "Redact PDF": "Redact text and graphics to permanently remove sensitive information.",
+    "Crop PDF": "Crop margins of PDF documents or select specific areas.",
+    "HTML to PDF": "Convert webpages in HTML to PDF.",
+    "Create Workflow": "Design your own PDF assembly line—because doing it manually is for chumps.",
+    "Metadata Cleaner": "Remove hidden metadata and personal information from your PDF files."
+};
+
+// Tool Card Component - Moved outside
+const ToolCard = ({ tool, index }: { tool: any; index: number }) => {
+    const wittyDescription = toolOverrides[tool.title] || tool.description;
+
+    return (
+        <div
+            className="w-[311.12px] h-[190.4px] flex-shrink-0"
+        >
+            <Link href={tool.href} className="block group w-full h-full">
+                <div className="bg-white rounded-2xl border border-slate-200 p-6 flex flex-col h-full relative overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
+                    <div className="flex flex-col gap-0 relative z-10 flex-grow h-full justify-between">
+                        <div className="flex flex-row items-center gap-4">
+                            <div className="relative flex items-center justify-center w-12 h-12 flex-shrink-0">
+                                {typeof tool.icon === 'string' ? (
+                                    <img
+                                        src={tool.icon}
+                                        alt={tool.title}
+                                        className={`h-full w-full object-contain ${['PDF to Excel', 'Excel to PDF', 'Edit PDF', 'Rotate PDF'].includes(tool.title)
+                                            ? 'scale-[3]'
+                                            : ['Unlock PDF', 'Protect PDF', 'Scan to PDF', 'OCR PDF'].includes(tool.title)
+                                                ? 'scale-[2]'
+                                                : ''
+                                            }`}
+                                    />
+                                ) : tool.icon ? (
+                                    <tool.icon className="h-full w-full" style={{ color: tool.color || '#1e293b' }} />
+                                ) : (
+                                    <div className="h-8 w-8 bg-slate-200 rounded-md" />
+                                )}
+                            </div>
+                            <h3 className="text-xl font-bold text-slate-900 leading-tight">
+                                {tool.title}
+                            </h3>
+                        </div>
+
+                        {/* Description */}
+                        <p className="text-sm text-slate-500 leading-relaxed font-medium line-clamp-2">
+                            {wittyDescription}
+                        </p>
+                    </div>
+
+                    {/* Footer Stats */}
+                    <div className="pt-3 border-t border-slate-50 flex items-center justify-between text-[11px] text-slate-400 font-medium mt-auto leading-[1]">
+                        <div className="flex items-center gap-1">
+                            <User className="w-3 h-3" />
+                            <span>5,63,456</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                            <Heart className="w-3 h-3 text-red-400 fill-red-400" />
+                            <span>5,63,456</span>
+                        </div>
+                    </div>
+                </div>
+            </Link>
+        </div>
+    );
+};
+
+// Feature Card with 3D tilt effect - optimized with CSS - Moved outside
+const FeatureCard = ({
+    title, description, image, bgColor, borderColor, delay = 0
+}: {
+    title: string; description: string; image: string; bgColor: string; borderColor: string; delay?: number;
+}) => (
+    <ScrollReveal delay={delay}>
+        <div
+            className="flex flex-col items-center group cursor-pointer transition-transform duration-200 ease-out hover:-translate-y-2"
+        >
+            <div
+                className={`w-full aspect-3/4 rounded-[3rem] ${bgColor} mb-6 relative overflow-hidden border ${borderColor} flex items-center justify-center p-6 transition-transform duration-200 ease-out group-hover:scale-[1.02]`}
+            >
+                <img
+                    src={image}
+                    alt={`${title} illustration`}
+                    className="w-full h-full object-contain"
+                    loading="lazy"
+                />
+            </div>
+            <h3 className="text-xl font-semibold text-slate-900">{title}</h3>
+            <p className="text-sm text-slate-500 mt-1 text-center">{description}</p>
+        </div>
+    </ScrollReveal>
+);
+
 interface HomeViewProps {
     heroTitle?: string;
     heroSubtitle?: string;
@@ -128,7 +245,8 @@ export function HomeView({
     platformName = "18+ PDF"
 }: HomeViewProps) {
     const { tools } = useTools();
-    const dashboardTools = tools.slice(0, 24);
+    // Filter out internal/admin tools (Category 'Other') and then slice
+    const dashboardTools = tools.filter(t => t.category !== "Other").slice(0, 30);
     const heroRef = useRef(null);
     const { scrollYProgress } = useScroll();
     const [showCompetitors, setShowCompetitors] = useState(false);
@@ -141,194 +259,138 @@ export function HomeView({
     const heroOpacity = useTransform(smoothScrollProgress, [0, 0.15], [1, 0]);
     const heroScale = useTransform(smoothScrollProgress, [0, 0.15], [1, 0.98]);
 
-    // Tool Card Component - Updated for Card Layout
-    const ToolCard = ({ tool, index }: { tool: any; index: number }) => {
-        const getGlowColor = (index: number) => {
-            const colors = ['blue', 'purple', 'green', 'orange', 'red'];
-            return colors[index % colors.length] as 'blue' | 'purple' | 'green' | 'orange' | 'red';
-        };
-
-        return (
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, delay: index * 0.05, ease: "easeOut" }}
-                style={{ willChange: "transform, opacity" }}
-                className="h-full w-full"
-            >
-                <Link href={tool.href} className="block group h-full w-full">
-                    <GlowCard
-                        customSize={true}
-                        glowColor={getGlowColor(index)}
-                        className="h-full w-full rounded-2xl bg-white border border-slate-200 transition-colors duration-200 ease-out p-6 flex flex-col gap-6 relative overflow-hidden"
-                    >
-
-                        <div className="flex flex-col gap-4 relative z-10 h-full">
-
-                            <div className="relative flex items-center justify-start w-12 h-12">
-                                {typeof tool.icon === 'string' ? (
-                                    <img src={tool.icon} alt={tool.title} className="h-8 w-8 object-contain" />
-                                ) : (
-                                    <tool.icon className="h-8 w-8" style={{ color: tool.color }} />
-                                )}
-                            </div>
-
-                            <div className="flex flex-col gap-2 grow">
-                                <div className="flex items-center justify-between w-full">
-                                    <h3 className="text-lg font-bold text-slate-900 group-hover:text-black leading-tight">
-                                        {tool.title}
-                                    </h3>
-                                    {tool.isNew && (
-                                        <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
-                                            New
-                                        </span>
-                                    )}
-                                    {tool.isPremium && (
-                                        <span className="bg-amber-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ml-2">
-                                            Premium
-                                        </span>
-                                    )}
-                                </div>
-
-                                <p className="text-sm text-slate-500 leading-relaxed font-medium">
-                                    {tool.description}
-                                </p>
-                            </div>
-                        </div>
-                    </GlowCard>
-                </Link>
-            </motion.div>
-        );
-    };
-
-    // Feature Card with 3D tilt effect - optimized with CSS
-    const FeatureCard = ({
-        title, description, image, bgColor, borderColor, delay = 0
-    }: {
-        title: string; description: string; image: string; bgColor: string; borderColor: string; delay?: number;
-    }) => (
-        <ScrollReveal delay={delay}>
-            <div
-                className="flex flex-col items-center group cursor-pointer transition-transform duration-200 ease-out hover:-translate-y-2"
-            >
-                <div
-                    className={`w-full aspect-3/4 rounded-[3rem] ${bgColor} mb-6 relative overflow-hidden border ${borderColor} flex items-center justify-center p-6 transition-transform duration-200 ease-out group-hover:scale-[1.02]`}
-                >
-                    <img
-                        src={image}
-                        alt={`${title} illustration`}
-                        className="w-full h-full object-contain"
-                        loading="lazy"
-                    />
-                </div>
-                <h3 className="text-xl font-semibold text-slate-900">{title}</h3>
-                <p className="text-sm text-slate-500 mt-1 text-center">{description}</p>
-            </div>
-        </ScrollReveal>
-    );
-
     return (
         <div className="flex min-h-screen flex-col bg-white font-sans text-slate-900 overflow-x-hidden">
             <Header /> {/* Note: Header might need props too if it displays platform name */}
 
             <main className="flex-1">
-                {/* Hero Section with Parallax */}
-                <section ref={heroRef} className="relative pt-10 pb-0 md:pt-12 md:pb-2 overflow-hidden bg-white">
-                    <motion.div
-                        className="container px-4 md:px-6 mx-auto text-center relative z-10"
-                        style={{ y: heroY, opacity: heroOpacity, scale: heroScale, willChange: "transform, opacity" }}
-                    >
-                        <div className="mx-auto max-w-5xl space-y-8">
+                {/* Hero Section - Centered Layout */}
+                <section ref={heroRef} className="relative pt-4 pb-4 md:pt-6 md:pb-6 overflow-visible">
 
-                            {/* Main Headline */}
+                    <motion.div
+                        className="container px-4 mx-auto relative z-10"
+                        style={{ y: heroY, opacity: heroOpacity, willChange: "transform, opacity" }}
+                    >
+                        {/* Rotated Badge with Arrow - Positioned independent of text content */}
+                        <motion.div
+                            className="absolute top-20 right-28 xl:right-34 2xl:right-44 z-20"
+                            initial={{ opacity: 0, scale: 0.8, rotate: 15 }}
+                            animate={{ opacity: 1, scale: 1, rotate: 5 }}
+                            transition={{ delay: 0.5, type: "spring" }}
+                        >
+                            <div className="relative flex items-center gap-2">
+                                {/* Arrow Image - pointing to the badge */}
+                                <img
+                                    src="/home/arrow.svg"
+                                    alt="Arrow"
+                                    className="w-16 h-12 mt-2 transform rotate-[-10deg]"
+                                />
+
+                                {/* Badge content - aligned right */}
+                                <div className="flex flex-col items-start justify-center gap-0.5 transform rotate-[5deg]">
+                                    <div className="text-[#FF0000] text-left font-caveat text-base md:text-lg leading-none font-bold whitespace-nowrap">
+                                        0.00 Rs / month
+                                    </div>
+                                    <div className="text-[#FF0000] text-left font-caveat text-base md:text-lg leading-none font-bold whitespace-nowrap">
+                                        keep your wallet safe
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.div>
+
+                        <div className="flex flex-col gap-3 items-center justify-start relative max-w-5xl mx-auto">
+                            {/* Main Headline with "one place." decoration */}
                             <motion.div
-                                className="relative"
+                                className="flex flex-col items-center justify-start relative w-full"
                                 initial={{ opacity: 0, y: 40 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.8, delay: 0.2 }}
                             >
-                                {/* Pricing badge with arrow - positioned top right of headline (moved next to "one platform.") */}
-
-                                <h1 className="text-4xl md:text-[4rem] font-bold font-caveat text-slate-900 leading-[0.9] mb-1">
-                                    {/* Replaced hardcoded text with prop */}
-                                    <div dangerouslySetInnerHTML={{ __html: heroTitle.replace(/\n/g, '<br />') }} />
-
-                                    {/* Kept original animation structure as wrapping for title?? No, the title structure was complex. 
-                      Let's assume the user just wants to edit the text for now.
-                      For simplicity, I'm rendering the simple text here. 
-                      To keep the "one place" animation, I would need to parse the title or have separate props.
-                      I'll just render it simply for now to satisfy the customization requirement.
-                  */}
+                                <h1 className="text-slate-900 text-center font-caveat text-5xl md:text-[5rem] leading-[0.95] font-bold">
+                                    All your PDF headaches gone in
                                 </h1>
+                                <div className="flex flex-row gap-0 items-center justify-center relative -mt-1">
+                                    <h1 className="text-slate-900 text-center font-caveat text-5xl md:text-[5rem] leading-[0.95] font-bold relative">
+                                        one place.
+                                    </h1>
+                                    {/* Decorative underline for "one place." - bolder */}
+                                    <div className="absolute w-[240px] h-[18px] left-1/2 -translate-x-1/2 bottom-[-8px] opacity-80">
+                                        <svg width="242" height="17" viewBox="0 0 242 17" fill="none" className="w-full h-full">
+                                            <path d="M2 8C50 2 100 12 120 8C140 4 180 14 240 8" stroke="#01B0F1" strokeWidth="5" strokeLinecap="round" />
+                                        </svg>
+                                    </div>
+                                </div>
                             </motion.div>
 
-                            {/* Subheadline */}
+
+
+                            {/* Subheadline with mixed colors */}
                             <motion.div
-                                className="relative inline-block mt-2 mb-8"
+                                className="flex flex-wrap gap-2 items-center justify-center relative mt-2"
                                 initial={{ opacity: 0, y: 30 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.8, delay: 0.4 }}
                             >
-                                <h2 className="text-2xl md:text-[2.5rem] font-bold font-caveat text-slate-900 leading-none">
-                                    {heroSubtitle}
+                                <h2 className="text-slate-900 text-center font-caveat text-3xl md:text-[3rem] font-bold leading-none">
+                                    Simple, super, and
                                 </h2>
+                                <div className="relative inline-block">
+                                    <h2 className="text-[#EAB308] text-center font-caveat text-3xl md:text-[3rem] font-bold leading-none">
+                                        totally free!
+                                    </h2>
+                                    {/* Decorative underline for "totally free!" - bolder */}
+                                    <div className="absolute left-0 right-0 -bottom-1 h-2">
+                                        <svg width="100%" height="8" viewBox="0 0 200 8" fill="none" preserveAspectRatio="none">
+                                            <path d="M2 4C50 2 100 6 150 3C170 2 180 5 198 4" stroke="#EAB308" strokeWidth="4" strokeLinecap="round" />
+                                        </svg>
+                                    </div>
+                                </div>
                             </motion.div>
 
-
-
-
+                            {/* CTA Button - Tilted more */}
+                            <motion.div
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.8, delay: 0.6 }}
+                                className="mt-3 transform -rotate-6"
+                            >
+                                <Button className="bg-red-500 hover:bg-red-600 text-white font-bold px-8 py-3 rounded-lg text-base md:text-lg shadow-lg">
+                                    It's Free Dude!
+                                </Button>
+                            </motion.div>
                         </div>
                     </motion.div>
                 </section>
 
                 {/* App Grid Section - Clean Card Layout */}
-                <section className="pt-0 pb-0 bg-white relative overflow-hidden">
+                <section className="pt-0 pb-0 relative overflow-visible">
+                    {/* Background SVG - positioned behind cards */}
+                    <div className="absolute inset-0 w-full h-full pointer-events-none z-0">
+                        <img
+                            src="/home/bg.svg"
+                            alt=""
+                            className="w-full h-auto object-contain opacity-40 -mt-52"
+                        />
+                    </div>
 
 
-                    <div className="container px-4 md:px-6 mx-auto relative z-10">
-                        <div className="max-w-7xl mx-auto relative">
-                            {/* Main Grid */}
-                            <div className="relative py-8">
-                                <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 justify-items-center">
-                                    {dashboardTools.map((tool, index) => (
-                                        <ToolCard key={tool.title} tool={tool} index={index} />
-                                    ))}
-                                </StaggerContainer>
-                            </div>
-
-                            {/* Bottom toggle and link */}
+                    <div className="w-full px-4 md:px-6 mx-auto relative z-10">
+                        <div className="w-full max-w-[1700px] mx-auto relative">
+                            {/* Tools Grid Section */}
+                            <section className="py-4">
+                                <div className="w-full">
+                                    <div className="flex flex-wrap justify-center gap-4">
+                                        {dashboardTools.map((tool, index) => (
+                                            <ToolCard key={tool.title} tool={tool} index={index} />
+                                        ))}
+                                    </div>
+                                </div>
+                            </section>
+                            {/* View all tools link */}
                             <ScrollReveal delay={0.3}>
-                                <div className="mt-6 mb-2 flex flex-col md:flex-row items-center justify-between gap-6 px-4">
-                                    {/* Toggle switch */}
-                                    <motion.div
-                                        className="flex items-center gap-3"
-                                        whileHover={{ scale: 1.02 }}
-                                    >
-                                        <motion.svg
-                                            className="w-6 h-6 text-[#FF0000]"
-                                            viewBox="0 0 24 24"
-                                            animate={{ rotate: [0, 15, -15, 0] }}
-                                            transition={{ duration: 2, repeat: Infinity }}
-                                        >
-                                            <path fill="currentColor" d="M12 2L13.5 8.5L20 10L13.5 11.5L12 18L10.5 11.5L4 10L10.5 8.5L12 2Z" />
-                                        </motion.svg>
-
-                                        <button
-                                            onClick={() => setShowCompetitors(!showCompetitors)}
-                                            className={`relative w-12 h-6 rounded-full cursor-pointer transition-colors duration-300 ${showCompetitors ? 'bg-[#01B0F1]' : 'bg-slate-300'}`}
-                                        >
-                                            <motion.div
-                                                className="absolute top-1 w-4 h-4 bg-white rounded-full shadow"
-                                                animate={{ left: showCompetitors ? '1.75rem' : '0.25rem' }}
-                                                transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                                            />
-                                        </button>
-                                        <span className="text-base font-medium text-slate-700">Just imagine life without {platformName}?</span>
-                                    </motion.div>
-
-                                    {/* View all link */}
+                                <div className="mt-4 mb-2 flex justify-center md:justify-end px-4">
                                     <motion.div whileHover={{ x: 5 }}>
-                                        <Link href="/tools" className="text-[#01B0F1] font-semibold flex items-center gap-2 hover:underline text-lg">
+                                        <Link href="/tools" className="text-slate-600 font-semibold flex items-center gap-2 hover:underline hover:text-slate-800 text-lg transition-colors">
                                             View all Tools <ArrowRight className="w-5 h-5" />
                                         </Link>
                                     </motion.div>
@@ -351,7 +413,7 @@ export function HomeView({
                                             <span className="relative inline-block">
                                                 smart work
                                                 <motion.div
-                                                    className="absolute bottom-2 left-0 w-full h-[0.4em] bg-[#01B0F1] -z-10 opacity-40 transform -rotate-2"
+                                                    className="absolute bottom-2 left-0 w-full h-[0.15em] bg-[#01B0F1] -z-10 opacity-60 transform -rotate-2"
                                                     initial={{ scaleX: 0 }}
                                                     whileInView={{ scaleX: 1 }}
                                                     transition={{ duration: 0.8 }}
@@ -434,7 +496,7 @@ export function HomeView({
                 </section>
 
                 {/* Tech Platform Section */}
-                <section className="py-24 bg-white">
+                <section className="py-24 bg-blue-50">
                     <div className="container px-4 mx-auto">
                         <ScrollReveal>
                             <div className="text-center mb-20">
@@ -546,31 +608,31 @@ export function HomeView({
                 <section className="py-24 bg-white overflow-hidden">
                     <div className="container px-4 mx-auto text-center relative">
                         <ScaleOnScroll>
-                            <div className="flex flex-col items-center gap-8">
-                                {/* Users Text */}
-                                <div>
-                                    <p className="text-2xl text-slate-600 mb-2">Grow your business, boss style</p>
-                                    <h2 className="text-5xl font-bold font-caveat text-slate-900 leading-none">
-                                        Join the crowd of <br />
-                                        <motion.span
-                                            className="text-[#01B0F1] inline-block"
-                                            animate={{ scale: [1, 1.1, 1] }}
-                                            transition={{ duration: 2, repeat: Infinity }}
-                                        >
-                                            happy
-                                        </motion.span>{" "}
-                                        legends
-                                    </h2>
-                                </div>
-
-                                {/* Divider - Visual connector for unity */}
-                                <div className="w-24 h-1.5 bg-blue-50 rounded-full my-6"></div>
+                            <div className="max-w-4xl mx-auto text-center">
+                                {/* Intro text - similar to other sections */}
+                                <p className="text-2xl md:text-3xl font-light text-slate-600 leading-relaxed mb-4">
+                                    Grow your business, boss style
+                                </p>
+                                <h3 className="text-4xl md:text-5xl font-bold font-caveat text-slate-800 leading-none mb-12">
+                                    <span>Join the crowd of </span>
+                                    <span className="relative inline-block">
+                                        <span className="text-[#01B0F1]">happy</span>
+                                        <motion.div
+                                            className="absolute bottom-1 left-0 w-full h-[0.15em] bg-[#01B0F1] -z-10 opacity-60 transform -rotate-1"
+                                            initial={{ scaleX: 0 }}
+                                            whileInView={{ scaleX: 1 }}
+                                            transition={{ duration: 0.8 }}
+                                            viewport={{ once: true }}
+                                        />
+                                    </span>
+                                    <span> legends</span>
+                                </h3>
 
                                 {/* Master Title */}
-                                <h2 className="text-[5rem] md:text-[7rem] font-bold font-caveat text-slate-900 leading-[0.9]">
-                                    Be the <br />
+                                <h2 className="text-6xl md:text-[7rem] font-bold font-caveat text-slate-900 leading-[0.9]">
+                                    <span>Be the </span>
                                     <span className="relative inline-block">
-                                        Boss
+                                        <span className="text-[#01B0F1]">Boss</span>
                                         <motion.div
                                             className="absolute -top-8 -right-12 text-[#01B0F1]"
                                             animate={{ rotate: [0, 15, 0], scale: [1, 1.2, 1] }}
@@ -582,9 +644,6 @@ export function HomeView({
                                         </motion.div>
                                     </span>
                                 </h2>
-
-                                <div className="text-slate-500 text-sm font-medium mt-4">
-                                </div>
                             </div>
                         </ScaleOnScroll>
                     </div>
@@ -597,10 +656,8 @@ export function HomeView({
                             {/* Brand Column */}
                             <div className="col-span-1 md:col-span-1">
                                 <Link href="/" className="flex items-center mb-6">
-                                    <span className="text-3xl font-bold font-caveat">
-                                        <span className="text-[#FF0000]">18+</span>
-                                        <span className="text-slate-900"> PDF</span>
-                                    </span>
+                                    <img src="/logo.svg" alt="18+ PDF" className="h-12 w-auto" />
+                                    <span className="text-slate-800 font-bold font-caveat text-3xl">PDF</span>
                                 </Link>
                                 <p className="text-slate-500 mb-6 leading-relaxed">
                                     Just finish work, and chill. No tension.
@@ -655,7 +712,7 @@ export function HomeView({
 
                         <div className="border-t border-slate-100 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-center md:text-left">
                             <div className="text-slate-500 text-sm font-medium">
-                                © {new Date().getFullYear()} {platformName}. All rights reserved.
+                                © {new Date().getFullYear()} 18+ PDF. All rights reserved.
                             </div>
                             <div className="text-slate-500 text-sm font-medium">
                                 Website made by <span className="text-[#FF0000] font-bold">CHN Technologies</span>
