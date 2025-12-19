@@ -73,12 +73,14 @@ export default function ToolsPage() {
         >
           {typeof tool.icon === 'string' ? (
             <img src={tool.icon} alt={tool.title} className="h-10 w-10 object-contain transition-transform duration-200 group-hover:scale-110" />
-          ) : (
+          ) : tool.icon ? (
             <tool.icon
               className="h-10 w-10 transition-transform duration-200 group-hover:scale-110"
               style={{ color: iconColor }}
               strokeWidth={1.8}
             />
+          ) : (
+            <div className="h-10 w-10 bg-slate-200 rounded-lg" />
           )}
           {tool.isNew && (
             <span className="absolute -top-1.5 -right-1.5 bg-brand-red text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-sm">
@@ -201,24 +203,26 @@ export default function ToolsPage() {
               </div>
             ) : (
               // Categorized View
-              categories.map((category) => {
-                const categoryTools = tools.filter((t) => t.category === category);
-                if (categoryTools.length === 0) return null;
+              categories
+                .filter((category) => category !== "Other") // Exclude "Other" category
+                .map((category) => {
+                  const categoryTools = tools.filter((t) => t.category === category);
+                  if (categoryTools.length === 0) return null;
 
-                return (
-                  <div key={category} className="bg-white rounded-3xl p-8 md:p-10 shadow-sm border border-slate-100">
-                    <h2 className="text-2xl md:text-3xl font-bold font-caveat text-[#714B67] mb-8 border-b border-slate-100 pb-4 inline-block">
-                      {category}
-                    </h2>
-                    <div className="text-sm text-slate-500 mb-4">{categoryTools.length} tools in this category</div>
-                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-x-6 gap-y-12 justify-items-center">
-                      {categoryTools.map((tool) => (
-                        <AppIcon key={tool.title} tool={tool} />
-                      ))}
+                  return (
+                    <div key={category} className="bg-white rounded-3xl p-8 md:p-10 shadow-sm border border-slate-100">
+                      <h2 className="text-2xl md:text-3xl font-bold font-caveat text-[#714B67] mb-8 border-b border-slate-100 pb-4 inline-block">
+                        {category}
+                      </h2>
+                      <div className="text-sm text-slate-500 mb-4">{categoryTools.length} tools in this category</div>
+                      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-x-6 gap-y-12 justify-items-center">
+                        {categoryTools.map((tool) => (
+                          <AppIcon key={tool.title} tool={tool} />
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                );
-              })
+                  );
+                })
             )}
           </div>
 

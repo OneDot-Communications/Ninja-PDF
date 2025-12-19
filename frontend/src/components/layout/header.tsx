@@ -42,28 +42,34 @@ export function Header() {
     }, [isMobileMenuOpen]);
 
     return (
-        <header className="sticky top-0 z-50 w-full bg-white/80 backdrop-blur-md shadow-sm supports-backdrop-filter:bg-white/60">
-            <div className="w-full flex h-16 items-center justify-between px-4 md:px-8 relative">
+        <header
+            className="sticky top-0 z-50 w-full bg-white/60 shadow-[0px_1px_2px_-1px_rgba(0,0,0,0.1),0px_1px_3px_0px_rgba(0,0,0,0.1)]"
+            style={{ backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)" }}
+        >
+            {/* Main Header Container */}
+            <div className="w-full flex h-16 items-center justify-between px-6 relative max-w-[1536px] mx-auto">
                 <Link href="/" className="flex items-center">
-                    <span className="text-3xl font-bold font-caveat">
-                        <span className="text-[#FF0000]">18+</span>
-                        <span className="text-slate-800"> PDF</span>
-                    </span>
+                    <img src="/logo.svg" alt="18+ PDF" className="h-12 w-auto" />
+                    <span className="text-slate-800 font-bold font-caveat text-3xl">PDF</span>
                 </Link>
 
                 {/* Desktop Actions */}
-                <div className="hidden md:flex items-center gap-4">
+                <div className="hidden md:flex items-center gap-2">
                     {!user && (
                         <>
                             <Link href="/login">
-                                <Button variant="ghost" className="text-slate-600 hover:text-[#01B0F1] hover:bg-blue-50">
-                                    Login
-                                </Button>
+                                <div className="rounded-lg px-4 py-2 flex items-center justify-center h-10 cursor-pointer group">
+                                    <span className="text-slate-600 group-hover:text-slate-900 text-center font-medium leading-none transition-colors">
+                                        Login
+                                    </span>
+                                </div>
                             </Link>
                             <Link href="/signup">
-                                <Button className="bg-[#01B0F1] hover:bg-[#0091d4] text-white shadow-md hover:shadow-lg transition-all">
-                                    Sign Up
-                                </Button>
+                                <div className="bg-slate-500 rounded-lg px-4 py-2 flex items-center justify-center h-10 overflow-hidden shadow-[0px_2px_4px_-2px_rgba(0,0,0,0.1),0px_4px_6px_-1px_rgba(0,0,0,0.1)] cursor-pointer hover:bg-slate-600 transition-colors">
+                                    <span className="text-white text-center font-medium leading-none">
+                                        Sign Up
+                                    </span>
+                                </div>
                             </Link>
                         </>
                     )}

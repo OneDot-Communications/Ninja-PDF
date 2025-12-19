@@ -1,9 +1,10 @@
 "use client";
 
-import { HomeView } from "@/components/home/HomeView";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/services/api";
+import { HomeView } from "@/components/home/HomeView";
 
+// Force re-compile to fix hydration mismatch
 export default function Home() {
   const [settings, setSettings] = useState({
     heroTitle: "All your PDF headache in one place.",

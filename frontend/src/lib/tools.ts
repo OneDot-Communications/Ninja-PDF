@@ -46,7 +46,7 @@ export const tools = [
     {
         title: "Merge PDF",
         description: "Combine PDFs in the order you want with the easiest PDF merger available.",
-        icon: FaObjectGroup,
+        icon: "/home/merge.png",
         href: "/merge-pdf",
         category: "Organize PDF",
         color: toolColors.pdf,
@@ -54,7 +54,7 @@ export const tools = [
     {
         title: "Split PDF",
         description: "Separate one page or a whole set for easy conversion into independent PDF files.",
-        icon: FaColumns,
+        icon: "/home/split-pdf.png",
         href: "/split-pdf",
         category: "Organize PDF",
         color: toolColors.pdf,
@@ -62,7 +62,7 @@ export const tools = [
     {
         title: "Compress PDF",
         description: "Reduce file size while optimizing for maximal PDF quality.",
-        icon: FaCompressArrowsAlt,
+        icon: "/home/compress-pdf.png",
         href: "/compress-pdf",
         category: "Optimize PDF",
         color: toolColors.optimize,
@@ -70,7 +70,7 @@ export const tools = [
     {
         title: "PDF to Word",
         description: "Easily convert your PDF files into easy to edit DOC and DOCX documents.",
-        icon: FaFileWord,
+        icon: "/home/pdf-word.png",
         href: "/pdf-to-word",
         category: "Convert PDF",
         color: toolColors.word,
@@ -78,7 +78,7 @@ export const tools = [
     {
         title: "PDF to PowerPoint",
         description: "Turn your PDF files into easy to edit PPT and PPTX slideshows.",
-        icon: FaFilePowerpoint,
+        icon: "/home/pdf-pptx.png",
         href: "/pdf-to-powerpoint",
         category: "Convert PDF",
         color: toolColors.powerpoint,
@@ -86,7 +86,7 @@ export const tools = [
     {
         title: "PDF to Excel",
         description: "Pull data straight from PDFs into Excel spreadsheets in a few short seconds.",
-        icon: FaFileExcel,
+        icon: "/home/pdf-excel.png",
         href: "/pdf-to-excel",
         category: "Convert PDF",
         color: toolColors.excel,
@@ -94,7 +94,7 @@ export const tools = [
     {
         title: "Word to PDF",
         description: "Make DOC and DOCX files easy to read by converting them to PDF.",
-        icon: FaFileWord,
+        icon: "/home/wrd-pdf.png",
         href: "/word-to-pdf",
         category: "Convert to PDF",
         color: toolColors.word,
@@ -102,7 +102,7 @@ export const tools = [
     {
         title: "PowerPoint to PDF",
         description: "Make PPT and PPTX slideshows easy to view by converting them to PDF.",
-        icon: FaFilePowerpoint,
+        icon: "/home/pptx-pdf.png",
         href: "/powerpoint-to-pdf",
         category: "Convert to PDF",
         color: toolColors.powerpoint,
@@ -110,7 +110,7 @@ export const tools = [
     {
         title: "Excel to PDF",
         description: "Make EXCEL spreadsheets easy to read by converting them to PDF.",
-        icon: FaFileExcel,
+        icon: "/home/excel-pdf.png",
         href: "/excel-to-pdf",
         category: "Convert to PDF",
         color: toolColors.excel,
@@ -118,7 +118,7 @@ export const tools = [
     {
         title: "Edit PDF",
         description: "Add text, images, shapes or freehand annotations to a PDF document.",
-        icon: FaEdit,
+        icon: "/home/edit-pdf.png",
         href: "/edit-pdf",
         category: "Edit PDF",
         isNew: true,
@@ -128,7 +128,7 @@ export const tools = [
     {
         title: "PDF to JPG",
         description: "Convert each PDF page into a JPG or extract all images contained in a PDF.",
-        icon: FaFileImage,
+        icon: "/home/pdf-img.png",
         href: "/pdf-to-jpg",
         category: "Convert from PDF",
         color: toolColors.image,
@@ -136,7 +136,7 @@ export const tools = [
     {
         title: "JPG to PDF",
         description: "Convert JPG images to PDF in seconds. Easily adjust orientation and margins.",
-        icon: FaFileImage,
+        icon: "/home/jpg-pdf.png",
         href: "/jpg-to-pdf",
         category: "Convert to PDF",
         color: toolColors.image,
@@ -144,7 +144,7 @@ export const tools = [
     {
         title: "Sign PDF",
         description: "Sign yourself or request electronic signatures from others.",
-        icon: FaFileSignature,
+        icon: "/home/sign.png",
         href: "/sign-pdf",
         category: "PDF Security",
         color: toolColors.security,
@@ -152,7 +152,7 @@ export const tools = [
     {
         title: "Watermark",
         description: "Stamp an image or text over your PDF in seconds.",
-        icon: FaStamp,
+        icon: "/home/watermark-pdf.png",
         href: "/watermark-pdf",
         category: "Edit PDF",
         color: toolColors.edit,
@@ -160,7 +160,7 @@ export const tools = [
     {
         title: "Rotate PDF",
         description: "Rotate your PDFs the way you need them.",
-        icon: FaSyncAlt,
+        icon: "/home/rotate-pdf.png",
         href: "/rotate-pdf",
         category: "Edit PDF",
         color: toolColors.pdf,
@@ -168,7 +168,7 @@ export const tools = [
     {
         title: "Unlock PDF",
         description: "Remove PDF password security, giving you the freedom to use your PDFs as you want.",
-        icon: FaUnlock,
+        icon: "/home/unlock-pdf.png",
         href: "/unlock-pdf",
         category: "PDF Security",
         color: toolColors.security,
@@ -176,7 +176,7 @@ export const tools = [
     {
         title: "Protect PDF",
         description: "Protect PDF files with a password. Encrypt PDF documents.",
-        icon: FaLock,
+        icon: "/home/protect-pdf.png",
         href: "/protect-pdf",
         category: "PDF Security",
         color: toolColors.security,
@@ -184,7 +184,7 @@ export const tools = [
     {
         title: "Organize PDF",
         description: "Sort pages of your PDF file however you like. Delete or add PDF pages.",
-        icon: FaSort,
+        icon: "/home/organize-pdf.png",
         href: "/organize-pdf",
         category: "Organize PDF",
         color: toolColors.organize,
@@ -192,7 +192,7 @@ export const tools = [
     {
         title: "PDF to PDF/A",
         description: "Transform your PDF to PDF/A, the ISO-standardized version of PDF for long-term archiving.",
-        icon: FaFilePdf,
+        icon: "/home/pdf-pdf-a.png",
         href: "/pdf-to-pdfa",
         category: "Convert PDF",
         color: toolColors.pdf,
@@ -200,7 +200,7 @@ export const tools = [
     {
         title: "Repair PDF",
         description: "Repair a damaged PDF and recover data from corrupt PDF.",
-        icon: FaBandAid,
+        icon: "/home/repair-pdf.png",
         href: "/repair-pdf",
         category: "Optimize PDF",
         color: toolColors.optimize,
@@ -208,7 +208,7 @@ export const tools = [
     {
         title: "Page Numbers",
         description: "Add page numbers into PDFs with ease.",
-        icon: FaListOl,
+        icon: "/home/page-number-pdf.png",
         href: "/page-numbers",
         category: "Edit PDF",
         color: toolColors.edit,
@@ -216,7 +216,7 @@ export const tools = [
     {
         title: "Scan to PDF",
         description: "Capture document scans from your mobile device and send them instantly to your browser.",
-        icon: FaPrint,
+        icon: "/home/scan-pdf.png",
         href: "/scan-to-pdf",
         category: "Organize PDF",
         color: toolColors.pdf,
@@ -224,7 +224,7 @@ export const tools = [
     {
         title: "OCR PDF",
         description: "Easily convert scanned PDF into searchable and selectable documents.",
-        icon: FaEye,
+        icon: "/home/ocr.png",
         href: "/ocr-pdf",
         category: "Optimize PDF",
         color: toolColors.optimize,
@@ -232,7 +232,7 @@ export const tools = [
     {
         title: "Compare PDF",
         description: "Show a side-by-side document comparison and easily spot changes.",
-        icon: FaNotEqual,
+        icon: "/home/compare-pdf.png",
         href: "/compare-pdf",
         category: "Edit PDF",
         isNew: true,
@@ -280,5 +280,13 @@ export const tools = [
         category: "PDF Security",
         isNew: true,
         color: toolColors.security,
+    },
+    {
+        title: "Extract Images",
+        description: "Extract all images from a PDF document.",
+        icon: FaFileImage,
+        href: "/extract-images",
+        category: "Convert from PDF",
+        color: toolColors.image,
     },
 ];
