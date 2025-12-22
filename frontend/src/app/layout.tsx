@@ -3,6 +3,7 @@ import { Montserrat, Kalam, Caveat } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { ClientLayout } from "./client-layout";
+import Script from "next/script";
 
 const montserrat = Montserrat({
   subsets: ["latin", "cyrillic"],
@@ -135,6 +136,20 @@ export default function RootLayout({
       >
         <JsonLd />
         <ClientLayout>{children}</ClientLayout>
+
+        {/* Google Analytics - Placeholder ID: Replace G-XXXXXXXXXX with real ID */}
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"
+          strategy="afterInteractive"
+        />
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-XXXXXXXXXX');
+          `}
+        </Script>
       </body>
     </html>
   );

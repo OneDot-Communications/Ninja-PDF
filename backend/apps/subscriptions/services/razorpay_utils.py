@@ -14,7 +14,7 @@ def get_razorpay_client():
     key_secret = getattr(settings, 'RAZORPAY_KEY_SECRET', 'secret_placeholder')
     return razorpay.Client(auth=(key_id, key_secret))
 
-def create_order(amount, currency='USD', receipt=None, notes=None):
+def create_order(amount, currency='INR', receipt=None, notes=None):
     """
     Amount expected in standard unit (e.g., 10.00). 
     Razorpay expects paisa/cents for INR/USD (multiply by 100).

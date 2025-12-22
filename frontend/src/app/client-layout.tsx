@@ -3,6 +3,8 @@
 import { useRef } from "react";
 import Toaster, { ToasterRef } from "@/components/ui/toast";
 import { AuthProvider } from '@/lib/context/AuthContext';
+import { CookieBanner } from "@/components/common/cookie-banner";
+import { FeedbackButton } from "@/components/common/feedback-button";
 
 export const toast = {
   show: (data: Parameters<ToasterRef['show']>[0]) => {
@@ -21,6 +23,8 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
       <>
         {children}
         <Toaster ref={toasterRef} />
+        <CookieBanner />
+        <FeedbackButton />
       </>
     </AuthProvider>
   );

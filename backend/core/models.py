@@ -145,3 +145,35 @@ class AuditLog(models.Model):
         
     def __str__(self):
         return f"{self.timestamp} - {self.actor} - {self.action}"
+
+class SupportTicket(models.Model):
+    """
+    User support tickets.
+    """
+    class Status(models.TextChoices):
+        OPEN = 'OPEN', _('Open')
+        IN_PROGRESS = 'IN_PROGRESS', _('In Progress')
+        RESOLVED = 'RESOLVED', _('Resolved')
+        CLOSED = 'CLOSED', _('Closed')
+    
+    class Priority(models.TextChoices):
+        LOW = 'LOW', _('Low')
+        MEDIUM = 'MEDIUM', _('Medium')
+        HIGH = 'HIGH', _('High')
+        CRITICAL = 'CRITICAL', _('Critical')
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='support_tickets')
+    subject = models.CharField(max_length=255)
+    message = models.TextField()
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.OPEN)
+    priority = models.CharField(max_length=20, choices=Priority.choices, default=Priority.MEDIUM)
+    
+    assigned_to = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_tickets')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"[{self.status}] {self.subject}"

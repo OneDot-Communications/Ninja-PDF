@@ -5,17 +5,20 @@ import { Button } from "../ui/button";
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Grip, Menu, X, Check } from "lucide-react";
-import { FaFilePdf, FaRobot, FaSignature, FaUserGroup, FaDesktop, FaMobile, FaGithub } from "react-icons/fa6";
+import { FaFilePdf, FaRobot, FaSignature, FaUserGroup, FaDesktop, FaMobile, FaGithub, FaRightFromBracket } from "react-icons/fa6";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from '@/lib/context/AuthContext';
 import { FaUser } from 'react-icons/fa6';
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 export function Header() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [mounted, setMounted] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
-    const { user } = useAuth();
+    const { user, logout } = useAuth();
+    const router = useRouter();
 
     useEffect(() => {
         setMounted(true);
@@ -40,6 +43,17 @@ export function Header() {
             document.body.style.overflow = "unset";
         }
     }, [isMobileMenuOpen]);
+
+    const handleLogout = async () => {
+        try {
+            await logout();
+            toast.success("Logged out successfully");
+            router.push('/');
+            setIsMobileMenuOpen(false);
+        } catch (error) {
+            toast.error("Failed to log out");
+        }
+    };
 
     return (
         <header
@@ -83,10 +97,17 @@ export function Header() {
                                     user.role === 'ADMIN' ? "/admin/dashboard" :
                                         "/profile"
                             }>
-                                <button className="flex items-center justify-center w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 transition-colors border border-slate-200">
+                                <button className="flex items-center justify-center w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 transition-colors border border-slate-200" title="Profile">
                                     <FaUser className="w-4 h-4 text-slate-600" />
                                 </button>
                             </Link>
+                            <button
+                                onClick={handleLogout}
+                                className="flex items-center justify-center w-9 h-9 rounded-full bg-slate-100 hover:bg-red-50 hover:border-red-200 transition-colors border border-slate-200 group"
+                                title="Logout"
+                            >
+                                <FaRightFromBracket className="w-4 h-4 text-slate-600 group-hover:text-red-500" />
+                            </button>
                         </div>
                     )}
                     <div ref={menuRef} className="relative">
@@ -254,25 +275,35 @@ export function Header() {
                                                 </Link>
                                             </>
                                         ) : (
-                                            <div className="col-span-2 flex items-center justify-between bg-slate-50 p-3 rounded-lg">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-10 h-10 rounded-full bg-[#01B0F1]/10 flex items-center justify-center text-[#01B0F1]">
-                                                        <FaUser className="w-5 h-5" />
+                                            <div className="col-span-2 space-y-3">
+                                                <div className="flex items-center justify-between bg-slate-50 p-3 rounded-lg">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-10 h-10 rounded-full bg-[#01B0F1]/10 flex items-center justify-center text-[#01B0F1]">
+                                                            <FaUser className="w-5 h-5" />
+                                                        </div>
+                                                        <div className="flex flex-col">
+                                                            <span className="text-sm font-bold text-slate-900">
+                                                                {user.first_name || 'User'}
+                                                            </span>
+                                                            <span className="text-xs text-slate-500 truncate max-w-[120px]">
+                                                                {user.email}
+                                                            </span>
+                                                        </div>
                                                     </div>
-                                                    <div className="flex flex-col">
-                                                        <span className="text-sm font-bold text-slate-900">
-                                                            {user.first_name || 'User'}
-                                                        </span>
-                                                        <span className="text-xs text-slate-500 truncate max-w-[120px]">
-                                                            {user.email}
-                                                        </span>
-                                                    </div>
+                                                    <Link href={user.role === 'ADMIN' || user.role === 'SUPER_ADMIN' ? "/admin/dashboard" : "/profile"} onClick={() => setIsMobileMenuOpen(false)}>
+                                                        <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700 hover:bg-blue-50">
+                                                            {user.role === 'ADMIN' || user.role === 'SUPER_ADMIN' ? "Dashboard" : "Profile"}
+                                                        </Button>
+                                                    </Link>
                                                 </div>
-                                                <Link href={user.role === 'ADMIN' || user.role === 'SUPER_ADMIN' ? "/admin/dashboard" : "/profile"} onClick={() => setIsMobileMenuOpen(false)}>
-                                                    <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700 hover:bg-blue-50">
-                                                        {user.role === 'ADMIN' || user.role === 'SUPER_ADMIN' ? "Dashboard" : "Profile"}
-                                                    </Button>
-                                                </Link>
+                                                <Button
+                                                    variant="outline"
+                                                    onClick={handleLogout}
+                                                    className="w-full justify-center h-10 text-red-600 border-red-200 hover:bg-red-50"
+                                                >
+                                                    <FaRightFromBracket className="w-4 h-4 mr-2" />
+                                                    Logout
+                                                </Button>
                                             </div>
                                         )}
                                     </div>

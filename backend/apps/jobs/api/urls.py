@@ -1,6 +1,6 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from apps.jobs.api.views import JobViewSet
+from apps.jobs.api.views import JobViewSet, AdminJobViewSet
 from apps.jobs.api.batch_views import (
     CreateBatchJobView,
     BatchJobStatusView,
@@ -11,6 +11,7 @@ from apps.jobs.api.batch_views import (
 
 router = DefaultRouter()
 router.register(r'jobs', JobViewSet, basename='jobs')
+router.register(r'admin', AdminJobViewSet, basename='admin-jobs')
 
 urlpatterns = [
     path('', include(router.urls)),

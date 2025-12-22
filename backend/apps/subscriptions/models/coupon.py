@@ -107,7 +107,7 @@ class RegionalPricing(models.Model):
     plan = models.ForeignKey('Plan', on_delete=models.CASCADE, related_name='regional_prices')
     country_code = models.CharField(max_length=3, help_text="ISO 3166-1 alpha-2 country code")
     country_name = models.CharField(max_length=100)
-    currency = models.CharField(max_length=3, default='USD')
+    currency = models.CharField(max_length=3, default='INR')
     price = models.DecimalField(max_digits=10, decimal_places=2)
     stripe_price_id = models.CharField(max_length=100, blank=True, null=True)
     is_active = models.BooleanField(default=True)

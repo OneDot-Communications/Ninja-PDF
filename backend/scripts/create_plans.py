@@ -7,7 +7,7 @@ def create_initial_plans():
         defaults={
             'name': 'Free',
             'price': 0.00,
-            'currency': 'USD',
+            'currency': 'INR',
             'interval': 'MONTHLY',
             'features': {
                 'MERGE_PDF': True,
@@ -29,7 +29,7 @@ def create_initial_plans():
         defaults={
             'name': 'Pro',
             'price': 9.99,
-            'currency': 'USD',
+            'currency': 'INR',
             'interval': 'MONTHLY',
             'stripe_price_id': 'price_pro_monthly_placeholder',
             'features': {
@@ -53,7 +53,7 @@ def create_initial_plans():
         defaults={
             'name': 'Enterprise',
             'price': 49.99,
-            'currency': 'USD',
+            'currency': 'INR',
             'interval': 'YEARLY', 
             'stripe_price_id': 'price_enterprise_yearly_placeholder',
             'features': {
@@ -78,7 +78,7 @@ def create_initial_plans():
         defaults={
             'name': 'Custom',
             'price': 0.00, # Contact for pricing
-            'currency': 'USD',
+            'currency': 'INR',
             'interval': 'YEARLY',
             'features': {
                 'ALL_FEATURES': True,

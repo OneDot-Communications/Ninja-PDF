@@ -45,7 +45,7 @@ export default function JsonLd() {
         offers: {
             "@type": "Offer",
             price: "0",
-            priceCurrency: "USD",
+            priceCurrency: "INR",
         },
         aggregateRating: {
             "@type": "AggregateRating",

@@ -19,7 +19,43 @@ class PDFToolAPIView(APIView):
         """Extract uploaded file from request."""
         if 'file' not in request.FILES:
             return None, Response({'error': 'No file provided'}, status=status.HTTP_400_BAD_REQUEST)
-        return request.FILES['file'], None
+        
+        file_obj = request.FILES['file']
+        
+        # Security: Virus Scan
+        # Attempt to use ClamAV if installed on the system
+        import shutil
+        import subprocess
+        import tempfile
+        
+        scanner = shutil.which('clamdscan') or shutil.which('clamscan')
+        if scanner:
+            try:
+                # We need a file path to scan. 
+                # If it's a TemporaryUploadedFile, it has a path.
+                # If InMemory, we write to temp.
+                if hasattr(file_obj, 'temporary_file_path'):
+                    path = file_obj.temporary_file_path()
+                    result = subprocess.run([scanner, '--no-summary', path], capture_output=True)
+                else:
+                    with tempfile.NamedTemporaryFile(delete=True) as tmp:
+                        for chunk in file_obj.chunks():
+                            tmp.write(chunk)
+                        tmp.flush()
+                        result = subprocess.run([scanner, '--no-summary', tmp.name], capture_output=True)
+                
+                if result.returncode != 0:
+                    # Non-zero return code typically means virus found or error
+                    # Exit code 1 for virus found in clamscan
+                    return None, Response(
+                        {'error': 'Security check failed. Malware detected.'}, 
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+            except Exception as e:
+                # Log error but fail open (don't block user if scanner is broken)
+                print(f"Virus Check Error: {e}")
+
+        return file_obj, None
 
 
 # ─────────────────────────────────────────────────────────────────────────────

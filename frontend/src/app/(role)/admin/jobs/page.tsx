@@ -29,13 +29,12 @@ export default function AdminJobsPage() {
     const loadData = async () => {
         try {
             const [jobsData, me] = await Promise.all([
-                api.request("GET", "/api/jobs/"), // Use direct request if getHistory is not Admin All View
+                api.request("GET", "/api/jobs/admin/"), // Admin View
                 api.getUserDetails('me')
             ]);
-            // api.getHistory() might point to /api/core/history/ which is user specific?
-            // JobViewSet is at /api/jobs/. If we mapped it there.
-            // Let's assume /api/jobs/ is the endpoint for JobViewSet.
-            setJobs(jobsData.results || jobsData);
+
+            const results = jobsData.results || jobsData;
+            setJobs(Array.isArray(results) ? results : []);
             setCurrentAdmin(me);
         } catch (error) {
             toast.error("Failed to load jobs");

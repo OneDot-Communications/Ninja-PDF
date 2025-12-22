@@ -44,6 +44,21 @@ export function Footer() {
                 </div>
                 <div className="mt-16 border-t border-border pt-8 text-center text-sm text-muted-foreground">
                     <p>&copy; {new Date().getFullYear()} 18+ PDF. All rights reserved.</p>
+                    <div className="mt-4 flex flex-col items-center gap-2 text-xs opacity-75">
+                        <p>Operated by CHN Technologies</p>
+                        <p>123 Tech Park, Coimbatore, TN, India - 641001</p>
+                        <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 mt-2 max-w-2xl mx-auto">
+                            <Link href="/legal/privacy-policy" className="hover:underline">Privacy Policy</Link>
+                            <Link href="/legal/terms-of-service" className="hover:underline">Terms of Service</Link>
+                            <Link href="/legal/cookie-policy" className="hover:underline">Cookie Policy</Link>
+                            <Link href="/legal/payment-policy" className="hover:underline">Payment Policy</Link>
+                            <Link href="/legal/subscription-policy" className="hover:underline">Subscription Policy</Link>
+                            <Link href="/legal/refund-policy" className="hover:underline">Refund Policy</Link>
+                            <Link href="/legal/data-retention-policy" className="hover:underline">Data Retention</Link>
+                            <Link href="/legal/security-policy" className="hover:underline">Security</Link>
+                            <Link href="/legal/dmca-policy" className="hover:underline">DMCA</Link>
+                        </div>
+                    </div>
                 </div>
             </div>
         </footer>

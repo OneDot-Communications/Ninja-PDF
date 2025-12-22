@@ -61,7 +61,7 @@ export default function BillingConfigPage() {
                 company_email: "",
                 company_phone: "",
                 tax_id: "",
-                default_currency: "USD",
+                default_currency: "INR",
                 invoice_prefix: "INV",
                 invoice_footer: "",
                 payment_terms_days: 30,
@@ -208,13 +208,14 @@ export default function BillingConfigPage() {
                                 <div>
                                     <Label>Default Currency</Label>
                                     <Select
-                                        value={config?.default_currency || "USD"}
+                                        value={config?.default_currency || "INR"}
                                         onValueChange={(v) => updateConfig("default_currency", v)}
                                     >
                                         <SelectTrigger>
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
+                                            <SelectItem value="INR">INR - Indian Rupee</SelectItem>
                                             <SelectItem value="USD">USD - US Dollar</SelectItem>
                                             <SelectItem value="EUR">EUR - Euro</SelectItem>
                                             <SelectItem value="GBP">GBP - British Pound</SelectItem>

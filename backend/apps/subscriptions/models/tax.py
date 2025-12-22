@@ -34,7 +34,7 @@ class TaxRule(models.Model):
         max_digits=12, decimal_places=2, null=True, blank=True,
         help_text="Revenue threshold for tax registration requirement"
     )
-    threshold_currency = models.CharField(max_length=3, default='USD')
+    threshold_currency = models.CharField(max_length=3, default='INR')
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -140,7 +140,7 @@ class BillingConfiguration(models.Model):
     company_logo = models.ImageField(upload_to='billing/', null=True, blank=True)
     
     # Default Currency
-    default_currency = models.CharField(max_length=3, default='USD')
+    default_currency = models.CharField(max_length=3, default='INR')
     supported_currencies = models.JSONField(default=list, help_text="List of supported currency codes")
     
     # Invoice Settings

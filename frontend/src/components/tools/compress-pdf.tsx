@@ -8,11 +8,14 @@ import { ArrowRight, AlertTriangle, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { pdfApi } from "@/lib/services/pdf-api";
 import { toast } from "@/lib/hooks/use-toast";
+import { useSimulatedProgress } from "@/lib/hooks/use-progress";
+import { Progress } from "@/components/ui/progress";
 
 export function CompressPdfTool() {
     const [file, setFile] = useState<File | null>(null);
     const [isProcessing, setIsProcessing] = useState(false);
     const [compressionLevel, setCompressionLevel] = useState<"recommended" | "extreme">("recommended");
+    const progress = useSimulatedProgress(isProcessing);
 
     const handleFileSelected = (files: File[]) => {
         if (files.length > 0) {
@@ -124,20 +127,25 @@ export function CompressPdfTool() {
             </div>
 
             <div className="flex flex-col items-center pt-8 space-y-4">
-                <Button
-                    size="lg"
-                    onClick={compressPdf}
-                    disabled={isProcessing}
-                    className="h-14 min-w-[200px] text-lg"
-                >
-                    {isProcessing ? (
-                        "Compressing..."
-                    ) : (
+                {isProcessing ? (
+                    <div className="w-full max-w-md space-y-2 animate-in fade-in zoom-in duration-300">
+                        <Progress value={progress} className="h-3" />
+                        <p className="text-center text-sm text-muted-foreground font-medium animate-pulse">
+                            Compressing PDF... {progress}%
+                        </p>
+                    </div>
+                ) : (
+                    <Button
+                        size="lg"
+                        onClick={compressPdf}
+                        disabled={isProcessing}
+                        className="h-14 min-w-[200px] text-lg shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all"
+                    >
                         <>
                             Compress PDF <ArrowRight className="ml-2 h-5 w-5" />
                         </>
-                    )}
-                </Button>
+                    </Button>
+                )}
             </div>
         </div>
     );

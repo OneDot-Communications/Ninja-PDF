@@ -25,7 +25,11 @@ export default function AdminDashboardPage() {
             try {
                 const data = await api.getAdminStats();
                 setStats(data);
-            } catch (error) {
+            } catch (error: any) {
+                // Suppress auth errors during logout/re-verification
+                if (error?.status === 401 || error?.status === 403 || error.message?.includes("credentials were not provided")) {
+                    return;
+                }
                 console.error("Failed to fetch admin stats", error);
             } finally {
                 setLoading(false);
@@ -142,7 +146,7 @@ export default function AdminDashboardPage() {
                             <TrendingUp className="h-4 w-4 text-orange-500" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold text-slate-900">${stats?.monthly_revenue || 0}</div>
+                            <div className="text-2xl font-bold text-slate-900">₹{stats?.monthly_revenue || 0}</div>
                             <p className="text-xs text-slate-500 mt-1">Estimated MRR</p>
                         </CardContent>
                     </Card>
