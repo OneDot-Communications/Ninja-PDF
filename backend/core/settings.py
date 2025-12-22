@@ -66,6 +66,7 @@ ALLOWED_HOSTS = [
     "ninja-pdf.onrender.com",
     "localhost",
     "127.0.0.1",
+    "https://octopus-app-4mzsp.ondigitalocean.app",
 ]
 
 
@@ -346,6 +347,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:3000",
     # Production URLs (add your deployed frontend URL here)
     "https://ninja-pdf.onrender.com",
+    "https://octopus-app-4mzsp.ondigitalocean.app",
     "https://ninjapdf.com",
     "http://localhost:3000",
     "http://127.0.0.1:3000",
@@ -354,7 +356,7 @@ CORS_ALLOWED_ORIGINS = [
 ]
 CORS_ALLOW_CREDENTIALS = True
 
-ALLOWED_HOSTS = ["localhost", "127.0.0.1", "18pluspdf.com", "api.18pluspdf.com", ".onrender.com"]
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", "18pluspdf.com", "api.18pluspdf.com", ".onrender.com", ".ondigitalocean.app"]
 
 # CSRF trusted origins for local dev (frontend running on port 3000)
 CSRF_TRUSTED_ORIGINS = [
