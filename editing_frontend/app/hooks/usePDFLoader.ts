@@ -3,24 +3,28 @@
 
 import { useState } from 'react';
 import { loadPDF, extractTextItems, renderPDFPageWithoutText } from '@/app/lib/pdf-extractor';
-import { PDFTextItem, PDFPageDimensions } from '@/app/types/pdf-editor';
+import { PDFTextItem, PDFPageDimensions, PDFLineItem } from '@/app/types/pdf-editor';
 import { calculateScale } from '@/app/lib/coordinate-transform';
 
 interface UsePDFLoaderReturn {
     loadFile: (file: File) => Promise<void>;
     textItems: PDFTextItem[];
+    lineItems: PDFLineItem[];
     pageDimensions: PDFPageDimensions | null;
     backgroundImageUrl: string | null;
     originalFile: File | null;
+    isDigitallySigned: boolean;
     isLoading: boolean;
     error: string | null;
 }
 
 export function usePDFLoader(): UsePDFLoaderReturn {
     const [textItems, setTextItems] = useState<PDFTextItem[]>([]);
+    const [lineItems, setLineItems] = useState<PDFLineItem[]>([]);
     const [pageDimensions, setPageDimensions] = useState<PDFPageDimensions | null>(null);
     const [backgroundImageUrl, setBackgroundImageUrl] = useState<string | null>(null);
     const [originalFile, setOriginalFile] = useState<File | null>(null);
+    const [isDigitallySigned, setIsDigitallySigned] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -29,9 +33,37 @@ export function usePDFLoader(): UsePDFLoaderReturn {
             setIsLoading(true);
             setError(null);
             setOriginalFile(file);
+            setIsDigitallySigned(false);
 
             // Load PDF
             const pdf = await loadPDF(file);
+
+            // Check for digital signatures
+            try {
+                // Get PDF metadata and check for signatures
+                const metadata = await pdf.getMetadata();
+                const info = metadata?.info as Record<string, unknown> | undefined;
+
+                // Check for signature indicators in metadata
+                if (info && (
+                    info['IsSignaturesPresent'] === true ||
+                    info['HasSignature'] === true
+                )) {
+                    setIsDigitallySigned(true);
+                }
+
+                // Also check first page for signature annotations
+                const page = await pdf.getPage(1);
+                const annotations = await page.getAnnotations();
+                const hasSignature = annotations.some(
+                    (annot: { subtype?: string }) => annot.subtype === 'Widget' || annot.subtype === 'Sig'
+                );
+                if (hasSignature) {
+                    setIsDigitallySigned(true);
+                }
+            } catch (sigErr) {
+                console.log('Could not check for signatures:', sigErr);
+            }
 
             // Load first page only for now
             const page = await pdf.getPage(1);
@@ -70,9 +102,11 @@ export function usePDFLoader(): UsePDFLoaderReturn {
     return {
         loadFile,
         textItems,
+        lineItems,
         pageDimensions,
         backgroundImageUrl,
         originalFile,
+        isDigitallySigned,
         isLoading,
         error,
     };
