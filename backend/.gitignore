@@ -4,5 +4,6 @@ test_cases.csv
 *.pyc
 
 mcq
+env/
 venv
 .env

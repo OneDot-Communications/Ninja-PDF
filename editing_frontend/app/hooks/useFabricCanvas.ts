@@ -46,14 +46,17 @@ export function useFabricCanvas(
 }
 
 /**
- * Add editable text (no white background needed since original text is not rendered)
+ * Add editable text using IText (not Textbox) to prevent word wrapping
+ * IText keeps text on a single line, preserving original PDF layout
  * Stores original text for later comparison during export
  */
 export function addEditableText(
     canvas: fabric.Canvas,
     textItem: CanvasTextItem
 ) {
-    const text = new fabric.Textbox(textItem.text, {
+    // Use IText instead of Textbox to prevent automatic word wrapping
+    // This preserves the original PDF text layout
+    const text = new fabric.IText(textItem.text, {
         left: textItem.left,
         top: textItem.top,
         fontSize: textItem.fontSize,
@@ -64,16 +67,14 @@ export function addEditableText(
         hasControls: true,
         hasBorders: true,
         lockScalingFlip: true,
-        splitByGrapheme: false,
-        width: textItem.width > 50 ? textItem.width : undefined,
         // Transparent background - no need to hide original
         backgroundColor: 'transparent',
     });
 
     // Store original text and position for export comparison
-    (text as fabric.Textbox & { originalText?: string; originalLeft?: number; originalTop?: number }).originalText = textItem.text;
-    (text as fabric.Textbox & { originalText?: string; originalLeft?: number; originalTop?: number }).originalLeft = textItem.left;
-    (text as fabric.Textbox & { originalText?: string; originalLeft?: number; originalTop?: number }).originalTop = textItem.top;
+    (text as fabric.IText & { originalText?: string; originalLeft?: number; originalTop?: number }).originalText = textItem.text;
+    (text as fabric.IText & { originalText?: string; originalLeft?: number; originalTop?: number }).originalLeft = textItem.left;
+    (text as fabric.IText & { originalText?: string; originalLeft?: number; originalTop?: number }).originalTop = textItem.top;
 
     canvas.add(text);
     return text;
