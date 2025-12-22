@@ -24,6 +24,12 @@ class FeatureViewSet(viewsets.ModelViewSet):
             return [IsSuperAdmin()]
         return [permissions.AllowAny()]
 
+    @action(detail=False, methods=['get'])
+    def role_permissions(self, request):
+        # Return empty list or mocked permissions logic
+        # For now, just return empty so the page loads
+        return Response([])
+
 
 class UserFeatureOverrideViewSet(viewsets.ModelViewSet):
     queryset = UserFeatureOverride.objects.all()

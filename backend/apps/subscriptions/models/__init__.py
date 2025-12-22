@@ -10,7 +10,7 @@ from .subscription import (
     UserFeatureUsage,
     GuestFeatureUsage,
     PremiumRequest,
-    SystemSetting,
+
     PlanFeature,
     RolePermission,
 )
@@ -37,7 +37,7 @@ __all__ = [
     'UserFeatureUsage',
     'GuestFeatureUsage',
     'PremiumRequest',
-    'SystemSetting',
+
     'PlanFeature',
     'RolePermission',
     'Coupon',

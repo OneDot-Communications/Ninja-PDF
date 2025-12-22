@@ -427,7 +427,7 @@ export const api = {
     return api.request("GET", "/api/auth/admin/database/");
   },
   getAuditLogs: (page: number = 1, action?: string) => {
-    let url = `/api/core/audit-logs/?page=${page}`;
+    let url = `/api/auth/security/audit-logs/?page=${page}`;
     if (action && action !== 'ALL') url += `&action=${action}`;
     return api.request("GET", url);
   },

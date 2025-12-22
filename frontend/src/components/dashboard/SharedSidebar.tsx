@@ -49,15 +49,11 @@ export function SharedSidebar({ className, type }: SharedSidebarProps) {
         { href: "/admin/dashboard", label: "Overview", icon: LayoutDashboard },
         { href: "/admin/users", label: "Users", icon: Users },
         { href: "/admin/subscriptions", label: "Subscriptions", icon: CreditCard },
-        { href: "/admin/features", label: "PDF Tools", icon: ShieldCheck },
         { href: "/admin/plans", label: "Plans", icon: Layers },
-        { href: "/admin/coupons", label: "Coupons", icon: Ticket },
-        { href: "/admin/invoices", label: "Invoices", icon: Receipt },
         { href: "/admin/support", label: "Support Tickets", icon: MessageSquare },
         { href: "/admin/content", label: "Content / CMS", icon: FileText },
         { href: "/admin/jobs", label: "Job Queue", icon: Cpu },
         { href: "/admin/activity", label: "System Activity", icon: Activity },
-        { href: "/admin/reports", label: "Reports", icon: BarChart3 },
         { href: "/admin/settings", label: "Settings", icon: Settings },
     ];
 

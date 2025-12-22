@@ -214,16 +214,7 @@ class PremiumRequest(models.Model):
         return f"{self.user.email} - {self.status}"
 
 
-class SystemSetting(models.Model):
-    """Global system configuration settings."""
-    key = models.CharField(max_length=100, unique=True)
-    value = models.TextField()
-    description = models.TextField(blank=True)
-    is_public = models.BooleanField(default=False, help_text="Whether this setting is visible to non-admin users")
-    updated_at = models.DateTimeField(auto_now=True)
-    
-    def __str__(self):
-        return f"{self.key}: {self.value[:50]}"
+
 
 
 class PlanFeature(models.Model):
