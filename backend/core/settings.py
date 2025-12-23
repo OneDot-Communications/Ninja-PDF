@@ -276,8 +276,8 @@ REST_AUTH = {
     'JWT_AUTH_COOKIE': 'access-token',
     'JWT_AUTH_REFRESH_COOKIE': 'refresh-token',
     'JWT_AUTH_HTTPONLY': True,  # Prevent JS access
-    # Recommend SameSite=Strict in production for CSRF protection on cookies
-    'JWT_AUTH_SAMESITE': os.getenv('JWT_AUTH_SAMESITE', 'Lax'),
+    # SameSite=None required for cross-origin requests (must use Secure=True)
+    'JWT_AUTH_SAMESITE': os.getenv('JWT_AUTH_SAMESITE', 'None'),
     # For local development don't hardcode a cookie domain so it's host-specific.
     # This avoids issues when frontend runs on `localhost` while backend is `127.0.0.1`.
     'JWT_AUTH_COOKIE_DOMAIN': None,
@@ -287,7 +287,7 @@ REST_AUTH = {
 }
 
 # Cookie config used by helpers
-JWT_COOKIE_SAMESITE = REST_AUTH.get('JWT_AUTH_SAMESITE', 'Strict')
+JWT_COOKIE_SAMESITE = REST_AUTH.get('JWT_AUTH_SAMESITE', 'None')
 
 # AllAuth Configuration
 # AllAuth Configuration (2025 Modern Standards)
@@ -299,7 +299,7 @@ ACCOUNT_SIGNUP_FIELDS = ['email*', 'password1*', 'password2*'] # Standard flow w
 ACCOUNT_EMAIL_VERIFICATION = 'mandatory'
 
 # CSRF Settings for JWT Auth
-CSRF_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_SAMESITE = os.getenv('CSRF_COOKIE_SAMESITE', 'None')
 CSRF_COOKIE_HTTPONLY = False  # Critical: Frontend needs to read this cookie
 CSRF_USE_SESSIONS = False 
 
