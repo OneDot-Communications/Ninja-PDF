@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner"; // Import sonner
 import { FaFacebook } from "react-icons/fa";
+import Image from "next/image";
 
 const LoginPage = () => {
     // ... (hooks)
@@ -119,95 +120,146 @@ const LoginPage = () => {
     };
 
     return (
-        <div className="py-12">
-            <div className="mx-auto max-w-md px-4">
-                <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.4 }}
-                    className="w-full"
-                >
-                    <div className="text-center mb-8">
-                        <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">Welcome Back</h1>
-                        <p className="text-slate-500 dark:text-slate-300">Hey Honey Login In!</p>
+        <div className="w-full">
+            <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4 }}
+                className="w-full"
+            >
+                    {/* Sign Up Link (Top Right) */}
+                    <div className="text-right mb-6">
+                        <span className="text-[#000000] font-['Poppins',sans-serif] text-base">
+                            No Account ?{" "}
+                        </span>
+                        <Link href="/signup" className="text-[#000000] font-['Poppins',sans-serif] text-base font-semibold hover:underline">
+                            Sign up
+                        </Link>
                     </div>
+
+                    {/* Logo */}
+                    <div className="mb-6 flex justify-center">
+                        <Image
+                            src="/pages/auth/18+logo.png"
+                            alt="Logo"
+                            width={120}
+                            height={60}
+                            className="object-contain"
+                        />
+                    </div>
+
+                    {/* Greeting */}
+                    <div className="mb-8">
+                        <p className="text-[#000000] font-['Poppins',sans-serif] text-xl mb-2 text-center">
+                            <span className="font-normal">Hey Dude,</span>
+                            <br />
+                            <span className="font-normal">Welcome again!</span>
+                        </p>
+                    </div>
+
+                    {/* Sign in Title */}
+                    <h1 className="text-[rgba(0,0,0,0.71)] text-left font-['Poppins',sans-serif] text-[32px] font-medium mb-8">
+                        Sign in
+                    </h1>
+
                     {error && (
-                        <div className="mb-4 rounded-lg bg-red-50 border border-red-200 p-3 text-red-700 text-sm dark:bg-red-500/20 dark:border-red-500/50 dark:text-red-400">
+                        <div className="mb-4 rounded-lg bg-red-50 border border-red-200 p-3 text-red-700 text-sm">
                             {error}
                         </div>
                     )}
-                    <form onSubmit={handleSubmit} className="space-y-4">
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                        {/* Email Field */}
                         <div className="space-y-2">
-                            <Label htmlFor="email">Email</Label>
+                            <label htmlFor="email" className="text-[#000000] font-['Poppins',sans-serif] text-base font-normal">
+                                Enter your email address
+                            </label>
                             <input
                                 type="email"
                                 id="email"
                                 required
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
-                                className="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#01B0F1] focus-visible:ring-offset-2 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                                placeholder="you@example.com"
+                                className="bg-[#ffffff] rounded-[9px] border-solid border-[#01b0f1] border w-full h-[49px] px-5 text-[#000000] font-['Poppins',sans-serif] text-sm placeholder:text-[#808080] placeholder:font-['Poppins',sans-serif] placeholder:font-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#01b0f1] focus-visible:ring-offset-0"
+                                placeholder="Email address"
                             />
                         </div>
+
+                        {/* Password Field */}
                         <div className="space-y-2">
-                            <div className="flex justify-between items-center">
-                                <Label htmlFor="password">Password</Label>
-                                <Link href="/forgot-password" className="text-sm text-[#01B0F1] hover:underline font-medium">
-                                    Forgot password?
-                                </Link>
+                            <label htmlFor="password" className="text-[#000000] font-['Poppins',sans-serif] text-base font-normal">
+                                Enter your Password
+                            </label>
+                            <div className="relative">
+                                <input
+                                    type="password"
+                                    id="password"
+                                    required
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    className="bg-[#ffffff] rounded-[9px] border-solid border-[#01b0f1] border w-full h-[49px] px-5 text-[#000000] font-['Poppins',sans-serif] text-sm placeholder:text-[#808080] placeholder:font-['Poppins',sans-serif] placeholder:font-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#01b0f1] focus-visible:ring-offset-0"
+                                    placeholder="Password"
+                                />
                             </div>
-                            <input
-                                type="password"
-                                id="password"
-                                required
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                className="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#01B0F1] focus-visible:ring-offset-2 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                                placeholder="••••••••"
-                            />
                         </div>
-                        <Button className="w-full bg-[#E53935] hover:bg-[#D32F2F] text-white font-semibold h-10 rounded-md mt-2" type="submit">
-                            {loading ? "Signing in..." : "Sign In"}
-                        </Button>
+
+                        {/* Remember Me & Forgot Password */}
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <input
+                                    type="checkbox"
+                                    id="remember"
+                                    className="rounded border-[#cfd9e0] border w-4 h-4 text-[#01b0f1] focus:ring-[#01b0f1]"
+                                />
+                                <label htmlFor="remember" className="text-[#718096] font-['Poppins',sans-serif] text-[13px] font-normal">
+                                    Remember me
+                                </label>
+                            </div>
+                            <Link href="/forgot-password" className="text-[#226db4] font-['Poppins',sans-serif] text-[13px] font-normal hover:underline">
+                                Forgot Password
+                            </Link>
+                        </div>
+
+                        {/* Sign In Button */}
+                        <button
+                            type="submit"
+                            disabled={loading}
+                            className="bg-[#226db4] rounded-[10px] w-full h-[46.49px] shadow-[0px_4px_19px_0px_rgba(119,147,65,0.3)] text-[#ffffff] font-['Poppins',sans-serif] text-base font-medium hover:bg-[#1a5690] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {loading ? "Signing in..." : "Sign in"}
+                        </button>
                     </form>
 
                     {requires2fa && (
-                        <form onSubmit={handleSubmitOtp} className="mt-4 space-y-2">
-                            <div className="mb-2 text-sm text-yellow-700 bg-yellow-50 border border-yellow-200 p-2 rounded">Two-factor authentication is required for this account. Enter your authentication token below.</div>
+                        <form onSubmit={handleSubmitOtp} className="mt-6 space-y-4">
+                            <div className="mb-2 text-sm text-yellow-700 bg-yellow-50 border border-yellow-200 p-3 rounded-lg">Two-factor authentication is required for this account. Enter your authentication token below.</div>
                             {cooldown && (
-                                <div className="mb-2 text-sm text-red-700 bg-red-50 border border-red-200 p-2 rounded">Too many attempts. Please wait {(Math.ceil(((cooldown || 0) - Date.now()) / 1000))}s before retrying.</div>
+                                <div className="mb-2 text-sm text-red-700 bg-red-50 border border-red-200 p-3 rounded-lg">Too many attempts. Please wait {(Math.ceil(((cooldown || 0) - Date.now()) / 1000))}s before retrying.</div>
                             )}
-                            <Label htmlFor="otp">Two-factor token</Label>
+                            <label htmlFor="otp" className="text-[#000000] font-['Poppins',sans-serif] text-base font-normal">Two-factor token</label>
                             <input
                                 id="otp"
                                 inputMode="numeric"
                                 pattern="[0-9]*"
                                 value={otpToken}
                                 onChange={(e) => setOtpToken(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                                className="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm"
+                                className="bg-[#ffffff] rounded-[9px] border-solid border-[#01b0f1] border w-full h-[49px] px-5 text-[#000000] font-['Poppins',sans-serif] text-sm placeholder:text-[#808080] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#01b0f1]"
                                 placeholder="123456"
                                 maxLength={6}
                             />
-                            <Button type="submit" className="w-full bg-[#E53935] hover:bg-[#D32F2F] text-white font-semibold h-10 rounded-md">
+                            <button
+                                type="submit"
+                                className="bg-[#226db4] rounded-[10px] w-full h-[46.49px] shadow-[0px_4px_19px_0px_rgba(119,147,65,0.3)] text-[#ffffff] font-['Poppins',sans-serif] text-base font-medium hover:bg-[#1a5690] transition-colors"
+                            >
                                 Verify 2FA
-                            </Button>
+                            </button>
                         </form>
                     )}
 
-                    <div className="my-6 mb-6">
-                        <div className="w-full">
-                            <GoogleLoginButton />
-                        </div>
+                    {/* Google Sign In Button */}
+                    <div className="mt-6">
+                        <GoogleLoginButton />
                     </div>
-
-                    <p className="mt-6 text-center text-sm text-gray-700 dark:text-gray-400">
-                        Don&apos;t have an account?{" "}
-                        <a href="/signup" className="text-indigo-400 hover:underline">
-                            Sign up
-                        </a>
-                    </p>
                 </motion.div>
-            </div>
         </div>
     );
 };
