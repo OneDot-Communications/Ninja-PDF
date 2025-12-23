@@ -9,7 +9,9 @@ export default function Home() {
   const [settings, setSettings] = useState({
     heroTitle: "All your PDF headache in one place.",
     heroSubtitle: "Simple, super, and totally free!",
-    platformName: "18+ PDF"
+    platformName: "18+ PDF",
+    primaryColor: "#01B0F1",
+    highlightHeight: 1.05
   });
 
   useEffect(() => {
@@ -24,7 +26,9 @@ export default function Home() {
           setSettings({
             heroTitle: response.hero_title || "All your PDF headache in one place.",
             heroSubtitle: response.hero_subtitle || "Simple, super, and totally free!",
-            platformName: response.platform_name || "18+ PDF"
+            platformName: response.platform_name || "18+ PDF",
+            primaryColor: response.primary_color || "#01B0F1",
+            highlightHeight: response.highlight_height || 1.05
           });
         }
       } catch (error) {
@@ -40,6 +44,8 @@ export default function Home() {
       heroTitle={settings.heroTitle}
       heroSubtitle={settings.heroSubtitle}
       platformName={settings.platformName}
+      primaryColor={settings.primaryColor}
+      highlightHeight={settings.highlightHeight}
     />
   );
 }

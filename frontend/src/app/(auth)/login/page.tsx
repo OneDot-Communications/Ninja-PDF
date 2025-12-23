@@ -129,7 +129,7 @@ const LoginPage = () => {
                 >
                     <div className="text-center mb-8">
                         <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">Welcome Back</h1>
-                        <p className="text-slate-500 dark:text-slate-300">Please enter your details.</p>
+                        <p className="text-slate-500 dark:text-slate-300">Hey Honey Login In!</p>
                     </div>
                     {error && (
                         <div className="mb-4 rounded-lg bg-red-50 border border-red-200 p-3 text-red-700 text-sm dark:bg-red-500/20 dark:border-red-500/50 dark:text-red-400">

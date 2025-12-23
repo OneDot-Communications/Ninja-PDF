@@ -46,6 +46,7 @@ export default function ContentPage() {
         heroTitle: "",
         heroSubtitle: "",
         primaryColor: "#01B0F1",
+        highlightHeight: 1.05,
         logoUrl: ""
     });
     const [logoFile, setLogoFile] = useState<File | null>(null);
@@ -66,6 +67,7 @@ export default function ContentPage() {
                     heroTitle: data.hero_title || "",
                     heroSubtitle: data.hero_subtitle || "",
                     primaryColor: data.primary_color || "#01B0F1",
+                    highlightHeight: data.highlight_height || 1.05,
                     logoUrl: data.logo || ""
                 });
                 if (data.logo) {
@@ -95,6 +97,7 @@ export default function ContentPage() {
             formData.append('hero_title', settings.heroTitle);
             formData.append('hero_subtitle', settings.heroSubtitle);
             formData.append('primary_color', settings.primaryColor);
+            formData.append('highlight_height', (settings.highlightHeight ?? 1.05).toString());
 
             if (logoFile) {
                 formData.append('logo', logoFile);
@@ -108,12 +111,11 @@ export default function ContentPage() {
                     heroTitle: response.hero_title,
                     heroSubtitle: response.hero_subtitle,
                     primaryColor: response.primary_color,
+                    highlightHeight: response.highlight_height ?? settings.highlightHeight,
                     logoUrl: response.logo
                 });
                 setLogoFile(null);
             }
-
-            toast.success("Branding updated successfully");
         } catch (error) {
             toast.error("Failed to save changes");
         } finally {
@@ -141,6 +143,7 @@ export default function ContentPage() {
                 heroTitle: res.data.hero_title || "",
                 heroSubtitle: res.data.hero_subtitle || "",
                 primaryColor: res.data.primary_color || "#01B0F1",
+                highlightHeight: res.data.highlight_height || settings.highlightHeight,
                 logoUrl: res.data.logo || ""
             });
             if (res.data.logo) setPreviewLogo(res.data.logo);
@@ -199,6 +202,8 @@ export default function ContentPage() {
                                 heroTitle={settings.heroTitle || "All your PDF headache in one place."}
                                 heroSubtitle={settings.heroSubtitle || "Simple, super, and totally free!"}
                                 platformName={settings.platformName || "18+ PDF"}
+                                primaryColor={settings.primaryColor}
+                                highlightHeight={settings.highlightHeight}
                                 previewMode={true}
                             />
                         </div>
@@ -298,6 +303,22 @@ export default function ContentPage() {
                                                 placeholder="#000000"
                                                 className="uppercase font-mono"
                                             />
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-3">
+                                        <Label>Highlight Height (em)</Label>
+                                        <div className="flex gap-2 items-center">
+                                            <Input
+                                                type="number"
+                                                step="0.05"
+                                                min="0.5"
+                                                max="2"
+                                                value={String(settings.highlightHeight ?? 1.05)}
+                                                onChange={(e) => setSettings({ ...settings, highlightHeight: parseFloat(e.target.value) || 1.05 })}
+                                                className="w-28"
+                                            />
+                                            <span className="text-sm text-slate-500">Adjust the paint highlight height</span>
                                         </div>
                                     </div>
                                 </div>
