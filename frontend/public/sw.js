@@ -16,6 +16,11 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+    // Ignore API requests and non-GET methods
+    if (event.request.method !== 'GET' || event.request.url.includes('/api/')) {
+        return;
+    }
+
     event.respondWith(
         caches.match(event.request)
             .then((response) => {

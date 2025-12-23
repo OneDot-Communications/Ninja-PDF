@@ -26,7 +26,7 @@ DATABASES = {
     }
 }
 
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_BACKEND = 'core.email_backend.ZeptoEmailBackend'
 
 CORS_ALLOWED_ORIGINS = [
     "https://ninja-pdf.onrender.com",

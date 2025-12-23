@@ -28,6 +28,40 @@ import base64
 
 User = get_user_model()
 
+
+class CustomVerifyEmailView(APIView):
+    """
+    Custom email verification using simple UUID tokens.
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request, *args, **kwargs):
+        from apps.accounts.models import EmailVerificationToken
+        from allauth.account.models import EmailAddress
+        
+        key = request.data.get('key')
+        if not key:
+            return Response({'detail': 'Key is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Look up token
+        try:
+            token = EmailVerificationToken.objects.get(token=key)
+        except (EmailVerificationToken.DoesNotExist, ValueError):
+            return Response({'detail': 'Invalid or expired verification link.'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Check if still valid
+        if not token.is_valid():
+            return Response({'detail': 'Verification link has expired.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Mark email as verified
+        user = token.user
+        EmailAddress.objects.filter(user=user, email=user.email).update(verified=True)
+        
+        # Mark token as used
+        token.mark_used()
+        
+        return Response({'detail': 'Email verified successfully!'}, status=status.HTTP_200_OK)
+
 class DataExportView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
