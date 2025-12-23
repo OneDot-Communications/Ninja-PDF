@@ -1,9 +1,11 @@
 from django.conf import settings
 from datetime import timedelta
+import os
 
 
 def cookie_settings():
-    secure = not settings.DEBUG and getattr(settings, 'SECURE_SSL_REDIRECT', False)
+    # Read secure from env, default to True for production safety
+    secure = os.getenv('JWT_COOKIE_SECURE', 'true').lower() == 'true'
     samesite = getattr(settings, 'JWT_COOKIE_SAMESITE', 'None')
     return {'secure': secure, 'samesite': samesite}
 
