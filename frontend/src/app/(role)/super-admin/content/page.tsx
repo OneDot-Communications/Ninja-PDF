@@ -16,6 +16,29 @@ export default function ContentPage() {
     const [saving, setSaving] = useState(false);
     const [activeTab, setActiveTab] = useState<'editor' | 'history'>('editor');
     const [versions, setVersions] = useState<any[]>([]);
+    const [fitPreview, setFitPreview] = useState(true);
+    const previewRef = useRef<HTMLDivElement | null>(null);
+    const [isFullScreen, setIsFullScreen] = useState(false);
+
+    // Listen for fullscreen changes to update state
+    useEffect(() => {
+        const handler = () => setIsFullScreen(!!document.fullscreenElement);
+        document.addEventListener('fullscreenchange', handler);
+        return () => document.removeEventListener('fullscreenchange', handler);
+    }, []);
+
+    const toggleFullScreen = async () => {
+        try {
+            if (!previewRef.current) return;
+            if (!document.fullscreenElement) {
+                await previewRef.current.requestFullscreen();
+            } else {
+                await document.exitFullscreen();
+            }
+        } catch (err) {
+            console.error('Fullscreen toggle failed', err);
+        }
+    }; 
 
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [settings, setSettings] = useState({
@@ -130,15 +153,67 @@ export default function ContentPage() {
     };
 
     return (
-        <div className="flex h-[calc(100vh-4rem)] overflow-hidden">
-            {/* Left Sidebar - Editor Controls */}
-            <div className="w-[400px] border-r border-slate-200 bg-white flex flex-col h-full overflow-y-auto z-20 shadow-xl">
-                <div className="p-6 border-b border-slate-100 bg-white sticky top-0 z-10">
-                    <div className="flex items-center gap-2 mb-2 text-slate-500">
-                        <LayoutTemplate className="w-5 h-5" />
-                        <span className="text-sm font-medium uppercase tracking-wider">Live Editor</span>
+        <div className="flex flex-col h-[calc(100vh-4rem)] overflow-hidden">
+            {/* Top Area - Live Preview */}
+            <div className="h-[46vh] bg-slate-100 overflow-hidden relative flex flex-col">
+                <div className="bg-slate-900 text-white text-xs py-2 px-4 flex items-center justify-between shadow-md z-30">
+                    <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                        <span className="font-mono opacity-80">LIVE PREVIEW MODE</span>
                     </div>
-                    <h1 className="text-2xl font-bold text-slate-900">CMS & Branding</h1>
+                    <div className="flex items-center gap-2">
+                        <div className="text-xs opacity-60">Desktop preview - showing 12 featured tools</div>
+                        <button
+                            onClick={() => setFitPreview(!fitPreview)}
+                            className={`ml-3 text-xs px-2 py-1 rounded transition-colors ${fitPreview ? 'bg-slate-700 hover:bg-slate-600' : 'bg-slate-800 hover:bg-slate-700'}`}
+                            aria-pressed={fitPreview}
+                        >
+                            {fitPreview ? 'Fit to container (On)' : 'Fit to container (Off)'}
+                        </button>
+                        <button
+                            onClick={toggleFullScreen}
+                            className="ml-2 text-xs px-2 py-1 rounded bg-sky-600 hover:bg-sky-500 transition-colors"
+                        >
+                            {isFullScreen ? 'Exit Full Screen' : 'Full Screen Preview'}
+                        </button> 
+                    </div>
+                </div>
+
+                <div className="flex-1 overflow-auto bg-slate-200/30 flex justify-center p-4">
+                    {/* Desktop Preview Container */}
+                    <div ref={previewRef} className="bg-white shadow-2xl rounded-lg overflow-hidden mx-auto" style={fitPreview ? { width: '100%', maxWidth: '1200px', transform: 'scale(1)', transformOrigin: 'top center' } : {width: '1200px', height: '100%', maxWidth: '1200px'}}>
+                        {/* Browser chrome simulation */}
+                        <div className="bg-slate-100 border-b border-slate-200 px-4 py-2 flex items-center gap-2">
+                            <div className="flex gap-1">
+                                <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                                <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                                <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                            </div>
+                            <div className="flex-1 bg-white rounded-md px-3 py-1 text-xs text-slate-500 border">
+                                http://localhost:3000
+                            </div>
+                        </div>
+                        
+                        <div className="h-full overflow-auto">
+                            <HomeView
+                                heroTitle={settings.heroTitle || "All your PDF headache in one place."}
+                                heroSubtitle={settings.heroSubtitle || "Simple, super, and totally free!"}
+                                platformName={settings.platformName || "18+ PDF"}
+                                previewMode={true}
+                            />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Bottom Area - Editor Controls */}
+            <div className="h-[54vh] border-t border-slate-200 bg-white flex flex-col overflow-visible shadow-xl">
+                <div className="p-6 border-b border-slate-100 bg-white sticky top-0 z-10">
+                    <div className="flex items-center gap-3 mb-3 text-slate-600">
+                        <LayoutTemplate className="w-5 h-5" />
+                        <span className="text-sm font-semibold uppercase tracking-wider">Live Editor</span>
+                    </div>
+                    <h1 className="text-2xl font-semibold text-slate-900">CMS & Branding</h1>
                     <div className="flex bg-slate-100 p-1 rounded-lg mt-4">
                         <button
                             className={`flex-1 text-sm font-medium py-1.5 rounded-md transition-all ${activeTab === 'editor' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
@@ -155,103 +230,105 @@ export default function ContentPage() {
                     </div>
                 </div>
 
-                <div className="p-6 space-y-8 flex-1">
+                <div className={activeTab === 'editor' ? 'p-6 grid grid-cols-2 gap-6 items-start' : 'p-6 space-y-8 flex-1'}>
                     {activeTab === 'editor' ? (
                         <>
-                            {/* Branding Section */}
-                            <div className="space-y-4">
-                                <div className="flex items-center justify-between">
-                                    <h3 className="text-sm font-bold text-slate-900 uppercase">Identity</h3>
-                                    <span className="text-xs text-slate-400">Global</span>
-                                </div>
+                            <div>
+                                {/* Branding Section */}
+                                <div className="space-y-4">
+                                    <div className="flex items-center justify-between">
+                                        <h3 className="text-sm font-bold text-slate-900 uppercase">Identity</h3>
+                                        <span className="text-xs text-slate-400">Global</span>
+                                    </div>
 
-                                {/* Logo Upload */}
-                                <div className="space-y-3">
-                                    <Label>Logo</Label>
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-16 h-16 border rounded-lg bg-slate-50 flex items-center justify-center overflow-hidden relative">
-                                            {previewLogo ? (
-                                                <img src={previewLogo} alt="Logo Preview" className="w-full h-full object-contain" />
-                                            ) : (
-                                                <ImageIcon className="text-slate-300 w-8 h-8" />
-                                            )}
-                                        </div>
-                                        <div className="flex-1">
-                                            <Input
-                                                type="file"
-                                                accept="image/*"
-                                                className="hidden"
-                                                ref={fileInputRef}
-                                                onChange={handleFileChange}
-                                            />
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                className="w-full"
-                                                onClick={() => fileInputRef.current?.click()}
-                                            >
-                                                <Upload className="w-4 h-4 mr-2" /> Upload Logo
-                                            </Button>
-                                            <p className="text-[10px] text-slate-400 mt-1">Recommended: PNG or SVG, 512x512</p>
+                                    {/* Logo Upload */}
+                                    <div className="space-y-3">
+                                        <Label>Logo</Label>
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-16 h-16 border rounded-lg bg-slate-50 flex items-center justify-center overflow-hidden relative">
+                                                {previewLogo ? (
+                                                    <img src={previewLogo} alt="Logo Preview" className="w-full h-full object-contain" />
+                                                ) : (
+                                                    <ImageIcon className="text-slate-300 w-8 h-8" />
+                                                )}
+                                            </div>
+                                            <div className="flex-1">
+                                                <Input
+                                                    type="file"
+                                                    accept="image/*"
+                                                    className="hidden"
+                                                    ref={fileInputRef}
+                                                    onChange={handleFileChange}
+                                                />
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="w-full"
+                                                    onClick={() => fileInputRef.current?.click()}
+                                                >
+                                                    <Upload className="w-4 h-4 mr-2" /> Upload Logo
+                                                </Button>
+                                                <p className="text-[10px] text-slate-400 mt-1">Recommended: PNG or SVG, 512x512</p>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
 
-                                <div className="space-y-3">
-                                    <Label>Platform Name</Label>
-                                    <Input
-                                        value={settings.platformName}
-                                        onChange={(e) => setSettings({ ...settings, platformName: e.target.value })}
-                                        placeholder="e.g. Ninja PDF"
-                                        className="font-medium"
-                                    />
-                                </div>
+                                    <div className="space-y-3">
+                                        <Label>Platform Name</Label>
+                                        <Input
+                                            value={settings.platformName}
+                                            onChange={(e) => setSettings({ ...settings, platformName: e.target.value })}
+                                            placeholder="e.g. Ninja PDF"
+                                            className="font-medium"
+                                        />
+                                    </div>
 
-                                <div className="space-y-3">
-                                    <Label>Primary Color</Label>
-                                    <div className="flex gap-2">
-                                        <Input
-                                            type="color"
-                                            value={settings.primaryColor}
-                                            onChange={(e) => setSettings({ ...settings, primaryColor: e.target.value })}
-                                            className="w-12 h-10 p-1 cursor-pointer"
-                                        />
-                                        <Input
-                                            value={settings.primaryColor}
-                                            onChange={(e) => setSettings({ ...settings, primaryColor: e.target.value })}
-                                            placeholder="#000000"
-                                            className="uppercase font-mono"
-                                        />
+                                    <div className="space-y-3">
+                                        <Label>Primary Color</Label>
+                                        <div className="flex gap-2">
+                                            <Input
+                                                type="color"
+                                                value={settings.primaryColor}
+                                                onChange={(e) => setSettings({ ...settings, primaryColor: e.target.value })}
+                                                className="w-12 h-10 p-1 cursor-pointer"
+                                            />
+                                            <Input
+                                                value={settings.primaryColor}
+                                                onChange={(e) => setSettings({ ...settings, primaryColor: e.target.value })}
+                                                placeholder="#000000"
+                                                className="uppercase font-mono"
+                                            />
+                                        </div>
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="w-full h-px bg-slate-100 my-2"></div>
+                            <div>
+                                {/* Hero Section */}
+                                <div className="space-y-4">
+                                    <div className="flex items-center justify-between">
+                                        <h3 className="text-sm font-bold text-slate-900 uppercase">Home Page Hero</h3>
+                                    </div>
 
-                            {/* Hero Section */}
-                            <div className="space-y-4">
-                                <div className="flex items-center justify-between">
-                                    <h3 className="text-sm font-bold text-slate-900 uppercase">Home Page Hero</h3>
-                                </div>
+                                    <div className="space-y-3">
+                                        <Label>Main Headline</Label>
+                                        <Textarea
+                                            value={settings.heroTitle}
+                                            onChange={(e) => setSettings({ ...settings, heroTitle: e.target.value })}
+                                            placeholder="Catchy title..."
+                                            className="min-h-[100px] font-caveat text-xl"
+                                        />
+                                    </div>
 
-                                <div className="space-y-3">
-                                    <Label>Main Headline</Label>
-                                    <Textarea
-                                        value={settings.heroTitle}
-                                        onChange={(e) => setSettings({ ...settings, heroTitle: e.target.value })}
-                                        placeholder="Catchy title..."
-                                        className="min-h-[100px] font-caveat text-xl"
-                                    />
-                                </div>
-
-                                <div className="space-y-3">
-                                    <Label>Subtitle</Label>
-                                    <Textarea
-                                        value={settings.heroSubtitle}
-                                        onChange={(e) => setSettings({ ...settings, heroSubtitle: e.target.value })}
-                                        placeholder="Subtext..."
-                                        className="min-h-[80px]"
-                                    />
+                                    <div className="space-y-3">
+                                        <Label>Subtitle</Label>
+                                        <Textarea
+                                            value={settings.heroSubtitle}
+                                            onChange={(e) => setSettings({ ...settings, heroSubtitle: e.target.value })}
+                                            placeholder="Subtext..."
+                                            className="min-h-[80px]"
+                                        />
+                                    </div>
                                 </div>
                             </div>
                         </>
@@ -312,28 +389,6 @@ export default function ContentPage() {
                         </div>
                     </div>
                 )}
-            </div>
-
-            {/* Right Area - Live Preview */}
-            <div className="flex-1 bg-slate-100 overflow-hidden relative flex flex-col">
-                <div className="bg-slate-900 text-white text-xs py-2 px-4 flex items-center justify-between shadow-md z-30">
-                    <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-                        <span className="font-mono opacity-80">LIVE PREVIEW MODE</span>
-                    </div>
-                </div>
-
-                <div className="flex-1 overflow-auto bg-slate-200/50 flex items-start justify-center p-8">
-                    {/* Preview Container - Scaled to fit but maintained aspect ratio */}
-                    <div className="origin-top transform scale-[0.65] lg:scale-[0.75] xl:scale-[0.85] w-[1280px] min-h-[1000px] bg-white shadow-2xl rounded-lg overflow-hidden border border-slate-200 ring-4 ring-slate-200/50">
-                        <HomeView
-                            heroTitle={settings.heroTitle || "Title Placeholder"}
-                            heroSubtitle={settings.heroSubtitle || "Subtitle Placeholder"}
-                            platformName={settings.platformName || "Platform"}
-                        // Pass other branding props if HomeView supports them
-                        />
-                    </div>
-                </div>
             </div>
         </div>
     );
