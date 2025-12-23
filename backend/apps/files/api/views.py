@@ -7,6 +7,7 @@ from django.contrib.auth.hashers import make_password, check_password
 import uuid
 
 from core.services.quota_service import QuotaService
+from core.storage import StorageService
 
 class UserFileViewSet(viewsets.ModelViewSet):
     serializer_class = UserFileSerializer
@@ -100,7 +101,11 @@ class PublicFileViewSet(viewsets.ViewSet):
         file.download_count += 1
         file.save()
         
+        # Generate signed URL for DO Spaces access (1 hour expiry)
+        download_url = StorageService.get_signed_url(file.file.name, expiration=3600)
+        
         return Response({
-            'url': file.file.url,
+            'url': download_url,
             'name': file.name
         })
+
