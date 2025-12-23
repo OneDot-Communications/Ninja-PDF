@@ -262,7 +262,7 @@ class StorageService:
         
         try:
             client = cls.get_s3_client()
-            return client.generate_presigned_url(
+            url = client.generate_presigned_url(
                 operation,
                 Params={
                     'Bucket': cls._bucket_name,
@@ -270,6 +270,23 @@ class StorageService:
                 },
                 ExpiresIn=expiration
             )
+            
+            # If CDN domain is configured, replace the endpoint with CDN
+            cdn_domain = getattr(settings, 'AWS_S3_CUSTOM_DOMAIN', None)
+            if cdn_domain and operation == 'get_object':
+                endpoint_url = getattr(settings, 'AWS_S3_ENDPOINT_URL', '')
+                bucket_name = settings.AWS_STORAGE_BUCKET_NAME
+                
+                # Replace endpoint+bucket with CDN domain
+                # DO Spaces endpoint: https://sgp1.digitaloceanspaces.com/bucket/path
+                # CDN format: https://bucket.sgp1.cdn.digitaloceanspaces.com/path
+                if endpoint_url and bucket_name:
+                    # Remove protocol for comparison
+                    old_base = f"{endpoint_url}/{bucket_name}"
+                    new_base = f"https://{cdn_domain}"
+                    url = url.replace(old_base, new_base)
+            
+            return url
         except Exception as e:
             logger.error(f"Storage:SIGNED_URL:FAILED path={path} error={e}")
             return default_storage.url(path)
