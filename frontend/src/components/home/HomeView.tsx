@@ -149,15 +149,13 @@ const toolOverrides: Record<string, string> = {
 };
 
 // Tool Card Component - Moved outside
-const ToolCard = ({ tool, index }: { tool: any; index: number }) => {
+const ToolCard = ({ tool, index, previewMode = false }: { tool: any; index: number; previewMode?: boolean }) => {
     const wittyDescription = toolOverrides[tool.title] || tool.description;
 
     return (
-        <div
-            className="w-[311.12px] h-[190.4px] flex-shrink-0"
-        >
+        <div className={previewMode ? 'w-full h-[210px]' : 'w-[311.12px] h-[190.4px] flex-shrink-0'}>
             <Link href={tool.href} className="block group w-full h-full">
-                <div className="bg-white rounded-2xl border border-slate-200 p-6 flex flex-col h-full relative overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
+                <div className={`bg-white rounded-2xl border border-slate-200 p-6 flex flex-col h-full relative overflow-hidden transition-all duration-300 hover:shadow-lg ${previewMode ? 'hover:-translate-y-0' : 'hover:-translate-y-1'}`}>
                     <div className="flex flex-col gap-0 relative z-10 flex-grow h-full justify-between">
                         <div className="flex flex-row items-center gap-4">
                             <div className="relative flex items-center justify-center w-12 h-12 flex-shrink-0">
@@ -165,7 +163,7 @@ const ToolCard = ({ tool, index }: { tool: any; index: number }) => {
                                     <img
                                         src={tool.icon}
                                         alt={tool.title}
-                                        className={`h-full w-full object-contain ${['PDF to Excel', 'Excel to PDF', 'Edit PDF', 'Rotate PDF'].includes(tool.title)
+                                        className={`h-full w-full object-contain ${previewMode ? '' : ['PDF to Excel', 'Excel to PDF', 'Edit PDF', 'Rotate PDF'].includes(tool.title)
                                             ? 'scale-[3]'
                                             : ['Unlock PDF', 'Protect PDF', 'Scan to PDF', 'OCR PDF'].includes(tool.title)
                                                 ? 'scale-[2]'
@@ -178,13 +176,13 @@ const ToolCard = ({ tool, index }: { tool: any; index: number }) => {
                                     <div className="h-8 w-8 bg-slate-200 rounded-md" />
                                 )}
                             </div>
-                            <h3 className="text-xl font-bold text-slate-900 leading-tight">
+                            <h3 className="text-lg md:text-xl font-bold text-slate-900 leading-tight">
                                 {tool.title}
                             </h3>
                         </div>
 
                         {/* Description */}
-                        <p className="text-sm text-slate-500 leading-relaxed font-medium line-clamp-2">
+                        <p className={`text-sm text-slate-500 leading-relaxed font-medium ${previewMode ? 'line-clamp-3' : 'line-clamp-2'}`}>
                             {wittyDescription}
                         </p>
                     </div>
@@ -236,17 +234,19 @@ interface HomeViewProps {
     heroTitle?: string;
     heroSubtitle?: string;
     platformName?: string;
+    previewMode?: boolean;
     // Add other customizable props here
 }
 
 export function HomeView({
     heroTitle = "All your PDF headache in one place.",
     heroSubtitle = "Simple, super, and totally free!",
-    platformName = "18+ PDF"
+    platformName = "18+ PDF",
+    previewMode = false
 }: HomeViewProps) {
     const { tools } = useTools();
     // Filter out internal/admin tools (Category 'Other') and then slice
-    const dashboardTools = tools.filter(t => t.category !== "Other").slice(0, 30);
+    const dashboardTools = tools.filter(t => t.category !== "Other").slice(0, previewMode ? 12 : 30);
     const heroRef = useRef(null);
     const { scrollYProgress } = useScroll();
     const [showCompetitors, setShowCompetitors] = useState(false);
@@ -306,20 +306,9 @@ export function HomeView({
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.8, delay: 0.2 }}
                             >
-                                <h1 className="text-slate-900 text-center font-caveat text-5xl md:text-[5rem] leading-[0.95] font-bold">
-                                    All your PDF headaches gone in
+                                <h1 className="text-slate-900 text-center font-caveat leading-[0.95] font-bold" style={{ fontSize: previewMode ? '4.25rem' : undefined }}>
+                                    {heroTitle}
                                 </h1>
-                                <div className="flex flex-row gap-0 items-center justify-center relative -mt-1">
-                                    <h1 className="text-slate-900 text-center font-caveat text-5xl md:text-[5rem] leading-[0.95] font-bold relative">
-                                        one place.
-                                    </h1>
-                                    {/* Decorative underline for "one place." - bolder */}
-                                    <div className="absolute w-[240px] h-[18px] left-1/2 -translate-x-1/2 bottom-[-8px] opacity-80">
-                                        <svg width="242" height="17" viewBox="0 0 242 17" fill="none" className="w-full h-full">
-                                            <path d="M2 8C50 2 100 12 120 8C140 4 180 14 240 8" stroke="#01B0F1" strokeWidth="5" strokeLinecap="round" />
-                                        </svg>
-                                    </div>
-                                </div>
                             </motion.div>
 
 
@@ -331,20 +320,9 @@ export function HomeView({
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.8, delay: 0.4 }}
                             >
-                                <h2 className="text-slate-900 text-center font-caveat text-3xl md:text-[3rem] font-bold leading-none">
-                                    Simple, super, and
+                                <h2 className="text-slate-900 text-center font-caveat font-bold leading-none" style={{ fontSize: previewMode ? '2.4rem' : undefined }}>
+                                    {heroSubtitle}
                                 </h2>
-                                <div className="relative inline-block">
-                                    <h2 className="text-[#EAB308] text-center font-caveat text-3xl md:text-[3rem] font-bold leading-none">
-                                        totally free!
-                                    </h2>
-                                    {/* Decorative underline for "totally free!" - bolder */}
-                                    <div className="absolute left-0 right-0 -bottom-1 h-2">
-                                        <svg width="100%" height="8" viewBox="0 0 200 8" fill="none" preserveAspectRatio="none">
-                                            <path d="M2 4C50 2 100 6 150 3C170 2 180 5 198 4" stroke="#EAB308" strokeWidth="4" strokeLinecap="round" />
-                                        </svg>
-                                    </div>
-                                </div>
                             </motion.div>
 
                             {/* CTA Button - Tilted more */}
@@ -379,9 +357,15 @@ export function HomeView({
                             {/* Tools Grid Section */}
                             <section className="py-4">
                                 <div className="w-full">
-                                    <div className="flex flex-wrap justify-center gap-4">
+                                    <div className={previewMode ? 'grid grid-cols-4 gap-4 px-8' : 'flex flex-wrap justify-center gap-4'}>
                                         {dashboardTools.map((tool, index) => (
-                                            <ToolCard key={tool.title} tool={tool} index={index} />
+                                            previewMode ? (
+                                                <div key={tool.title} className="w-full">
+                                                    <ToolCard key={tool.title} tool={tool} index={index} previewMode={previewMode} />
+                                                </div>
+                                            ) : (
+                                                <ToolCard key={tool.title} tool={tool} index={index} />
+                                            )
                                         ))}
                                     </div>
                                 </div>
