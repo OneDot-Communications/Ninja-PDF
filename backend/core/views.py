@@ -1,4 +1,4 @@
-from rest_framework import viewsets, status, permissions
+from rest_framework import viewsets, status, permissions, parsers
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.decorators import action
@@ -31,6 +31,7 @@ class PublicSettingsView(APIView):
 
 class AdminBrandingView(APIView):
     permission_classes = [IsSuperAdmin]
+    parser_classes = [parsers.MultiPartParser, parsers.FormParser]
 
     def get(self, request):
         branding = PlatformBranding.load()
@@ -42,19 +43,41 @@ class AdminBrandingView(APIView):
         
         # Create Version Snapshot before saving
         from .models import ContentVersion
-        from apps.accounts.api.serializers import PlatformBrandingSerializer as PBS
-        snapshot_data = PBS(branding).data
+        import json
+        
+        # Create snapshot data, handling logo field properly
+        snapshot_data = {
+            'platform_name': branding.platform_name,
+            'hero_title': branding.hero_title,
+            'hero_subtitle': branding.hero_subtitle,
+            'primary_color': branding.primary_color,
+            'logo': branding.logo.url if branding.logo else None,
+            'is_active': branding.is_active,
+            'updated_at': branding.updated_at.isoformat() if branding.updated_at else None
+        }
+        
         ContentVersion.objects.create(
             snapshot=snapshot_data,
             created_by=request.user,
             note="Auto-save before update"
         )
-
-        serializer = PlatformBrandingSerializer(branding, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Update fields manually
+        if 'platform_name' in request.data:
+            branding.platform_name = request.data['platform_name']
+        if 'hero_title' in request.data:
+            branding.hero_title = request.data['hero_title']
+        if 'hero_subtitle' in request.data:
+            branding.hero_subtitle = request.data['hero_subtitle']
+        if 'primary_color' in request.data:
+            branding.primary_color = request.data['primary_color']
+        if 'logo' in request.FILES:
+            branding.logo = request.FILES['logo']
+        
+        branding.save()
+        
+        serializer = PlatformBrandingSerializer(branding, context={'request': request})
+        return Response(serializer.data)
 
 
 class SystemSettingViewSet(viewsets.ModelViewSet):
