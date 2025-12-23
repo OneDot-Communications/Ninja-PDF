@@ -65,7 +65,7 @@ export function Header() {
                                 </div>
                             </Link>
                             <Link href="/signup">
-                                <div className="bg-slate-500 rounded-lg px-4 py-2 flex items-center justify-center h-10 overflow-hidden shadow-[0px_2px_4px_-2px_rgba(0,0,0,0.1),0px_4px_6px_-1px_rgba(0,0,0,0.1)] cursor-pointer hover:bg-slate-600 transition-colors">
+                                <div className="bg-[#FF5252] rounded-lg px-4 py-2 flex items-center justify-center h-10 overflow-hidden shadow-[0px_6px_20px_-8px_rgba(255,82,82,0.25)] cursor-pointer hover:bg-[#ff3b3b] transition-colors focus:outline-none focus:ring-2 focus:ring-[#FF5252]/30">
                                     <span className="text-white text-center font-medium leading-none">
                                         Sign Up
                                     </span>
@@ -248,7 +248,7 @@ export function Header() {
                                                     </Button>
                                                 </Link>
                                                 <Link href="/signup" onClick={() => setIsMobileMenuOpen(false)}>
-                                                    <Button className="w-full justify-center h-12 bg-[#01B0F1] hover:bg-[#0091d4] text-white">
+                                                    <Button className="w-full justify-center h-12 bg-[#FF5252] hover:bg-[#ff3b3b] text-white focus:outline-none focus:ring-2 focus:ring-[#FF5252]/30">
                                                         Sign Up
                                                     </Button>
                                                 </Link>

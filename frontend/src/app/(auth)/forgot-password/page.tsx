@@ -4,13 +4,13 @@ import React, { useState } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { api } from "@/lib/services/api";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
+import { useRouter } from "next/navigation";
 
 const ForgotPasswordPage = () => {
     const [email, setEmail] = useState("");
     const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
     const [message, setMessage] = useState("");
+    const router = useRouter();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -28,63 +28,116 @@ const ForgotPasswordPage = () => {
 
     if (status === 'success') {
         return (
-            <div className="py-12">
-                <div className="mx-auto max-w-md px-4 text-center">
-                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="w-full bg-white dark:bg-gray-800 p-8 rounded-lg shadow-sm border border-slate-200 dark:border-gray-700">
-                        <div className="mb-4 flex justify-center">
-                            <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
-                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
-                            </div>
+            <div className="flex items-center justify-center py-12">
+                <motion.div 
+                    initial={{ opacity: 0, y: 20 }} 
+                    animate={{ opacity: 1, y: 0 }} 
+                    className="w-[467px] bg-white/85 backdrop-blur-sm rounded-[40px] shadow-[0px_4px_35px_rgba(0,0,0,0.08)] p-12"
+                >
+                    <div className="mb-8 flex justify-center">
+                        <div className="h-16 w-16 rounded-full bg-[#226DB4]/10 flex items-center justify-center">
+                            <svg className="w-8 h-8 text-[#226DB4]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                            </svg>
                         </div>
-                        <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Check your email</h2>
-                        <p className="text-slate-600 dark:text-slate-300 mb-6">
-                            We've sent a password reset link to <span className="font-semibold text-slate-900 dark:text-white">{email}</span>.
-                        </p>
-                        <Button variant="outline" className="w-full" asChild>
-                            <Link href="/login">Back to Login</Link>
-                        </Button>
-                    </motion.div>
-                </div>
+                    </div>
+                    <h2 className="text-[32px] font-medium text-black/71 text-center mb-4 font-['Poppins']">Check your email</h2>
+                    <p className="text-[#8D8D8D] text-center mb-8 font-['Poppins']">
+                        We've sent a password reset link to <span className="font-semibold text-black/74">{email}</span>.
+                    </p>
+                    <button
+                        onClick={() => router.push('/login')}
+                        className="w-full h-[52px] bg-[#226DB4] hover:bg-[#1a5a99] text-white font-medium text-base rounded-[10px] shadow-[0px_4px_19px_rgba(119,147,65,0.3)] transition-colors font-['Poppins']"
+                    >
+                        Back to Login
+                    </button>
+                </motion.div>
             </div>
         );
     }
 
     return (
-        <div className="py-12">
-            <div className="mx-auto max-w-md px-4">
-                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="w-full">
-                    <div className="text-center mb-8">
-                        <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">Reset Password</h1>
-                        <p className="text-slate-500 dark:text-slate-300">Enter your email to receive a reset link.</p>
+        <div className="flex items-center justify-center py-16">
+            <motion.div 
+                initial={{ opacity: 0, y: 20 }} 
+                animate={{ opacity: 1, y: 0 }} 
+                transition={{ duration: 0.4 }}
+                className="w-[467px] bg-white/85 backdrop-blur-sm rounded-[40px] shadow-[0px_4px_35px_rgba(0,0,0,0.08)] px-12 py-10"
+            >
+                {/* Logo */}
+                <Link href="/" className="block mb-6">
+                    <img 
+                        src="/pages/auth/logo.png" 
+                        alt="Ninja PDF" 
+                        className="h-[45px] w-[84px] object-cover"
+                    />
+                </Link>
+
+                {/* Top section with greeting and sign up link */}
+                <div className="flex justify-between items-start mb-8">
+                    <div>
+                        <p className="text-[20px] font-bold text-black/74 font-['Poppins'] leading-[30px]">
+                            Hey Bro,<br />Short memory!
+                        </p>
+                    </div>
+                    <div className="text-right">
+                        <p className="text-[16px] text-[#8D8D8D] font-['Poppins'] leading-[24px]">
+                            No Account ?<br />
+                            <Link href="/signup" className="text-[#8D8D8D] hover:text-[#226DB4] transition-colors">
+                                Sign up
+                            </Link>
+                        </p>
+                    </div>
+                </div>
+
+                {/* Main heading */}
+                <h1 className="text-[32px] font-medium text-black/71 mb-12 font-['Poppins'] leading-[48px]">
+                    Forget Password
+                </h1>
+
+                {/* Error message */}
+                {status === 'error' && (
+                    <div className="mb-4 rounded-[9px] bg-red-100 p-3 text-red-700 text-sm font-['Poppins']">
+                        {message}
+                    </div>
+                )}
+
+                {/* Form */}
+                <form onSubmit={handleSubmit} className="space-y-6">
+                    {/* Email input */}
+                    <div className="space-y-3">
+                        <label htmlFor="email" className="block text-[16px] font-normal text-black font-['Poppins'] leading-[24px]">
+                            Enter your username or email address
+                        </label>
+                        <input
+                            id="email"
+                            type="email"
+                            required
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            placeholder="Username or email address"
+                            className="w-full h-[50px] px-5 bg-white border border-[#01B0F1] rounded-[9px] text-[14px] font-light text-[#808080] placeholder:text-[#808080] font-['Poppins'] focus:outline-none focus:ring-2 focus:ring-[#01B0F1]/30 transition-all"
+                        />
                     </div>
 
-                    {status === 'error' && (
-                        <div className="mb-4 rounded bg-red-100 p-2 text-red-700 dark:bg-red-900 dark:text-red-200">{message}</div>
-                    )}
+                    {/* Submit button */}
+                    <button
+                        type="submit"
+                        disabled={status === 'loading'}
+                        className="w-full h-[52px] bg-[#226DB4] hover:bg-[#1a5a99] disabled:bg-[#226DB4]/60 text-white font-medium text-base rounded-[10px] shadow-[0px_4px_19px_rgba(119,147,65,0.3)] transition-colors font-['Poppins']"
+                    >
+                        {status === 'loading' ? 'Sending...' : 'Forget Password'}
+                    </button>
+                </form>
 
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="email">Email</Label>
-                            <input
-                                id="email"
-                                type="email"
-                                required
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                placeholder="you@example.com"
-                                className="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#01B0F1] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                            />
-                        </div>
-                        <Button className="w-full bg-[#E53935] hover:bg-[#D32F2F] text-white font-semibold h-10 rounded-md mt-2" type="submit">
-                            {status === 'loading' ? "Sending..." : "Send Reset Link"}
-                        </Button>
-                    </form>
-                    <div className="text-center text-sm text-slate-600 mt-4">
-                        Remember your password?{' '}
-                        <Link href="/login" className="text-indigo-600 hover:underline font-semibold">Log in</Link>
-                    </div>
-                </motion.div>
-            </div>
+                {/* Back to Home button */}
+                <button
+                    onClick={() => router.push('/')}
+                    className="w-full h-[49px] mt-4 bg-[rgba(150,139,254,0.21)] hover:bg-[rgba(150,139,254,0.3)] text-black/81 font-normal text-base rounded-[9px] transition-colors font-['Poppins']"
+                >
+                    Back to Home
+                </button>
+            </motion.div>
         </div>
     );
 };
