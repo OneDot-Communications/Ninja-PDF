@@ -218,18 +218,15 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # EMAIL CONFIGURATION (Zepto Mail - Production Ready)
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
-# EMAIL CONFIGURATION (Zepto Mail - Production Ready)
+# EMAIL CONFIGURATION (Zepto Mail - API)
 # -----------------------------------------------------------------------------
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'noreply@18pluspdf.com')
-# FORCE SMTP BACKEND (No console fallback anymore)
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+# Use Custom Zepto API Backend
+EMAIL_BACKEND = 'core.email_backend.ZeptoEmailBackend'
 
 # Zepto Mail Configuration
-EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.zeptomail.com') # Strict Zepto Default
-EMAIL_PORT = int(os.getenv('EMAIL_PORT', 587))
-EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True') == 'True'
-EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
-EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
+ZEPTO_API_URL = "https://api.zeptomail.in/v1.1/email"
+ZEPTO_API_KEY = os.getenv('ZEPTO_API_KEY')
 
 
 # -----------------------------------------------------------------------------
@@ -396,15 +393,15 @@ LOGGING = {
 # ASYNC & CACHE CONFIGURATION (REDIS)
 # -----------------------------------------------------------------------------
 # Use Redis for Caching
-# CACHES = {
-#     "default": {
-#         "BACKEND": "django_redis.cache.RedisCache",
-#         "LOCATION": os.getenv("REDIS_URL", "redis://127.0.0.1:6379/1"),
-#         "OPTIONS": {
-#             "CLIENT_CLASS": "django_redis.client.DefaultClient",
-#         }
-#     }
-# }
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": os.getenv("REDIS_URL", "redis://127.0.0.1:6379/1"),
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        }
+    }
+}
 
 # Celery Configuration
 CELERY_BROKER_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')

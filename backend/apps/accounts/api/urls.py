@@ -1,5 +1,6 @@
 """Accounts API URLs"""
 from django.urls import path, include
+from django.http import HttpResponse
 from rest_framework.routers import DefaultRouter
 from apps.accounts.api.views import (
     SignupView,
@@ -23,6 +24,7 @@ from apps.accounts.api.views import (
     TwoFactorBackupCodesView,
 )
 from dj_rest_auth.views import UserDetailsView
+from apps.accounts.api.views import CustomVerifyEmailView
 
 from rest_framework_simplejwt.views import TokenVerifyView
 from dj_rest_auth.jwt_auth import get_refresh_view
@@ -90,6 +92,8 @@ urlpatterns = [
     path('token/refresh/', RefreshTokenWrapper.as_view(), name='token_refresh'),
     
     # dj-rest-auth registration
+    path('registration/verify-email/', CustomVerifyEmailView.as_view(), name='rest_verify_email'),
+    path('ping/', lambda request: HttpResponse("pong"), name='ping'),
     path('registration/', include('dj_rest_auth.registration.urls')),
     
     # dj-rest-auth password endpoints
