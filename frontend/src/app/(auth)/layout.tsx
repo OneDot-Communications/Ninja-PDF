@@ -96,7 +96,7 @@ export default function AuthLayout({
                 {/* Right Section: Form Card */}
                 <div className="flex-1 flex items-center justify-center px-4 py-8 lg:px-8 relative">
                     {/* Form Card */}
-                    <div className="w-full max-w-[520px] relative z-10">
+                    <div className="w-full max-w-[530px] relative z-10">
 
                         {/* Card Container */}
                         <div className="bg-[#ffffff] rounded-[40px] shadow-[0px_4px_35px_0px_rgba(0,0,0,0.08)] p-10 lg:p-14" style={{ opacity: 0.85 }}>

@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { api } from "@/lib/services/api";
 import { Eye, EyeOff } from "lucide-react";
+import Image from "next/image";
 
 const SignupContent = () => {
     const router = useRouter();
@@ -104,11 +105,22 @@ const SignupContent = () => {
 
     return (
         <div className="w-full">
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="w-full">
                 {/* Header with greeting and account link */}
                 <div className="mb-6">
                     <div className="flex items-start justify-between mb-4">
                         <div>
+                            {/* Logo */}
+                            <div className="mb-6 flex justify-center">
+                                <Image
+                                    src="/pages/auth/18+logo.png"
+                                    alt="Logo"
+                                    width={120}
+                                    height={60}
+                                    className="object-contain"
+                                />
+                            </div>
+
                             <h2 className="text-[20px] leading-[30px] font-bold text-[rgba(0,0,0,0.74)] font-['Poppins',sans-serif]">
                                 Hey Tourist,<br />Come on!
                             </h2>
