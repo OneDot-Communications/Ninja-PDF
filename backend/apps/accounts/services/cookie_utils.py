@@ -4,7 +4,7 @@ from datetime import timedelta
 
 def cookie_settings():
     secure = not settings.DEBUG and getattr(settings, 'SECURE_SSL_REDIRECT', False)
-    samesite = getattr(settings, 'JWT_COOKIE_SAMESITE', 'Lax')
+    samesite = getattr(settings, 'JWT_COOKIE_SAMESITE', 'None')
     return {'secure': secure, 'samesite': samesite}
 
 
