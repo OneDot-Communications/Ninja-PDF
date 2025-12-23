@@ -237,13 +237,17 @@ interface HomeViewProps {
     heroSubtitle?: string;
     platformName?: string;
     previewMode?: boolean; // optional flag for preview mode
+    primaryColor?: string; // hero highlight color
+    highlightHeight?: number; // height in em for the paint highlight
     // Add other customizable props here
 }
 
 export function HomeView({
     heroTitle = "All your PDF headache in one place.",
     heroSubtitle = "Simple, super, and totally free!",
-    platformName = "18+ PDF"
+    platformName = "18+ PDF",
+    primaryColor,
+    highlightHeight
 }: HomeViewProps) {
     const { tools } = useTools();
     // Filter out internal/admin tools (Category 'Other') and then slice
@@ -254,6 +258,11 @@ export function HomeView({
 
     // Smooth scroll progress for better performance
     const smoothScrollProgress = useSpring(scrollYProgress, { stiffness: 100, damping: 30, restDelta: 0.001 });
+
+    // Effective highlight settings (can be controlled from super-admin)
+    const effectiveHighlightHeight = typeof highlightHeight === 'number' ? highlightHeight : 1.05; // em
+    const highlightFill = primaryColor || '#AEEBFF';
+    const highlightShadow = primaryColor || '#01B0F1';
 
     // Hero parallax effects - optimized with smoother values
     const heroY = useTransform(smoothScrollProgress, [0, 0.3], [0, -100]);
@@ -289,8 +298,47 @@ export function HomeView({
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.8, delay: 0.2 }}
                             >
+                                {/* Split hero title to put "one place" on second line with paint-style highlight */}
                                 <h1 className="text-slate-900 text-center font-caveat text-5xl md:text-[5rem] leading-[0.95] font-bold">
-                                    {heroTitle}
+                                    {(() => {
+                                        const regex = /(one place\.?)/i;
+                                        const m = heroTitle.match(regex);
+                                        if (!heroTitle) return null;
+
+                                        if (m) {
+                                            const highlight = m[0];
+                                            const before = heroTitle.replace(regex, '').trim();
+                                            return (
+                                                <>
+                                                    <span>{before}</span>
+                                                    <br />
+                                                    <span className="relative inline-block">
+                                                        {/* Paint-like rounded rect behind the text */}
+                                                        <motion.svg
+                                                            className="absolute left-0 right-0 top-1/2 -translate-y-1/2 -z-10 w-full"
+                                                            viewBox="0 0 100 20"
+                                                            preserveAspectRatio="none"
+                                                            initial={{ scaleX: 0 }}
+                                                            whileInView={{ scaleX: 1 }}
+                                                            transition={{ duration: 0.6, ease: 'easeOut' }}
+                                                            viewport={{ once: true }}
+                                                            style={{ transformOrigin: 'left', height: `${effectiveHighlightHeight}em` }}
+                                                        >
+                                                            {/* Paint-like stroke path to create rounded, slightly irregular edges */}
+                                                            <path d="M2 10 C12 4 26 2 40 3 C54 4 68 6 82 5 C90 4 95 2 100 3 L100 17 C95 18 90 19 82 18 C68 17 54 15 40 16 C26 17 12 19 2 13 Z" fill={highlightFill} />
+                                                            {/* Soft shadow below for depth */}
+                                                            <path d="M2 11 C12 5 26 3 40 4 C54 5 68 7 82 6 C90 5 95 3 100 4 L100 18 C95 19 90 20 82 19 C68 18 54 16 40 17 C26 18 12 20 2 14 Z" fill={highlightShadow} opacity="0.12" />
+                                                        </motion.svg>
+
+                                                        <span className="relative z-10 text-slate-900">{highlight}</span>
+                                                    </span>
+                                                </>
+                                            );
+                                        }
+
+                                        // fallback - render full title normally
+                                        return <span>{heroTitle}</span>;
+                                    })()}
                                 </h1>
                             </motion.div>
 
