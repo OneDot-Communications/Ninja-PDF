@@ -151,9 +151,9 @@ const LoginPage = () => {
                     {/* Greeting */}
                     <div className="mb-8">
                         <p className="text-[#000000] font-['Poppins',sans-serif] text-xl mb-2 text-center">
-                            <span className="font-normal">Hey Dude,</span>
+                            <span className="font-normal">Hey Honey</span>
                             <br />
-                            <span className="font-normal">Welcome again!</span>
+                            <span className="font-normal">Welcome back!</span>
                         </p>
                     </div>
 
