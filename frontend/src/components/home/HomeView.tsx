@@ -236,6 +236,7 @@ interface HomeViewProps {
     heroTitle?: string;
     heroSubtitle?: string;
     platformName?: string;
+    previewMode?: boolean; // optional flag for preview mode
     // Add other customizable props here
 }
 
