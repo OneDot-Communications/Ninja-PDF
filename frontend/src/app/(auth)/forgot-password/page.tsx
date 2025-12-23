@@ -28,12 +28,11 @@ const ForgotPasswordPage = () => {
 
     if (status === 'success') {
         return (
-            <div className="flex items-center justify-center py-12">
-                <motion.div 
-                    initial={{ opacity: 0, y: 20 }} 
-                    animate={{ opacity: 1, y: 0 }} 
-                    className="w-[467px] bg-white/85 backdrop-blur-sm rounded-[40px] shadow-[0px_4px_35px_rgba(0,0,0,0.08)] p-12"
-                >
+            <motion.div 
+                initial={{ opacity: 0, y: 20 }} 
+                animate={{ opacity: 1, y: 0 }} 
+                className="w-full"
+            >
                     <div className="mb-8 flex justify-center">
                         <div className="h-16 w-16 rounded-full bg-[#226DB4]/10 flex items-center justify-center">
                             <svg className="w-8 h-8 text-[#226DB4]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -52,22 +51,20 @@ const ForgotPasswordPage = () => {
                         Back to Login
                     </button>
                 </motion.div>
-            </div>
         );
     }
 
     return (
-        <div className="flex items-center justify-center py-16">
-            <motion.div 
-                initial={{ opacity: 0, y: 20 }} 
-                animate={{ opacity: 1, y: 0 }} 
-                transition={{ duration: 0.4 }}
-                className="w-[467px] bg-white/85 backdrop-blur-sm rounded-[40px] shadow-[0px_4px_35px_rgba(0,0,0,0.08)] px-12 py-10"
-            >
+        <motion.div 
+            initial={{ opacity: 0, y: 20 }} 
+            animate={{ opacity: 1, y: 0 }} 
+            transition={{ duration: 0.4 }}
+            className="w-full"
+        >
                 {/* Logo */}
                 <Link href="/" className="block mb-6">
                     <img 
-                        src="/pages/auth/logo.png" 
+                        src="/pages/auth/18+logo.png" 
                         alt="Ninja PDF" 
                         className="h-[45px] w-[84px] object-cover"
                     />
@@ -138,7 +135,6 @@ const ForgotPasswordPage = () => {
                     Back to Home
                 </button>
             </motion.div>
-        </div>
     );
 };
 
