@@ -106,34 +106,34 @@ const SignupContent = () => {
     return (
         <div className="w-full">
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="w-full">
-                {/* Header with greeting and account link */}
-                <div className="mb-6">
-                    <div className="flex items-start justify-between mb-4">
-                        <div>
-                            {/* Logo */}
-                            <div className="mb-6 flex justify-center">
-                                <Image
-                                    src="/pages/auth/18+logo.png"
-                                    alt="Logo"
-                                    width={120}
-                                    height={60}
-                                    className="object-contain"
-                                />
-                            </div>
+                {/* Sign Up Link (Top Right) */}
+                <div className="text-right mb-6">
+                    <span className="text-[#000000] font-['Poppins',sans-serif] text-base">
+                        Have an Account ?{" "}
+                    </span>
+                    <Link href="/login" className="text-[#000000] font-['Poppins',sans-serif] text-base font-semibold hover:underline">
+                        Sign in
+                    </Link>
+                </div>
 
-                            <h2 className="text-[20px] leading-[30px] font-bold text-[rgba(0,0,0,0.74)] font-['Poppins',sans-serif]">
-                                Hey Tourist,<br />Come on!
-                            </h2>
-                        </div>
-                        <div className="text-right">
-                            <p className="text-[16px] leading-[24px] text-[#8D8D8D] font-['Poppins',sans-serif]">
-                                Have an Account ?<br />
-                                <Link href="/login" className="text-[#226db4] hover:underline font-medium">
-                                    Sign in
-                                </Link>
-                            </p>
-                        </div>
-                    </div>
+                {/* Logo */}
+                <div className="mb-6 flex justify-center">
+                    <Image
+                        src="/pages/auth/18+logo.png"
+                        alt="Logo"
+                        width={120}
+                        height={60}
+                        className="object-contain"
+                    />
+                </div>
+
+                {/* Greeting */}
+                <div className="mb-8">
+                    <p className="text-[#000000] font-['Poppins',sans-serif] text-xl mb-2 text-center">
+                        <span className="font-normal">Hey Tourist,</span>
+                        <br />
+                        <span className="font-normal">Come on!</span>
+                    </p>
                 </div>
 
                 {/* Sign up title */}

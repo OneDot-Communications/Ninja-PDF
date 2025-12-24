@@ -12,8 +12,8 @@ import { User, Lock, Mail, Phone, MapPin, Building, Save, Edit, Calendar, Home, 
 import { toast } from "sonner";
 
 import { Skeleton } from "@/components/ui/skeleton";
-import { PhoneInput } from "@/components/ui/phone-input";
-
+import { PhoneInput } from "@/components/ui/phone-input";import { AvatarCropModal } from "@/components/profile/AvatarCropModal";
+import { validateImage, fileToDataUrl, blobToFile } from "@/lib/utils/image-validation";
 export default function ProfilePage() {
     const { user, refreshUser, loading: authLoading } = useAuth();
     const [loading, setLoading] = useState(false);
@@ -64,6 +64,12 @@ export default function ProfilePage() {
     const [billingAddress, setBillingAddress] = useState("San Jose, California, USA"); // Default value from design
     const [city, setCity] = useState("San Jose"); // Default value from design
     const [postalCode, setPostalCode] = useState("45962"); // Default value from design
+    const [avatarKey, setAvatarKey] = useState(Date.now());
+    
+    // Crop modal state
+    const [cropModalOpen, setCropModalOpen] = useState(false);
+    const [selectedImage, setSelectedImage] = useState<string | null>(null);
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
     const handleSave = async () => {
         setLoading(true);
@@ -84,7 +90,62 @@ export default function ProfilePage() {
         }
     };
 
-    const [avatarKey, setAvatarKey] = useState(Date.now()); // For cache busting
+    const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        // Reset input value to allow selecting the same file again
+        e.target.value = "";
+
+        try {
+            // Validate image
+            const validation = await validateImage(file);
+            if (!validation.valid) {
+                toast.error(validation.error || "Invalid image");
+                return;
+            }
+
+            // Convert to data URL for crop modal
+            const dataUrl = await fileToDataUrl(file);
+            setSelectedImage(dataUrl);
+            setSelectedFile(file);
+            setCropModalOpen(true);
+        } catch (error) {
+            console.error("Error processing image:", error);
+            toast.error("Failed to process image");
+        }
+    };
+
+    const handleCropComplete = async (croppedBlob: Blob) => {
+        setLoading(true);
+        setCropModalOpen(false);
+
+        try {
+            // Convert blob to file
+            const croppedFile = blobToFile(croppedBlob, selectedFile?.name || "avatar.jpg");
+
+            // Create FormData and upload
+            const formData = new FormData();
+            formData.append("avatar", croppedFile);
+
+            console.log("Uploading cropped photo...");
+            const response = await api.updateAvatar(formData);
+            console.log("Photo upload successful:", response);
+
+            // Refresh user data and update cache key
+            await refreshUser();
+            setAvatarKey(Date.now());
+
+            toast.success("Photo updated successfully");
+        } catch (err) {
+            console.error("Photo upload failed:", err);
+            toast.error("Failed to upload photo");
+        } finally {
+            setLoading(false);
+            setSelectedImage(null);
+            setSelectedFile(null);
+        }
+    };
 
     return (
         <div className="relative">
@@ -112,27 +173,16 @@ export default function ProfilePage() {
                     <div className="px-[30px] pb-[30px]">
                         {/* Avatar Section */}
                         <div className="flex items-start gap-6 mb-8">
-                            {console.log("Current user avatar:", user?.avatar)}
                             <div className="relative">
-                                <div className="w-[130px] h-[130px] rounded-full overflow-hidden bg-slate-100 flex items-center justify-center">
-                                    {user?.avatar ? (
-                                        <img 
-                                            key={avatarKey}
-                                            src={`${user.avatar}?t=${avatarKey}`} 
-                                            alt="Profile" 
-                                            className="w-full h-full object-cover"
-                                            onError={(e) => {
-                                                console.log("Avatar image failed to load:", user.avatar);
-                                                // Fallback to initials if image fails
-                                                e.currentTarget.style.display = 'none';
-                                                e.currentTarget.nextElementSibling.style.display = 'flex';
-                                            }}
-                                        />
-                                    ) : null}
-                                    <div className={`w-full h-full rounded-full flex items-center justify-center text-2xl font-semibold text-slate-600 bg-slate-100 ${user?.avatar ? 'hidden' : 'flex'}`}>
+                                <Avatar className="w-[130px] h-[130px]">
+                                    <AvatarImage 
+                                        src={user?.avatar ? `${user.avatar}?t=${avatarKey}` : undefined} 
+                                        alt="Profile" 
+                                    />
+                                    <AvatarFallback className="text-2xl bg-slate-100 text-slate-600">
                                         {user?.first_name?.[0] || 'U'}
-                                    </div>
-                                </div>
+                                    </AvatarFallback>
+                                </Avatar>
                                 {/* Edit Icon */}
                                 <div className="absolute -right-2 -bottom-2 w-[30px] h-[30px] bg-[#3371eb] rounded-full flex items-center justify-center cursor-pointer hover:bg-[#2a5fd6] transition-colors"
                                      onClick={() => document.getElementById('avatar-upload')?.click()}>
@@ -142,42 +192,8 @@ export default function ProfilePage() {
                                     id="avatar-upload"
                                     type="file"
                                     className="hidden"
-                                    accept="image/*"
-                                    onChange={async (e) => {
-                                        if (e.target.files?.[0]) {
-                                            const file = e.target.files[0];
-                                            console.log("Starting photo upload:", file.name);
-
-                                            const formData = new FormData();
-                                            formData.append('avatar', file);
-
-                                            setLoading(true);
-                                            try {
-                                                const response = await api.updateAvatar(formData);
-                                                console.log("Photo upload successful, response:", response);
-                                                console.log("Response avatar field:", response?.avatar);
-
-                                                // Update user state directly with the response
-                                                if (response && response.avatar) {
-                                                    // Temporarily update the local user state for immediate UI update
-                                                    setUser(prevUser => prevUser ? { ...prevUser, avatar: response.avatar } : null);
-                                                }
-                                                
-                                                // Also refresh from server to ensure consistency
-                                                await refreshUser();
-                                                
-                                                console.log("User context refreshed");
-                                                setAvatarKey(Date.now()); // Force image refresh
-
-                                                toast.success("Photo updated successfully");
-                                            } catch (err) {
-                                                console.error("Photo upload failed:", err);
-                                                toast.error("Failed to upload photo");
-                                            } finally {
-                                                setLoading(false);
-                                            }
-                                        }
-                                    }}
+                                    accept="image/jpeg,image/png,image/webp"
+                                    onChange={handleFileSelect}
                                 />
                             </div>
                         </div>
@@ -353,6 +369,20 @@ export default function ProfilePage() {
                     </Card>
                 </div>
             </div>
+
+            {/* Crop Modal */}
+            {cropModalOpen && selectedImage && (
+                <AvatarCropModal
+                    open={cropModalOpen}
+                    onClose={() => {
+                        setCropModalOpen(false);
+                        setSelectedImage(null);
+                        setSelectedFile(null);
+                    }}
+                    imageSrc={selectedImage}
+                    onCropComplete={handleCropComplete}
+                />
+            )}
         </div>
     );
 }
