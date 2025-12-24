@@ -96,9 +96,9 @@ class UserSerializer(serializers.ModelSerializer):
         return None
 
     def get_storage_used(self, obj):
-        if hasattr(obj, 'subscription'):
-            return obj.subscription.storage_used
-        return 0
+        from core.services.quota_service import QuotaService
+        used, _ = QuotaService.get_storage_quota(obj)
+        return used
 
     def get_storage_limit(self, obj):
         from core.services.quota_service import QuotaService
