@@ -259,6 +259,10 @@ class StorageService:
         Generate signed URL with custom expiration.
         Works with DigitalOcean Spaces, AWS S3, Cloudflare R2.
         
+        NOTE: Signed URLs MUST use the original S3 endpoint, not CDN.
+        The signature is calculated against the original URL - replacing 
+        the domain with CDN would invalidate the signature.
+        
         Args:
             path: Storage path
             expiration: URL validity in seconds (default 1 hour)
@@ -288,22 +292,12 @@ class StorageService:
                 ExpiresIn=expiration
             )
             
-            logger.debug(f"Storage:SIGNED_URL generated for path={path} expires_in={expiration}s")
+            logger.debug(f"Storage:SIGNED_URL generated for path={path} expires_in={expiration}s url={url[:100]}...")
             
-            # If CDN domain is configured, replace the endpoint with CDN
-            cdn_domain = getattr(settings, 'AWS_S3_CUSTOM_DOMAIN', None)
-            if cdn_domain and operation == 'get_object':
-                endpoint_url = getattr(settings, 'AWS_S3_ENDPOINT_URL', '')
-                bucket_name = settings.AWS_STORAGE_BUCKET_NAME
-                
-                # Replace endpoint+bucket with CDN domain
-                # DO Spaces endpoint: https://sgp1.digitaloceanspaces.com/bucket/path
-                # CDN format: https://bucket.sgp1.cdn.digitaloceanspaces.com/path
-                if endpoint_url and bucket_name:
-                    old_base = f"{endpoint_url}/{bucket_name}"
-                    new_base = f"https://{cdn_domain}"
-                    url = url.replace(old_base, new_base)
-                    logger.debug(f"Storage:SIGNED_URL CDN replaced: {old_base} -> {new_base}")
+            # NOTE: Do NOT replace the endpoint with CDN for signed URLs!
+            # The signature is tied to the original URL. Changing the domain
+            # would cause "SignatureDoesNotMatch" errors.
+            # CDN can only be used for public (unsigned) file access.
             
             return url
         except Exception as e:
