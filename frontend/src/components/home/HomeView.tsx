@@ -148,9 +148,53 @@ const toolOverrides: Record<string, string> = {
     "Metadata Cleaner": "Remove hidden metadata and personal information from your PDF files."
 };
 
+// Split descriptions for styled rendering
+const getSplitDescription = (toolTitle: string, fullDescription: string) => {
+    const splits: Record<string, { normal: string; italic: string }> = {
+        "Merge PDF": { normal: "Merging PDFs is easy,", italic: "merging plans… not always." },
+        "Split PDF": { normal: "Breaking pages apart is fine", italic: "breaking hearts is not." },
+        "Compress PDF": { normal: "Making PDFs lighter", italic: "because life is heavy enough." },
+        "PDF to Word": { normal: "PDFs open up in Word;", italic: "hearts don't open that easily." },
+        "PDF to PowerPoint": { normal: "Turn your PDF files into", italic: "easy to edit PPT and PPTX slideshows." },
+        "PDF to Excel": { normal: "Extracting data is easy,", italic: "extracting feelings isn't." },
+        "Word to PDF": { normal: "Converting Word is simple,", italic: "converting emotions is not." },
+        "PowerPoint to PDF": { normal: "Converting slides is simple,", italic: "converting feelings is not." },
+        "Excel to PDF": { normal: "Excel has formulas;", italic: "PDF has its life together." },
+        "Edit PDF": { normal: "Editing PDFs made easy", italic: "unlike editing your past decisions." },
+        "PDF to JPG": { normal: "Convert to JPG so your file loads", italic: "before you lose patience." },
+        "JPG to PDF": { normal: "One click and your JPG puts on its", italic: "\"I'm important\" outfit." },
+        "Sign PDF": { normal: "PDFs can be signed in seconds;", italic: "life decisions take forever." },
+        "Watermark": { normal: "Put a watermark on it", italic: "like a tattoo, but for documents." },
+        "Rotate PDF": { normal: "Fix that sideways PDF", italic: "before your neck files a complaint." },
+        "Unlock PDF": { normal: "Your PDF is locked", italic: "probably for no good reason. Fix that." },
+        "Protect PDF": { normal: "Guard your document", italic: "because trust issues apply to files too." },
+        "Organize PDF": { normal: "Organize your PDF because", italic: "smth'ng in your life should be in order." },
+        "PDF to PDF/A": { normal: "Convert to PDF/A because", italic: "even files need to get their life together." },
+        "Repair PDF": { normal: "PDFs break too luckily,", italic: "theirs is easier to fix." },
+        "Page Numbers": { normal: "Add page numbers into PDFs", italic: "with ease." },
+        "Scan to PDF": { normal: "Scan to PDF because", italic: "your papers deserve a digital retirement plan." },
+        "OCR PDF": { normal: "Make your PDF readable;", italic: "it's been ignoring you long enough." },
+        "Compare PDF": { normal: "Compare two PDFs and finally prove", italic: "you weren't imagining things." },
+        "Redact PDF": { normal: "Redact text and graphics to", italic: "permanently remove sensitive information." },
+        "Crop PDF": { normal: "Crop margins of PDF documents", italic: "or select specific areas." },
+        "HTML to PDF": { normal: "Convert webpages in", italic: "HTML to PDF." },
+        "Create Workflow": { normal: "Design your own PDF assembly line", italic: "because doing it manually is for chumps." },
+        "Metadata Cleaner": { normal: "Remove hidden metadata and personal information", italic: "from your PDF files." }
+    };
+
+    return splits[toolTitle] || { normal: fullDescription, italic: "" };
+};
+
 // Tool Card Component - Moved outside
 const ToolCard = ({ tool, index }: { tool: any; index: number }) => {
     const wittyDescription = toolOverrides[tool.title] || tool.description;
+    const splitDesc = getSplitDescription(tool.title, wittyDescription);
+    const [isLiked, setIsLiked] = useState(false);
+
+    const handleLike = (e: React.MouseEvent) => {
+        e.preventDefault(); // Prevent navigation
+        setIsLiked(!isLiked);
+    };
 
     return (
         <div
@@ -158,6 +202,17 @@ const ToolCard = ({ tool, index }: { tool: any; index: number }) => {
         >
             <Link href={tool.href} className="block group w-full h-full">
                 <div className="bg-white rounded-2xl border border-slate-200 p-6 flex flex-col h-full relative overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
+                    {/* Like button at top right */}
+                    <button
+                        onClick={handleLike}
+                        className="absolute top-3 right-3 z-20 p-1 rounded-full hover:bg-slate-50 transition-colors"
+                    >
+                        <Heart className={cn(
+                            "w-4 h-4 transition-colors",
+                            isLiked ? "text-red-500 fill-red-500" : "text-slate-300"
+                        )} />
+                    </button>
+
                     <div className="flex flex-col gap-0 relative z-10 flex-grow h-full justify-between">
                         <div className="flex flex-row items-center gap-4">
                             <div className="relative flex items-center justify-center w-12 h-12 flex-shrink-0">
@@ -180,19 +235,21 @@ const ToolCard = ({ tool, index }: { tool: any; index: number }) => {
 
                         {/* Description */}
                         <p className="text-sm text-slate-500 leading-relaxed font-medium line-clamp-2">
-                            {wittyDescription}
+                            <span className="opacity-75">{splitDesc.normal}</span>
+                            {splitDesc.italic && (
+                                <>
+                                    {" "}
+                                    <span className="italic">{splitDesc.italic}</span>
+                                </>
+                            )}
                         </p>
                     </div>
 
                     {/* Footer Stats */}
-                    <div className="pt-3 border-t border-slate-50 flex items-center justify-between text-[11px] text-slate-400 font-medium mt-auto leading-[1]">
+                    <div className="pt-3 border-t border-slate-50 flex items-center justify-end text-[11px] text-slate-400 font-medium mt-auto leading-[1]">
                         <div className="flex items-center gap-1">
                             <User className="w-3 h-3" />
-                            <span>5,63,456</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                            <Heart className="w-3 h-3 text-red-400 fill-red-400" />
-                            <span>5,63,456</span>
+                            <span>0</span>
                         </div>
                     </div>
                 </div>
