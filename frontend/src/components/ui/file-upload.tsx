@@ -58,42 +58,42 @@ export const FileUpload = ({
 
   // Clean layout: No glow, just shadow. Larger icons. Better gap.
   return (
-    <div className="w-full p-8 md:p-10 flex justify-center">
+    <div className="w-full p-4 md:p-6 flex justify-center">
       <div
         {...getRootProps()}
         className={cn(
-          "group relative flex flex-col items-center justify-center min-h-[280px] w-full max-w-5xl mx-auto transition-all focus:outline-none cursor-pointer",
+          "group relative flex flex-col items-center justify-center min-h-[200px] w-full transition-all focus:outline-none cursor-pointer",
           isDragActive && "scale-[1.01]"
         )}
       >
         <input {...getInputProps()} />
 
-        {/* Main Interface Wrapper - Relative for absolute positioning of icons */}
-        <div className="relative flex flex-col items-center justify-center">
+        {/* Main Interface Wrapper */}
+        <div className="flex flex-col items-center justify-center w-full">
 
           {/* Main Action Button - Centered */}
           <Button
             type="button" // Prevent form submission if any
             className={cn(
-              "h-24 px-12 text-3xl font-bold rounded-xl shadow-xl transition-all duration-300 relative z-10",
+              "h-14 px-8 text-lg font-bold rounded-xl shadow-lg transition-all duration-300",
               "bg-[#0057B7] hover:bg-[#004494] text-white border-0 ring-0 outline-none" // Krishna Blue
             )}
           >
             Select PDF files
           </Button>
 
-          {/* Integration Icons - Absolute Positioned to the right of the button */}
-          <div className="absolute left-[100%] top-1/2 -translate-y-1/2 -mt-8 ml-6 flex flex-col gap-2 z-20">
+          {/* Integration Icons - Inline below button */}
+          <div className="flex items-center gap-3 mt-4">
             <button
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
                 alert("Google Drive integration coming soon!");
               }}
-              className="p-2 bg-white rounded-full shadow-lg hover:shadow-xl hover:scale-110 transition-all group/icon"
+              className="p-2 bg-white rounded-full shadow-md hover:shadow-lg hover:scale-110 transition-all group/icon"
               title="Google Drive"
             >
-              <FaGoogleDrive className="w-5 h-5 text-slate-600 group-hover/icon:text-[#0057B7]" />
+              <FaGoogleDrive className="w-4 h-4 text-slate-600 group-hover/icon:text-[#0057B7]" />
             </button>
             <button
               type="button"
@@ -101,15 +101,15 @@ export const FileUpload = ({
                 e.stopPropagation();
                 alert("Dropbox integration coming soon!");
               }}
-              className="p-2 bg-white rounded-full shadow-lg hover:shadow-xl hover:scale-110 transition-all group/icon"
+              className="p-2 bg-white rounded-full shadow-md hover:shadow-lg hover:scale-110 transition-all group/icon"
               title="Dropbox"
             >
-              <FaDropbox className="w-5 h-5 text-slate-600 group-hover/icon:text-[#0061FF]" />
+              <FaDropbox className="w-4 h-4 text-slate-600 group-hover/icon:text-[#0061FF]" />
             </button>
           </div>
 
           {/* Bottom Text */}
-          <p className="mt-8 text-slate-400 text-lg font-medium">
+          <p className="mt-4 text-slate-400 text-sm font-medium">
             or drop PDFs here
           </p>
         </div>

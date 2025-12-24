@@ -364,27 +364,13 @@ export function RotatePdfTool() {
     // If no file, show file upload
     if (!file) {
         return (
-            <div className="flex flex-col items-center justify-center h-[calc(100vh-64px)] bg-linear-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
-                <div className="max-w-md w-full p-8 bg-white dark:bg-gray-800 rounded-2xl shadow-xl">
-                    <div className="flex items-center justify-center mb-6">
-                        <div className="p-4 bg-blue-100 dark:bg-blue-900 rounded-full">
-                            <RotateCw className="h-12 w-12 text-blue-600 dark:text-blue-400" />
-                        </div>
-                    </div>
-                    <h1 className="text-2xl font-bold text-center mb-2 text-gray-900 dark:text-white">Rotate PDF</h1>
-                    <p className="text-center text-gray-600 dark:text-gray-400 mb-6">Upload a PDF to rotate pages</p>
-                    <FileUpload
-                        onFilesSelected={handleFileSelected}
-                        maxFiles={1}
-                        accept={{ "application/pdf": [".pdf"] }}
-                        description="Drop a PDF file here or click to browse"
-                    />
-                    <div className="mt-6 text-center">
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                            Rotate pages in your PDF with precision control
-                        </p>
-                    </div>
-                </div>
+            <div className="mx-auto max-w-2xl px-4">
+                <FileUpload
+                    onFilesSelected={handleFileSelected}
+                    maxFiles={1}
+                    accept={{ "application/pdf": [".pdf"] }}
+                    description="Drop a PDF file here or click to browse"
+                />
             </div>
         );
     }
@@ -425,14 +411,26 @@ export function RotatePdfTool() {
                         </Button>
                     </div>
 
-                    {/* Rotation Angle */}
+                    {/* Rotation Angle - Click to rotate selected pages */}
                     <div className="flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-1 mr-2">
                         <Button
-                            variant="ghost"
+                            variant={rotationAngle === 45 ? "secondary" : "ghost"}
                             size="icon"
                             className="h-8 w-8"
-                            onClick={() => setRotationAngle(45)}
-                            title="Set rotation to 45°"
+                            onClick={() => {
+                                setRotationAngle(45);
+                                // Immediately rotate selected pages by 45°
+                                if (selectedPages.size > 0) {
+                                    saveToHistory();
+                                    setPages(prev => prev.map(p => {
+                                        if (selectedPages.has(p.originalIndex)) {
+                                            return { ...p, rotation: (p.rotation + 45 + 360) % 360 };
+                                        }
+                                        return p;
+                                    }));
+                                }
+                            }}
+                            title="Rotate 45° clockwise"
                         >
                             45°
                         </Button>
@@ -440,26 +438,62 @@ export function RotatePdfTool() {
                             variant={rotationAngle === 90 ? "secondary" : "ghost"}
                             size="icon"
                             className="h-8 w-8"
-                            onClick={() => setRotationAngle(90)}
-                            title="Set rotation to 90°"
+                            onClick={() => {
+                                setRotationAngle(90);
+                                // Immediately rotate selected pages by 90°
+                                if (selectedPages.size > 0) {
+                                    saveToHistory();
+                                    setPages(prev => prev.map(p => {
+                                        if (selectedPages.has(p.originalIndex)) {
+                                            return { ...p, rotation: (p.rotation + 90 + 360) % 360 };
+                                        }
+                                        return p;
+                                    }));
+                                }
+                            }}
+                            title="Rotate 90° clockwise"
                         >
                             90°
                         </Button>
                         <Button
-                            variant="ghost"
+                            variant={rotationAngle === 180 ? "secondary" : "ghost"}
                             size="icon"
                             className="h-8 w-8"
-                            onClick={() => setRotationAngle(180)}
-                            title="Set rotation to 180°"
+                            onClick={() => {
+                                setRotationAngle(180);
+                                // Immediately rotate selected pages by 180°
+                                if (selectedPages.size > 0) {
+                                    saveToHistory();
+                                    setPages(prev => prev.map(p => {
+                                        if (selectedPages.has(p.originalIndex)) {
+                                            return { ...p, rotation: (p.rotation + 180 + 360) % 360 };
+                                        }
+                                        return p;
+                                    }));
+                                }
+                            }}
+                            title="Rotate 180°"
                         >
                             180°
                         </Button>
                         <Button
-                            variant="ghost"
+                            variant={rotationAngle === 270 ? "secondary" : "ghost"}
                             size="icon"
                             className="h-8 w-8"
-                            onClick={() => setRotationAngle(270)}
-                            title="Set rotation to 270°"
+                            onClick={() => {
+                                setRotationAngle(270);
+                                // Immediately rotate selected pages by 270°
+                                if (selectedPages.size > 0) {
+                                    saveToHistory();
+                                    setPages(prev => prev.map(p => {
+                                        if (selectedPages.has(p.originalIndex)) {
+                                            return { ...p, rotation: (p.rotation + 270 + 360) % 360 };
+                                        }
+                                        return p;
+                                    }));
+                                }
+                            }}
+                            title="Rotate 270° clockwise"
                         >
                             270°
                         </Button>

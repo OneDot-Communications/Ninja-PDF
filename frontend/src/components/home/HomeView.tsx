@@ -4,7 +4,7 @@ import { Header } from "../layout/header"; // Adjusted import path
 import {
     ArrowRight, Check, Star, Zap, Shield, Users, User, Heart, Globe, Layout, FileText, Settings,
     Play, Download, ChevronRight, ArrowDown, MessageCircle, Github, Twitter, Linkedin,
-    Youtube, Instagram, Facebook
+    Youtube, Instagram, Facebook, Crown
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "../ui/button"; // Adjusted import path
@@ -115,42 +115,10 @@ const ScaleOnScroll = ({ children, className = "" }: { children: React.ReactNode
     );
 };
 
-// Tool Content Overrides
-const toolOverrides: Record<string, string> = {
-    "Merge PDF": "Merging PDFs is easy, merging plans… not always.",
-    "Split PDF": "Breaking pages apart is fine breaking hearts is not.",
-    "Compress PDF": "Making PDFs lighter—because life is heavy enough.",
-    "PDF to Word": "PDFs open up in Word; hearts don’t open that easily.",
-    "PDF to PowerPoint": "Turn your PDF files into easy to edit PPT and PPTX slideshows.",
-    "PDF to Excel": "Extracting data is easy, extracting feelings isn’t.",
-    "Word to PDF": "Converting Word is simple, converting emotions is not.",
-    "PowerPoint to PDF": "Converting slides is simple, converting feelings is not.",
-    "Excel to PDF": "Excel has formulas; PDF has its life together.",
-    "Edit PDF": "Editing PDFs made easy—unlike editing your past decisions.",
-    "PDF to JPG": "Convert to JPG so your file loads before you lose patience.",
-    "JPG to PDF": "One click and your JPG puts on its “I’m important” outfit.",
-    "Sign PDF": "PDFs can be signed in seconds; life decisions take forever.",
-    "Watermark": "Put a watermark on it—like a tattoo, but for documents.",
-    "Rotate PDF": "Fix that sideways PDF before your neck files a complaint.",
-    "Unlock PDF": "Your PDF is locked—probably for no good reason. Fix that.",
-    "Protect PDF": "Guard your document—because trust issues apply to files too.",
-    "Organize PDF": "Organize your PDF because smth’ng in your life should be in order.",
-    "PDF to PDF/A": "Convert to PDF/A because even files need to get their life together.",
-    "Repair PDF": "PDFs break too luckily, theirs is easier to fix.",
-    "Page Numbers": "Add page numbers into PDFs with ease.",
-    "Scan to PDF": "Scan to PDF because your papers deserve a digital retirement plan.",
-    "OCR PDF": "Make your PDF readable; it’s been ignoring you long enough.",
-    "Compare PDF": "Compare two PDFs and finally prove you weren’t imagining things.",
-    "Redact PDF": "Redact text and graphics to permanently remove sensitive information.",
-    "Crop PDF": "Crop margins of PDF documents or select specific areas.",
-    "HTML to PDF": "Convert webpages in HTML to PDF.",
-    "Create Workflow": "Design your own PDF assembly line—because doing it manually is for chumps.",
-    "Metadata Cleaner": "Remove hidden metadata and personal information from your PDF files."
-};
-
 // Tool Card Component - Moved outside
 const ToolCard = ({ tool, index }: { tool: any; index: number }) => {
-    const wittyDescription = toolOverrides[tool.title] || tool.description;
+    // We now rely solely on the database description, ignoring hardcoded overrides
+    const wittyDescription = tool.description;
 
     return (
         <div
@@ -178,6 +146,14 @@ const ToolCard = ({ tool, index }: { tool: any; index: number }) => {
                                     <div className="h-8 w-8 bg-slate-200 rounded-md" />
                                 )}
                             </div>
+
+                            {/* Premium Badge */}
+                            {tool.isPremium && (
+                                <div className="absolute top-0 -right-2 text-amber-500 p-2 drop-shadow-sm">
+                                    <Crown className="w-5 h-5 fill-current" />
+                                </div>
+                            )}
+
                             <h3 className="text-xl font-bold text-slate-900 leading-tight">
                                 {tool.title}
                             </h3>

@@ -39,7 +39,7 @@ export function PdfToJpgTool() {
 
             toast.show({
                 title: "Success",
-                message: "PDF converted successfully!",
+                message: "All pages converted to JPG images! Check your download.",
                 variant: "success",
                 position: "top-right",
             });

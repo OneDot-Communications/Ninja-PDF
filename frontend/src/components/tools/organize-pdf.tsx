@@ -1,11 +1,10 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, memo } from "react";
 import { saveAs } from "file-saver";
 import { FileUpload } from "../ui/file-upload";
 import { Button } from "../ui/button";
 import {
-    FileText,
     ChevronLeft,
     ChevronRight,
     ZoomIn,
@@ -17,37 +16,51 @@ import {
     Redo,
     Download,
     X,
-    Move,
-    Square as SquareIcon,
+    LayoutGrid,
+    List,
+    Eye,
+    EyeOff,
+    CheckSquare,
+    RotateCw,
+    Plus,
+    Trash2,
+    Copy,
+    Sun,
+    Moon,
     Monitor,
     Smartphone,
     Tablet,
     Sliders,
     HelpCircle,
-    Sun,
-    Moon,
-    Layers,
-    History,
-    Scan,
-    Command,
-    RotateCw,
-    Plus,
-    Trash2,
-    Copy,
-    CheckSquare,
-    Square,
-    LayoutGrid,
-    List,
-    Eye,
-    EyeOff,
-    ArrowUp,
-    ArrowDown,
     GripVertical
 } from "lucide-react";
 import { pdfApi } from "@/lib/services/pdf-api";
 import { getPdfJs } from "@/lib/services/pdf-service";
 import { toast } from "@/lib/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import {
+    DndContext,
+    closestCenter,
+    KeyboardSensor,
+    PointerSensor,
+    useSensor,
+    useSensors,
+    DragOverlay,
+    DragStartEvent,
+    DragEndEvent,
+    defaultDropAnimationSideEffects,
+    DropAnimation,
+} from '@dnd-kit/core';
+import {
+    arrayMove,
+    SortableContext,
+    sortableKeyboardCoordinates,
+    rectSortingStrategy,
+    useSortable,
+    verticalListSortingStrategy
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { snapCenterToCursor } from '@dnd-kit/modifiers';
 
 // Page item interface
 interface PageItem {
@@ -63,6 +76,293 @@ interface HistoryState {
     currentPage: number;
 }
 
+const dropAnimation: DropAnimation = {
+    sideEffects: defaultDropAnimationSideEffects({
+        styles: {
+            active: {
+                opacity: '0.5',
+            },
+        },
+    }),
+};
+
+// Component to render a single PDF page thumbnail
+const PdfPageThumbnail = ({
+    pdfProxy,
+    pageIndex,
+    zoom,
+    rotation,
+    isBlank
+}: {
+    pdfProxy: any;
+    pageIndex: number;
+    zoom: number;
+    rotation: number;
+    isBlank?: boolean;
+}) => {
+    const canvasRef = useRef<HTMLCanvasElement>(null);
+    const renderTaskRef = useRef<any>(null);
+
+    useEffect(() => {
+        if (!pdfProxy || isBlank || !canvasRef.current) return;
+
+        let isMounted = true;
+
+        const renderPage = async () => {
+            try {
+                // Cancel previous render if any and WAIT for it to clean up
+                if (renderTaskRef.current) {
+                    try {
+                        renderTaskRef.current.cancel();
+                        await renderTaskRef.current.promise.catch(() => { });
+                    } catch (e) {
+                        // Ignore errors during cancellation
+                    }
+                }
+
+                if (!isMounted) return;
+
+                const page = await pdfProxy.getPage(pageIndex + 1);
+
+                // Double check mount status after awaiting getPage
+                if (!isMounted) return;
+
+                // Calculate viewport with scale (zoom)
+                const viewport = page.getViewport({ scale: zoom / 100 });
+                const canvas = canvasRef.current!;
+
+                // Ensure context is available
+                const context = canvas.getContext("2d");
+                if (!context) return;
+
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+
+                const renderContext = {
+                    canvasContext: context,
+                    viewport: viewport,
+                };
+
+                const renderTask = page.render(renderContext);
+                renderTaskRef.current = renderTask;
+                await renderTask.promise;
+            } catch (error: any) {
+                if (error.name !== 'RenderingCancelledException') {
+                    // Suppress "canvas in use" errors if they slip through, as they are temporary
+                    if (error.message && error.message.includes('same canvas')) {
+                        return; // Retry logic could be added here if needed, but usually next effect run fixes it
+                    }
+                    console.error("Error rendering page:", error);
+                }
+            }
+        };
+
+        renderPage();
+
+        return () => {
+            isMounted = false;
+            // Clean up on unmount
+            if (renderTaskRef.current) {
+                renderTaskRef.current.cancel();
+            }
+        };
+    }, [pdfProxy, pageIndex, zoom, isBlank]);
+
+    if (isBlank) {
+        return (
+            <div className="flex h-full w-full items-center justify-center bg-gray-100 text-gray-500 text-sm">
+                Blank Page
+            </div>
+        );
+    }
+
+    return (
+        <canvas
+            ref={canvasRef}
+            className="h-full w-full object-contain"
+        />
+    );
+};
+
+// Component for Sortable Item
+const SortablePageItem = ({
+    page,
+    index,
+    pdfProxy,
+    selectedPages,
+    toggleSelection,
+    showPageNumbers,
+    viewMode,
+    zoom
+}: {
+    page: PageItem;
+    index: number;
+    pdfProxy: any;
+    selectedPages: Set<string>;
+    toggleSelection: (id: string) => void;
+    showPageNumbers: boolean;
+    viewMode: "grid" | "list";
+    zoom: number;
+}) => {
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging
+    } = useSortable({ id: page.id });
+
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.5 : 1,
+    };
+
+    if (viewMode === 'list') {
+        return (
+            <div
+                ref={setNodeRef}
+                style={style}
+                id={page.id} // Add ID for sizing
+                className={cn(
+                    "flex items-center p-4 bg-white dark:bg-gray-800 rounded-lg shadow-md transition-all duration-200",
+                    selectedPages.has(page.id) && "ring-2 ring-blue-500 ring-offset-2",
+                    isDragging && "z-50 shadow-xl scale-105"
+                )}
+                {...attributes}
+                {...listeners}
+            >
+                {/* Drag Handle */}
+                <div
+                    className="mr-4 text-gray-400 cursor-grab active:cursor-grabbing hover:text-gray-600"
+                >
+                    <GripVertical className="h-5 w-5" />
+                </div>
+
+                {/* Page Thumbnail */}
+                <div
+                    className="flex-1 relative h-32 w-48 overflow-hidden rounded border border-gray-200 dark:border-gray-700 cursor-pointer"
+                    onClick={() => toggleSelection(page.id)}
+                >
+                    <PdfPageThumbnail
+                        key={`list-thumb-${page.id}`}
+                        pdfProxy={pdfProxy}
+                        pageIndex={page.originalIndex}
+                        zoom={zoom}
+                        rotation={page.rotation}
+                        isBlank={page.isBlank}
+                    />
+
+                    {/* Page Number */}
+                    {showPageNumbers && (
+                        <div className="absolute bottom-2 right-2 bg-gray-800 bg-opacity-70 text-white px-2 py-1 rounded text-xs">
+                            {index + 1}
+                        </div>
+                    )}
+
+                    {/* Selection Indicator */}
+                    {selectedPages.has(page.id) && (
+                        <div className="absolute top-2 right-2 bg-blue-500 text-white p-1 rounded-full">
+                            <CheckSquare className="h-3 w-3" />
+                        </div>
+                    )}
+
+                    {/* Rotation Indicator */}
+                    {page.rotation !== 0 && (
+                        <div className="absolute top-2 left-2 bg-gray-800 bg-opacity-70 text-white p-1 rounded-full">
+                            <RotateCw className="h-3 w-3" style={{ transform: `rotate(${page.rotation}deg)` }} />
+                        </div>
+                    )}
+                </div>
+
+                {/* Page Info */}
+                <div className="ml-4 flex-1">
+                    <div className="text-sm font-medium">
+                        {page.isBlank ? "Blank Page" : `Page ${page.originalIndex + 1}`}
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // Grid View
+    return (
+        <div
+            ref={setNodeRef}
+            style={style}
+            id={page.id} // Add ID for sizing
+            {...attributes}
+            {...listeners}
+            className={cn(
+                "relative group transition-all duration-200 touch-none",
+                selectedPages.has(page.id) && "ring-2 ring-blue-500 ring-offset-2",
+                isDragging && "z-50"
+            )}
+        >
+            <div
+                className="relative aspect-[3/4] w-full overflow-hidden rounded-lg shadow-md bg-white cursor-pointer"
+                onClick={(e) => {
+                    // Prevent drag click from toggling if it was a drag?
+                    // DnD kit handles this well usually.
+                    // But listeners on parent might interfere with click?
+                    // Actually, let listeners handle drag, onClick handle click.
+                    // If simple click, onClick fires.
+                    toggleSelection(page.id);
+                }}
+            >
+                <div
+                    className="relative h-full w-full"
+                    style={{
+                        transform: `scale(${zoom / 100}) rotate(${page.rotation}deg)`,
+                        transformOrigin: 'center center'
+                        // Note: Zoom scaling in grid view is applied to inner content or container?
+                        // Original code applied it to outer transform.
+                        // We will replicate that.
+                    }}
+                >
+                    <PdfPageThumbnail
+                        key={`grid-thumb-${page.id}`}
+                        pdfProxy={pdfProxy}
+                        pageIndex={page.originalIndex}
+                        zoom={100}
+                        rotation={page.rotation}
+                        isBlank={page.isBlank}
+                    />
+
+                    {/* Page Number (Counter-rotated?) */}
+                    {showPageNumbers && (
+                        <div className="absolute bottom-2 right-2 bg-gray-800 bg-opacity-70 text-white px-2 py-1 rounded text-xs">
+                            {index + 1}
+                        </div>
+                    )}
+
+                    {/* Selection Indicator */}
+                    {selectedPages.has(page.id) && (
+                        <div className="absolute top-2 right-2 bg-blue-500 text-white p-1 rounded-full">
+                            <CheckSquare className="h-3 w-3" />
+                        </div>
+                    )}
+
+                    {/* Rotation Indicator */}
+                    {page.rotation !== 0 && (
+                        <div className="absolute top-2 left-2 bg-gray-800 bg-opacity-70 text-white p-1 rounded-full">
+                            <RotateCw className="h-3 w-3" style={{ transform: `rotate(${page.rotation}deg)` }} />
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* Page Info */}
+            <div className="mt-2 text-center">
+                <div className="text-sm font-medium">
+                    {page.isBlank ? "Blank Page" : `Page ${page.originalIndex + 1}`}
+                </div>
+            </div>
+        </div>
+    );
+};
+
 export function OrganizePdfTool() {
     // File and PDF state
     const [file, setFile] = useState<File | null>(null);
@@ -73,8 +373,24 @@ export function OrganizePdfTool() {
     const [isProcessing, setIsProcessing] = useState(false);
     const [zoom, setZoom] = useState(100);
 
-    // Canvas refs
-    const canvasRefs = useRef<(HTMLCanvasElement | null)[]>([]);
+    // DnD Sensors
+    const sensors = useSensors(
+        useSensor(PointerSensor, {
+            activationConstraint: {
+                distance: 8, // Allow clicks for selection, drag only after movement
+            },
+        }),
+        useSensor(KeyboardSensor, {
+            coordinateGetter: sortableKeyboardCoordinates,
+        })
+    );
+
+    const [activeId, setActiveId] = useState<string | null>(null);
+    const [activeSize, setActiveSize] = useState<{ width: number, height: number } | null>(null);
+
+    // Canvas refs (No longer needed globally, handled by sub-components)
+    // const canvasRefs = useRef<(HTMLCanvasElement | null)[]>([]); 
+    // containerRef and scrollContainerRef might be useful for scrolling
     const containerRef = useRef<HTMLDivElement>(null);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -111,9 +427,6 @@ export function OrganizePdfTool() {
                 }).promise;
                 setPdfProxy(pdf);
                 setNumPages(pdf.numPages);
-
-                // Initialize canvas refs
-                canvasRefs.current = Array(pdf.numPages).fill(null);
 
                 // Create initial page items
                 const newPages: PageItem[] = [];
@@ -156,38 +469,33 @@ export function OrganizePdfTool() {
         }
     };
 
-    useEffect(() => {
-        if (!file || !pdfProxy) return;
+    // Handle Drag End
+    const handleDragEnd = (event: DragEndEvent) => {
+        const { active, over } = event;
+        setActiveId(null);
 
-        const renderAllPages = async () => {
-            // Apply zoom
-            const scale = zoom / 100;
+        if (over && active.id !== over.id) {
+            saveToHistory();
+            setPages((items) => {
+                const oldIndex = items.findIndex((item) => item.id === active.id);
+                const newIndex = items.findIndex((item) => item.id === over.id);
 
-            // Render each page
-            for (let i = 0; i < pdfProxy.numPages; i++) {
-                const page = await pdfProxy.getPage(i + 1);
-                const viewport = page.getViewport({ scale });
+                return arrayMove(items, oldIndex, newIndex);
+            });
+        }
+    };
 
-                // Get or create canvas
-                let canvas = canvasRefs.current[i];
+    const handleDragStart = (event: DragStartEvent) => {
+        const id = event.active.id as string;
+        setActiveId(id);
 
-                if (!canvas) continue;
-
-                const context = canvas.getContext("2d")!;
-
-                canvas.height = viewport.height;
-                canvas.width = viewport.width;
-
-                await page.render({
-                    canvasContext: context,
-                    viewport: viewport,
-                    canvas: canvas,
-                }).promise;
-            }
-        };
-
-        renderAllPages();
-    }, [file, pdfProxy, zoom]);
+        // Capture dimensions of the dragged item
+        const node = document.getElementById(id);
+        if (node) {
+            const rect = node.getBoundingClientRect();
+            setActiveSize({ width: rect.width, height: rect.height });
+        }
+    };
 
     // Save current state to history
     const saveToHistory = useCallback(() => {
@@ -352,27 +660,13 @@ export function OrganizePdfTool() {
     // If no file, show file upload
     if (!file) {
         return (
-            <div className="flex flex-col items-center justify-center h-[calc(100vh-64px)] bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
-                <div className="max-w-md w-full p-8 bg-white dark:bg-gray-800 rounded-2xl shadow-xl">
-                    <div className="flex items-center justify-center mb-6">
-                        <div className="p-4 bg-blue-100 dark:bg-blue-900 rounded-full">
-                            <LayoutGrid className="h-12 w-12 text-blue-600 dark:text-blue-400" />
-                        </div>
-                    </div>
-                    <h1 className="text-2xl font-bold text-center mb-2 text-gray-900 dark:text-white">Organize PDF</h1>
-                    <p className="text-center text-gray-600 dark:text-gray-400 mb-6">Upload a PDF to organize pages</p>
-                    <FileUpload
-                        onFilesSelected={handleFileSelected}
-                        maxFiles={1}
-                        accept={{ "application/pdf": [".pdf"] }}
-                        description="Drop a PDF file here or click to browse"
-                    />
-                    <div className="mt-6 text-center">
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                            Rearrange, rotate, add, or delete pages in your PDF
-                        </p>
-                    </div>
-                </div>
+            <div className="mx-auto max-w-2xl px-4">
+                <FileUpload
+                    onFilesSelected={handleFileSelected}
+                    maxFiles={1}
+                    accept={{ "application/pdf": [".pdf"] }}
+                    description="Drop a PDF file here or click to browse"
+                />
             </div>
         );
     }
@@ -601,146 +895,80 @@ export function OrganizePdfTool() {
             </div>
 
             {/* Main Canvas Area */}
-            <div
-                ref={scrollContainerRef}
-                className="flex-1 bg-gray-50 dark:bg-gray-900 overflow-auto p-8 relative"
+            <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragStart={handleDragStart}
+                onDragEnd={handleDragEnd}
             >
-                <div className="flex flex-col items-center">
-                    {viewMode === 'grid' ? (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                            {pages.map((page, index) => (
-                                <div
-                                    key={page.id}
-                                    className={cn(
-                                        "relative group cursor-pointer transition-all duration-200",
-                                        selectedPages.has(page.id) && "ring-2 ring-blue-500 ring-offset-2"
-                                    )}
-                                    onClick={() => toggleSelection(page.id)}
-                                    style={{
-                                        transform: `scale(${zoom / 100}) rotate(${page.rotation}deg)`
-                                    }}
-                                >
-                                    <div className="relative aspect-[3/4] w-full overflow-hidden rounded-lg shadow-md bg-white">
-                                        {/* Page Thumbnail */}
-                                        <div className="relative h-full w-full">
-                                            {page.isBlank ? (
-                                                <div className="flex h-full w-full items-center justify-center bg-gray-100 text-gray-500 text-sm">
-                                                    Blank Page
-                                                </div>
-                                            ) : (
-                                                <canvas
-                                                    ref={el => { canvasRefs.current[index] = el; }}
-                                                    className="h-full w-full object-contain"
-                                                />
-                                            )}
+                <div
+                    ref={scrollContainerRef}
+                    className="flex-1 bg-gray-50 dark:bg-gray-900 overflow-auto p-8 relative"
+                >
+                    <div className="flex flex-col items-center">
+                        <SortableContext items={pages.map(p => p.id)} strategy={rectSortingStrategy}>
+                            {viewMode === 'grid' ? (
+                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 w-full">
+                                    {pages.map((page, index) => (
+                                        <SortablePageItem
+                                            key={page.id}
+                                            page={page}
+                                            index={index}
+                                            pdfProxy={pdfProxy}
+                                            selectedPages={selectedPages}
+                                            toggleSelection={toggleSelection}
+                                            showPageNumbers={showPageNumbers}
+                                            viewMode="grid"
+                                            zoom={zoom}
+                                        />
+                                    ))}
 
-                                            {/* Page Number */}
-                                            {showPageNumbers && (
-                                                <div className="absolute bottom-2 right-2 bg-gray-800 bg-opacity-70 text-white px-2 py-1 rounded text-xs">
-                                                    {index + 1}
-                                                </div>
-                                            )}
-
-                                            {/* Selection Indicator */}
-                                            {selectedPages.has(page.id) && (
-                                                <div className="absolute top-2 right-2 bg-blue-500 text-white p-1 rounded-full">
-                                                    <CheckSquare className="h-3 w-3" />
-                                                </div>
-                                            )}
-
-                                            {/* Rotation Indicator */}
-                                            {page.rotation !== 0 && (
-                                                <div className="absolute top-2 left-2 bg-gray-800 bg-opacity-70 text-white p-1 rounded-full">
-                                                    <RotateCw className="h-3 w-3" style={{ transform: `rotate(${page.rotation}deg)` }} />
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    {/* Page Info */}
-                                    <div className="mt-2 text-center">
-                                        <div className="text-sm font-medium">
-                                            {page.isBlank ? "Blank Page" : `Page ${page.originalIndex + 1}`}
-                                        </div>
+                                    {/* Add Blank Page Button */}
+                                    <div
+                                        className="flex items-center justify-center border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg aspect-[3/4] w-full cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                                        onClick={addBlankPage}
+                                    >
+                                        <Plus className="h-8 w-8 text-gray-400" />
+                                        <span className="text-sm text-gray-500 mt-2">Add Page</span>
                                     </div>
                                 </div>
-                            ))}
+                            ) : (
+                                <div className="w-full max-w-2xl space-y-4">
+                                    {pages.map((page, index) => (
+                                        <SortablePageItem
+                                            key={page.id}
+                                            page={page}
+                                            index={index}
+                                            pdfProxy={pdfProxy}
+                                            selectedPages={selectedPages}
+                                            toggleSelection={toggleSelection}
+                                            showPageNumbers={showPageNumbers}
+                                            viewMode="list"
+                                            zoom={zoom}
+                                        />
+                                    ))}
 
-                            {/* Add Blank Page Button */}
-                            <div
-                                className="flex items-center justify-center border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg aspect-[3/4] w-full cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                                onClick={addBlankPage}
-                            >
-                                <Plus className="h-8 w-8 text-gray-400" />
-                                <span className="text-sm text-gray-500 mt-2">Add Blank Page</span>
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="w-full max-w-2xl space-y-4">
-                            {pages.map((page, index) => (
-                                <div
-                                    key={page.id}
-                                    className={cn(
-                                        "flex items-center p-4 bg-white dark:bg-gray-800 rounded-lg shadow-md cursor-pointer transition-all duration-200",
-                                        selectedPages.has(page.id) && "ring-2 ring-blue-500 ring-offset-2"
-                                    )}
-                                    onClick={() => toggleSelection(page.id)}
-                                    style={{
-                                        transform: `scale(${zoom / 100}) rotate(${page.rotation}deg)`
-                                    }}
-                                >
-                                    {/* Drag Handle */}
-                                    <div className="mr-4 text-gray-400">
-                                        <GripVertical className="h-5 w-5" />
-                                    </div>
-
-                                    {/* Page Thumbnail */}
-                                    <div className="flex-1 relative h-32 w-48 overflow-hidden rounded border border-gray-200 dark:border-gray-700">
-                                        {page.isBlank ? (
-                                            <div className="flex h-full w-full items-center justify-center bg-gray-100 text-gray-500 text-sm">
-                                                Blank Page
-                                            </div>
-                                        ) : (
-                                            <canvas
-                                                ref={el => { canvasRefs.current[index] = el; }}
-                                                className="h-full w-full object-contain"
-                                            />
-                                        )}
-
-                                        {/* Page Number */}
-                                        {showPageNumbers && (
-                                            <div className="absolute bottom-2 right-2 bg-gray-800 bg-opacity-70 text-white px-2 py-1 rounded text-xs">
-                                                {index + 1}
-                                            </div>
-                                        )}
-
-                                        {/* Selection Indicator */}
-                                        {selectedPages.has(page.id) && (
-                                            <div className="absolute top-2 right-2 bg-blue-500 text-white p-1 rounded-full">
-                                                <CheckSquare className="h-3 w-3" />
-                                            </div>
-                                        )}
-
-                                        {/* Rotation Indicator */}
-                                        {page.rotation !== 0 && (
-                                            <div className="absolute top-2 left-2 bg-gray-800 bg-opacity-70 text-white p-1 rounded-full">
-                                                <RotateCw className="h-3 w-3" style={{ transform: `rotate(${page.rotation}deg)` }} />
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {/* Page Info */}
-                                    <div className="ml-4 flex-1">
-                                        <div className="text-sm font-medium">
-                                            {page.isBlank ? "Blank Page" : `Page ${page.originalIndex + 1}`}
-                                        </div>
+                                    {/* Add Blank button for list view too */}
+                                    <div
+                                        className="flex items-center justify-center border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg h-16 w-full cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                                        onClick={addBlankPage}
+                                    >
+                                        <Plus className="h-6 w-6 text-gray-400 mr-2" />
+                                        <span className="text-sm text-gray-500">Add Blank Page</span>
                                     </div>
                                 </div>
-                            ))}
-                        </div>
-                    )}
+                            )}
+                        </SortableContext>
+                    </div>
                 </div>
-            </div>
+
+                {/* Drag Indicator - Fixed position at top center */}
+                {activeId && (
+                    <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-50 bg-blue-600 text-white px-6 py-3 rounded-full shadow-lg font-medium text-sm animate-pulse">
+                        Moving Page {(pages.find(p => p.id === activeId)?.originalIndex ?? 0) + 1}
+                    </div>
+                )}
+            </DndContext>
 
             {/* Settings Panel */}
             <div className="fixed bottom-4 left-4 z-40">

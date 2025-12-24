@@ -35,7 +35,8 @@ export function UnlockPdfTool() {
 
         try {
             // Backend-first with client-side fallback
-            const result = await pdfApi.unlock(file, isEncrypted ? password : "");
+            // Try with provided password, or empty string if not thought to be encrypted
+            const result = await pdfApi.unlock(file, password);
 
             saveAs(result.blob, result.fileName);
             setStatus("success");
@@ -46,15 +47,31 @@ export function UnlockPdfTool() {
                 variant: "success",
                 position: "top-right",
             });
-        } catch (error) {
-            console.error("Error unlocking PDF:", error);
+        } catch (error: any) {
+            // Only log unexpected errors to avoid Next.js development error overlay
+            if (error.message !== 'Password incorrect') {
+                console.error("Error unlocking PDF:", error);
+            }
+
             setStatus("error");
-            toast.show({
-                title: "Unlock Failed",
-                message: "Failed to unlock PDF. Incorrect password?",
-                variant: "error",
-                position: "top-right",
-            });
+
+            // If it failed and we thought it wasn't encrypted, it probably IS encrypted
+            if (!isEncrypted) {
+                setIsEncrypted(true);
+                toast.show({
+                    title: "Password Required",
+                    message: "This file appears to be encrypted. Please enter the password.",
+                    variant: "warning",
+                    position: "top-right",
+                });
+            } else {
+                toast.show({
+                    title: "Unlock Failed",
+                    message: "Incorrect password. Please try again.",
+                    variant: "error",
+                    position: "top-right",
+                });
+            }
         } finally {
             setIsProcessing(false);
         }
@@ -85,7 +102,7 @@ export function UnlockPdfTool() {
                             </span>
                         ) : (
                             <span className="inline-flex items-center rounded-full bg-alert-success/10 px-2.5 py-0.5 text-xs font-medium text-alert-success">
-                                <Unlock className="mr-1 h-3 w-3" /> No Password Required
+                                <Unlock className="mr-1 h-3 w-3" /> No Password Detected
                             </span>
                         )}
                     </div>
@@ -111,22 +128,20 @@ export function UnlockPdfTool() {
                     <p className="text-sm text-muted-foreground mt-2">
                         {isEncrypted
                             ? "This file is password protected. Enter the password to remove it."
-                            : "This file does not have an open password, but may have editing restrictions. Click below to save a clean copy."}
+                            : "Click below to remove security. If a password is required, we'll ask for it."}
                     </p>
                 </div>
 
-                {isEncrypted && (
-                    <div>
-                        <label className="mb-2 block text-sm font-medium">Password</label>
-                        <input
-                            type="password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                            placeholder="Enter document password"
-                        />
-                    </div>
-                )}
+                <div className={isEncrypted ? "block" : "hidden"}>
+                    <label className="mb-2 block text-sm font-medium">Password</label>
+                    <input
+                        type="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        placeholder="Enter document password"
+                    />
+                </div>
 
                 <Button
                     size="lg"
@@ -134,7 +149,7 @@ export function UnlockPdfTool() {
                     disabled={isProcessing || (isEncrypted && !password)}
                     className="w-full h-12 text-lg"
                 >
-                    {isProcessing ? "Processing..." : (isEncrypted ? "Unlock & Download" : "Download Unlocked Copy")}
+                    {isProcessing ? "Processing..." : (isEncrypted ? "Unlock & Download" : "Remove Security")}
                 </Button>
 
                 {status === "success" && (

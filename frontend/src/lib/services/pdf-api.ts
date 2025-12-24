@@ -43,9 +43,12 @@ const withFallback = async (
             // Fallback to client-side processing
             const result = await clientFallback();
             return result;
-        } catch (clientError) {
-            console.error("Both backend and client-side processing failed:", clientError);
-            throw new Error("Processing failed. Please try again later.");
+        } catch (clientError: any) {
+            // Suppress logging for password errors (expected during unlock attempts)
+            if (clientError?.message !== 'Password incorrect') {
+                console.error("Both backend and client-side processing failed:", clientError);
+            }
+            throw clientError;
         }
     }
 };
@@ -54,21 +57,22 @@ const withFallback = async (
  * Helper factory for standard conversions (Backend -> Client Fallback)
  */
 const createStandardConverter = (
-    apiMethod: (file: File) => Promise<any>,
+    apiMethod: (file: File, options?: any) => Promise<any>,
     strategyName: string,
     outputExtOrFn: string | ((name: string) => string),
     clientDefaultOptions: any = {}
 ) => {
-    return async (file: File): Promise<ProcessingResult> => {
+    return async (file: File, options?: any): Promise<ProcessingResult> => {
+        // Logic to determine filename...
         const fileName = typeof outputExtOrFn === 'function'
             ? outputExtOrFn(file.name)
             : file.name.replace(/\.[^/.]+$/, "") + outputExtOrFn;
 
         return withFallback(
-            () => apiMethod(file),
+            () => apiMethod(file, options),
             async () => {
                 const processor = await getClientProcessor();
-                return processor.execute(strategyName, [file], clientDefaultOptions);
+                return processor.execute(strategyName, [file], { ...clientDefaultOptions, ...options });
             },
             fileName
         );
@@ -117,8 +121,22 @@ export const pdfApi = {
     // PDF TO OTHER FORMATS
     // ─────────────────────────────────────────────────────────────────────────────
     pdfToWord: createStandardConverter(api.pdfToWord, "pdf-to-word", ".docx"),
-    pdfToExcel: createStandardConverter(api.pdfToExcel, "pdf-to-excel", ".xlsx"),
-    pdfToPowerpoint: createStandardConverter(api.pdfToPowerpoint, "pdf-to-powerpoint", ".pptx"),
+    pdfToExcel: async (file: File, options?: any) => {
+        // FORCE BACKEND ONLY - for image embedding
+        const response = await api.pdfToExcel(file);
+        return {
+            blob: response,
+            fileName: file.name.replace(/\.[^/.]+$/, "") + ".xlsx"
+        };
+    },
+    pdfToPowerpoint: async (file: File, options?: any) => {
+        // FORCE BACKEND ONLY - Debugging
+        const response = await api.pdfToPowerpoint(file, options);
+        return {
+            blob: response,
+            fileName: file.name.replace(/\.[^/.]+$/, "") + ".pptx"
+        };
+    },
 
     pdfToJpg: async (file: File, options?: any): Promise<ProcessingResult> => {
         return withFallback(
@@ -127,7 +145,7 @@ export const pdfApi = {
                 const processor = await getClientProcessor();
                 return processor.execute("convert-from-pdf", [file], { format: "jpeg", dpi: 150, ...options });
             },
-            file.name.replace(".pdf", ".jpg")
+            file.name.replace(".pdf", "_images.zip")  // Backend returns ZIP with all pages
         );
     },
 
@@ -137,21 +155,30 @@ export const pdfApi = {
     // ─────────────────────────────────────────────────────────────────────────────
     // OTHER FORMATS TO PDF
     // ─────────────────────────────────────────────────────────────────────────────
-    wordToPdf: createStandardConverter(
-        api.wordToPdf,
-        "convert-to-pdf",
-        (name) => name.replace(/\.(docx?|doc)$/i, ".pdf")
-    ),
-    excelToPdf: createStandardConverter(
-        api.excelToPdf,
-        "convert-to-pdf",
-        (name) => name.replace(/\.(xlsx?|xls)$/i, ".pdf")
-    ),
-    powerpointToPdf: createStandardConverter(
-        api.powerpointToPdf,
-        "convert-to-pdf",
-        (name) => name.replace(/\.(pptx?|ppt)$/i, ".pdf")
-    ),
+    wordToPdf: async (file: File) => {
+        // FORCE BACKEND ONLY
+        const response = await api.wordToPdf(file);
+        return {
+            blob: response,
+            fileName: file.name.replace(/\.(docx?|doc)$/i, ".pdf")
+        };
+    },
+    excelToPdf: async (file: File) => {
+        // FORCE BACKEND ONLY
+        const response = await api.excelToPdf(file);
+        return {
+            blob: response,
+            fileName: file.name.replace(/\.(xlsx?|xls)$/i, ".pdf")
+        };
+    },
+    powerpointToPdf: async (file: File) => {
+        // FORCE BACKEND ONLY
+        const response = await api.powerpointToPdf(file);
+        return {
+            blob: response,
+            fileName: file.name.replace(/\.(pptx?|ppt)$/i, ".pdf")
+        };
+    },
     jpgToPdf: createStandardConverter(
         api.jpgToPdf,
         "convert-to-pdf",
@@ -172,7 +199,7 @@ export const pdfApi = {
     // ─────────────────────────────────────────────────────────────────────────────
     // PDF SECURITY
     // ─────────────────────────────────────────────────────────────────────────────
-    protect: async (file: File, password: string, permissions: {
+    protect: async (file: File, password: string | { userPassword?: string, ownerPassword?: string }, permissions: {
         allowPrinting?: boolean;
         allowCopying?: boolean;
         allowModifying?: boolean;
@@ -193,9 +220,6 @@ export const pdfApi = {
         };
 
         // Client (pdf-lib) expects specific keys without 'allow' prefix
-        // pdf-service.ts handles the mapping if we pass a structure it expects, 
-        // but let's pass the mapped object to be safe based on our findings.
-        // Actually pdf-service.ts uses: options.permissions?.printing
         const clientPermissions = {
             printing: permissions.allowPrinting,
             copying: permissions.allowCopying,
@@ -206,11 +230,29 @@ export const pdfApi = {
             documentAssembly: permissions.allowAssembly,
         };
 
+        // Resolve passwords
+        let userPassword = '';
+        let ownerPassword = '';
+
+        if (typeof password === 'string') {
+            userPassword = password;
+            ownerPassword = password;
+        } else {
+            userPassword = password.userPassword || '';
+            ownerPassword = password.ownerPassword || userPassword || '';
+        }
+
+        const clientOptions = {
+            userPassword,
+            ownerPassword,
+            permissions: clientPermissions
+        };
+
         return withFallback(
-            () => api.protectPdf(file, password, backendPermissions),
+            () => api.protectPdf(file, ownerPassword, backendPermissions),
             async () => {
                 const processor = await getClientProcessor();
-                return processor.execute("protect", [file], { password, permissions: clientPermissions });
+                return processor.execute("protect", [file], clientOptions);
             },
             `protected-${file.name}`
         );
@@ -253,13 +295,18 @@ export const pdfApi = {
     },
 
     split: async (file: File, options: any): Promise<ProcessingResult> => {
+        const isSeparate = options.splitMode === 'separate';
+        const extension = isSeparate ? '.zip' : '.pdf';
+        const baseName = file.name.replace(/\.[^/.]+$/, "");
+        const fileName = `split-${baseName}${extension}`;
+
         return withFallback(
             () => api.splitPdf(file, options.selectedPages || [], options.splitMode || 'merge'),
             async () => {
                 const processor = await getClientProcessor();
                 return processor.execute("split", [file], options);
             },
-            `split-${file.name}`
+            fileName
         );
     },
 

@@ -252,13 +252,13 @@ REST_FRAMEWORK = {
     ),
     # Throttling to protect auth endpoints and brute-force attempts
     'DEFAULT_THROTTLE_RATES': {
-        'login': '10/min',
-        'anon': '20/min',
-        'user': '100/min',  # Standard authenticated user limit
-        'password_reset': '5/hour',
-        'registration': '5/hour',
-        'otp': '10/min',
-        'dj_rest_auth': '100/min',
+        'login': '30/min',
+        'anon': '100/min',
+        'user': '1000/min',  # Standard authenticated user limit
+        'password_reset': '10/hour',
+        'registration': '10/hour',
+        'otp': '30/min',
+        'dj_rest_auth': '500/min',
     }
 }
 

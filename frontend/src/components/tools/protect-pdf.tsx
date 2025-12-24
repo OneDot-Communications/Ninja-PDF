@@ -37,7 +37,11 @@ export function ProtectPdfTool() {
 
         try {
             // pdfApi.protect handles both backend and client-side fallback internally
-            const result = await pdfApi.protect(file, userPassword || ownerPassword, {
+            // Pass separate passwords if provided
+            const result = await pdfApi.protect(file, {
+                userPassword: userPassword || undefined,
+                ownerPassword: ownerPassword || undefined
+            }, {
                 allowPrinting,
                 allowCopying,
                 allowModifying,

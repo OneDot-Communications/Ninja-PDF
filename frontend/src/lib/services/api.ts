@@ -99,7 +99,13 @@ const uploadFile = async (endpoint: string, file: File, additionalData?: Record<
   }
 
   // For file downloads, return blob
-  if (contentType && (contentType.includes("application/pdf") || contentType.includes("application/octet-stream"))) {
+  if (contentType && (
+    contentType.includes("application/pdf") ||
+    contentType.includes("application/octet-stream") ||
+    contentType.includes("application/zip") ||
+    contentType.includes("application/vnd.") || // Matches Office formats (Word, Excel, PPT)
+    contentType.includes("image/") // Matches images
+  )) {
     return response.blob();
   }
   return response.text();
@@ -365,7 +371,13 @@ export const api = {
   // ─────────────────────────────────────────────────────────────────────────────
   pdfToJpg: (file: File) => uploadFile("/api/tools/pdf-to-jpg/", file),
   pdfToExcel: (file: File) => uploadFile("/api/tools/pdf-to-excel/", file),
-  pdfToPowerpoint: (file: File) => uploadFile("/api/tools/pdf-to-powerpoint/", file),
+  pdfToPowerpoint: (file: File, options?: any) => {
+    const extraData: Record<string, string> = {};
+    if (options && options.aspectRatio) {
+      extraData.aspectRatio = options.aspectRatio;
+    }
+    return uploadFile("/api/tools/pdf-to-powerpoint/", file, extraData);
+  },
   pdfToWord: (file: File) => uploadFile("/api/tools/pdf-to-word/", file),
   pdfToPdfa: (file: File) => uploadFile("/api/tools/pdf-to-pdfa/", file),
   pdfToHtml: (file: File) => uploadFile("/api/tools/pdf-to-html/", file),

@@ -4,10 +4,10 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { saveAs } from "file-saver";
 import { FileUpload } from "../ui/file-upload";
 import { Button } from "../ui/button";
-import { 
-    GitCompare, 
-    ChevronLeft, 
-    ChevronRight, 
+import {
+    GitCompare,
+    ChevronLeft,
+    ChevronRight,
     ZoomIn,
     ZoomOut,
     Maximize,
@@ -89,14 +89,14 @@ export function ComparePdfTool() {
     const [numPages, setNumPages] = useState(0);
     const [isProcessing, setIsProcessing] = useState(false);
     const [zoom, setZoom] = useState(100);
-    
+
     // Canvas refs
     const canvas1Refs = useRef<(HTMLCanvasElement | null)[]>([]);
     const canvas2Refs = useRef<(HTMLCanvasElement | null)[]>([]);
     const diffCanvasRefs = useRef<(HTMLCanvasElement | null)[]>([]);
     const containerRef = useRef<HTMLDivElement>(null);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
-    
+
     // Comparison state
     const [comparisonMode, setComparisonMode] = useState<ComparisonMode>("side-by-side");
     const [opacity, setOpacity] = useState(50);
@@ -111,7 +111,7 @@ export function ComparePdfTool() {
     const [diffImage, setDiffImage] = useState<string | null>(null);
     const [showFile1Only, setShowFile1Only] = useState(false);
     const [showFile2Only, setShowFile2Only] = useState(false);
-    
+
     // UI state
     const [showToolbar, setShowToolbar] = useState(true);
     const [showProperties, setShowProperties] = useState(true);
@@ -120,23 +120,23 @@ export function ComparePdfTool() {
     const [showGrid, setShowGrid] = useState(false);
     const [snapToGrid, setSnapToGrid] = useState(false);
     const [gridSize, setGridSize] = useState(10);
-    
+
     // History state for undo/redo
     const [history, setHistory] = useState<HistoryState[]>([]);
     const [historyIndex, setHistoryIndex] = useState(-1);
-    
+
     // Color presets
     const colorPresets = [
-        "#FF0000", "#0000FF", "#00FF00", "#FFFF00", 
+        "#FF0000", "#0000FF", "#00FF00", "#FFFF00",
         "#FF00FF", "#00FFFF", "#000000", "#888888"
     ];
-    
+
     // Font options
     const fontOptions = [
-        "Arial", "Helvetica", "Times New Roman", "Courier New", 
+        "Arial", "Helvetica", "Times New Roman", "Courier New",
         "Georgia", "Verdana", "Comic Sans MS", "Impact"
     ];
-    
+
     // Comparison mode options
     const comparisonModeOptions = [
         { id: "side-by-side", icon: <ArrowLeft className="h-4 w-4 mr-2" />, label: "Side by Side" },
@@ -149,13 +149,13 @@ export function ComparePdfTool() {
         if (files.length > 0) {
             setFile1(files[0]);
             setCurrentPage(1);
-            
+
             // Load PDF to get page count
             const pdfjsLib = await getPdfJs();
             const arrayBuffer = await files[0].arrayBuffer();
             const pdf = await (pdfjsLib as any).getDocument(new Uint8Array(arrayBuffer)).promise;
             setNumPages(pdf.numPages);
-            
+
             // Initialize canvas refs
             canvas1Refs.current = Array(pdf.numPages).fill(null);
             canvas2Refs.current = Array(pdf.numPages).fill(null);
@@ -167,13 +167,13 @@ export function ComparePdfTool() {
         if (files.length > 0) {
             setFile2(files[0]);
             setCurrentPage(1);
-            
+
             // Load PDF to get page count
             const pdfjsLib = await getPdfJs();
             const arrayBuffer = await files[0].arrayBuffer();
             const pdf = await (pdfjsLib as any).getDocument(new Uint8Array(arrayBuffer)).promise;
             setNumPages(pdf.numPages);
-            
+
             // Initialize canvas refs
             canvas1Refs.current = Array(pdf.numPages).fill(null);
             canvas2Refs.current = Array(pdf.numPages).fill(null);
@@ -186,66 +186,66 @@ export function ComparePdfTool() {
 
         const renderAllPages = async () => {
             const pdfjsLib = await getPdfJs();
-            
+
             // Apply zoom
             const scale = zoom / 100;
-            
+
             // Render file 1
             const arrayBuffer1 = await file1.arrayBuffer();
             const pdf1 = await (pdfjsLib as any).getDocument(new Uint8Array(arrayBuffer1)).promise;
-            
+
             for (let i = 1; i <= pdf1.numPages; i++) {
                 const page = await pdf1.getPage(i);
                 const viewport = page.getViewport({ scale });
-                
+
                 // Get or create canvas
                 let canvas = canvas1Refs.current[i - 1];
-                
+
                 if (!canvas) continue;
-                
+
                 const context = canvas.getContext("2d")!;
-                
+
                 canvas.height = viewport.height;
                 canvas.width = viewport.width;
-                
+
                 await page.render({
                     canvasContext: context,
                     viewport: viewport,
                     canvas: canvas,
                 }).promise;
             }
-            
+
             // Render file 2
             const arrayBuffer2 = await file2.arrayBuffer();
             const pdf2 = await (pdfjsLib as any).getDocument(new Uint8Array(arrayBuffer2)).promise;
-            
+
             for (let i = 1; i <= pdf2.numPages; i++) {
                 const page = await pdf2.getPage(i);
                 const viewport = page.getViewport({ scale });
-                
+
                 // Get or create canvas
                 let canvas = canvas2Refs.current[i - 1];
-                
+
                 if (!canvas) continue;
-                
+
                 const context = canvas.getContext("2d")!;
-                
+
                 canvas.height = viewport.height;
                 canvas.width = viewport.width;
-                
+
                 await page.render({
                     canvasContext: context,
                     viewport: viewport,
                     canvas: canvas,
                 }).promise;
             }
-            
+
             // Compute diff if in diff mode
             if (comparisonMode === "diff") {
                 computeDiff();
             }
         };
-        
+
         renderAllPages();
     }, [file1, file2, zoom, comparisonMode]);
 
@@ -258,77 +258,77 @@ export function ComparePdfTool() {
         try {
             // Initialize PDF.js
             const pdfjsLib = await getPdfJs();
-            
+
             // Get page 1 from both PDFs
             const arrayBuffer1 = await file1.arrayBuffer();
             const pdf1 = await (pdfjsLib as any).getDocument(new Uint8Array(arrayBuffer1)).promise;
             const page1 = await pdf1.getPage(1);
-            
+
             const arrayBuffer2 = await file2.arrayBuffer();
             const pdf2 = await (pdfjsLib as any).getDocument(new Uint8Array(arrayBuffer2)).promise;
             const page2 = await pdf2.getPage(1);
-            
+
             // Render both pages to canvases
             const viewport1 = page1.getViewport({ scale: 1 });
             const viewport2 = page2.getViewport({ scale: 1 });
-            
+
             // Use larger dimensions
             const width = Math.max(viewport1.width, viewport2.width);
             const height = Math.max(viewport1.height, viewport2.height);
-            
+
             const canvas1 = document.createElement("canvas");
             canvas1.width = width;
             canvas1.height = height;
             const ctx1 = canvas1.getContext("2d");
             if (!ctx1) throw new Error("Could not get context 1");
-            
+
             const canvas2 = document.createElement("canvas");
             canvas2.width = width;
             canvas2.height = height;
             const ctx2 = canvas2.getContext("2d");
             if (!ctx2) throw new Error("Could not get context 2");
-            
+
             // Fill with white background
             ctx1.fillStyle = "white";
             ctx1.fillRect(0, 0, width, height);
             ctx2.fillStyle = "white";
             ctx2.fillRect(0, 0, width, height);
-            
+
             await page1.render({ canvasContext: ctx1, viewport: viewport1, canvas: canvas1 }).promise;
             await page2.render({ canvasContext: ctx2, viewport: viewport2, canvas: canvas2 }).promise;
-            
+
             // Get image data for comparison
             const imageData1 = ctx1.getImageData(0, 0, width, height);
             const imageData2 = ctx2.getImageData(0, 0, width, height);
-            
+
             // Create diff canvas
             const diffCanvas = document.createElement("canvas");
             diffCanvas.width = width;
             diffCanvas.height = height;
             const diffCtx = diffCanvas.getContext("2d");
             if (!diffCtx) throw new Error("Could not get diff context");
-            
+
             // Create diff image data
             const diffImageData = diffCtx.createImageData(width, height);
             const data1 = imageData1.data;
             const data2 = imageData2.data;
             const diffData = diffImageData.data;
-            
+
             // Simple pixel-by-pixel comparison
             for (let i = 0; i < data1.length; i += 4) {
                 const r1 = data1[i];
                 const g1 = data1[i + 1];
                 const b1 = data1[i + 2];
                 const a1 = data1[i + 3];
-                
+
                 const r2 = data2[i];
                 const g2 = data2[i + 1];
                 const b2 = data2[i + 2];
                 const a2 = data2[i + 3];
-                
+
                 // Calculate difference
                 const diff = Math.abs(r1 - r2) + Math.abs(g1 - g2) + Math.abs(b1 - b2);
-                
+
                 if (diff > 30) {
                     // Mark as red
                     diffData[i] = 255;
@@ -343,17 +343,17 @@ export function ComparePdfTool() {
                     diffData[i + 3] = 255;
                 }
             }
-            
+
             // Put diff image data back to canvas
             diffCtx.putImageData(diffImageData, 0, 0);
-            
+
             // Convert to data URL
             const diffImageUrl = diffCanvas.toDataURL();
             setDiffImage(diffImageUrl);
-            
+
             // Store diff canvas in refs
             diffCanvasRefs.current[0] = diffCanvas;
-            
+
         } catch (error) {
             console.error("Error computing diff:", error);
             toast.show({
@@ -375,16 +375,16 @@ export function ComparePdfTool() {
             comparisonMode,
             opacity
         };
-        
+
         // Remove any states after the current index
         const newHistory = history.slice(0, historyIndex + 1);
         newHistory.push(newState);
-        
+
         // Limit history to 20 states
         if (newHistory.length > 20) {
             newHistory.shift();
         }
-        
+
         setHistory(newHistory);
         setHistoryIndex(newHistory.length - 1);
     }, [comparisonElements, currentPage, comparisonMode, opacity, history, historyIndex]);
@@ -431,7 +431,7 @@ export function ComparePdfTool() {
             strokeWidth: strokeWidth,
             opacity: opacity / 100
         };
-        
+
         if (type === "text") {
             newElement.content = "Note";
             newElement.fontSize = fontSize;
@@ -445,7 +445,7 @@ export function ComparePdfTool() {
                 { x: 60, y: 50 }
             ];
         }
-        
+
         saveToHistory();
         setComparisonElements(prev => [...prev, newElement]);
         setSelectedElementId(id);
@@ -455,9 +455,9 @@ export function ComparePdfTool() {
     // Update selected element properties
     const updateSelectedElement = (updates: Partial<ComparisonElement>) => {
         if (!selectedElementId) return;
-        
+
         saveToHistory();
-        setComparisonElements(prev => prev.map(el => 
+        setComparisonElements(prev => prev.map(el =>
             el.id === selectedElementId ? { ...el, ...updates } : el
         ));
     };
@@ -483,7 +483,7 @@ export function ComparePdfTool() {
             });
 
             saveAs(result.blob, result.fileName || `comparison-${file1.name}-vs-${file2.name}`);
-            
+
             toast.show({
                 title: "Success",
                 message: "Comparison exported successfully!",
@@ -503,44 +503,122 @@ export function ComparePdfTool() {
         }
     };
 
+    // Handle both files from a single upload
+    const handleFilesSelected = async (files: File[]) => {
+        if (files.length >= 1) {
+            setFile1(files[0]);
+        }
+        if (files.length >= 2) {
+            setFile2(files[1]);
+        }
+
+        if (files.length > 0) {
+            // Load PDF to get page count from first file
+            const pdfjsLib = await getPdfJs();
+            const arrayBuffer = await files[0].arrayBuffer();
+            const pdf = await (pdfjsLib as any).getDocument(new Uint8Array(arrayBuffer)).promise;
+            setNumPages(pdf.numPages);
+
+            // Initialize canvas refs
+            canvas1Refs.current = Array(pdf.numPages).fill(null);
+            canvas2Refs.current = Array(pdf.numPages).fill(null);
+            diffCanvasRefs.current = Array(pdf.numPages).fill(null);
+        }
+    };
+
     // If no files, show file upload
     if (!file1 || !file2) {
         return (
-            <div className="flex flex-col items-center justify-center h-[calc(100vh-64px)] bg-linear-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
-                <div className="max-w-md w-full p-8 bg-white dark:bg-gray-800 rounded-2xl shadow-xl">
-                    <div className="flex items-center justify-center mb-6">
-                        <div className="p-4 bg-blue-100 dark:bg-blue-900 rounded-full">
-                            <GitCompare className="h-12 w-12 text-blue-600 dark:text-blue-400" />
+            <div className="mx-auto max-w-2xl px-4 py-8">
+                {/* Initial state - no files selected */}
+                {!file1 && (
+                    <FileUpload
+                        onFilesSelected={handleFilesSelected}
+                        maxFiles={2}
+                        accept={{ "application/pdf": [".pdf"] }}
+                        description="Select 2 PDF files to compare"
+                    />
+                )}
+
+                {/* One file selected - show option to add second */}
+                {file1 && !file2 && (
+                    <FileUpload
+                        onFilesSelected={(files) => {
+                            if (files.length > 0) {
+                                setFile2(files[0]);
+                            }
+                        }}
+                        maxFiles={1}
+                        accept={{ "application/pdf": [".pdf"] }}
+                        description="Select the second PDF to compare with"
+                    />
+                )}
+
+                {/* Show selected files status */}
+                {(file1 || file2) && (
+                    <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <div
+                            className={cn(
+                                "rounded-xl border bg-card p-4 shadow-sm transition-all hover:shadow-md",
+                                !file1 && "cursor-pointer border-dashed"
+                            )}
+                            onClick={() => !file1 && document.getElementById('file1-input')?.click()}
+                        >
+                            <div className="flex items-center gap-3">
+                                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
+                                    <FileText className="h-5 w-5" />
+                                </div>
+                                <div className="flex-1 overflow-hidden">
+                                    <p className="text-xs font-medium text-muted-foreground mb-0.5">Original PDF</p>
+                                    <p className="text-sm font-semibold truncate text-foreground">
+                                        {file1 ? file1.name : <span className="text-muted-foreground italic font-normal">Click to select...</span>}
+                                    </p>
+                                </div>
+                                {file1 ? (
+                                    <div className="flex items-center gap-1">
+                                        <Check className="h-5 w-5 text-green-500" />
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); setFile1(null); }}
+                                            className="h-6 w-6 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+                                        >
+                                            <X className="h-4 w-4 text-gray-500" />
+                                        </button>
+                                    </div>
+                                ) : null}
+                            </div>
+                        </div>
+
+                        <div
+                            className={cn(
+                                "rounded-xl border bg-card p-4 shadow-sm transition-all hover:shadow-md",
+                                !file2 && file1 && "cursor-pointer border-dashed border-indigo-300"
+                            )}
+                        >
+                            <div className="flex items-center gap-3">
+                                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400">
+                                    <GitCompare className="h-5 w-5" />
+                                </div>
+                                <div className="flex-1 overflow-hidden">
+                                    <p className="text-xs font-medium text-muted-foreground mb-0.5">Modified PDF</p>
+                                    <p className="text-sm font-semibold truncate text-foreground">
+                                        {file2 ? file2.name : <span className="text-muted-foreground italic font-normal">{file1 ? "↑ Select above" : "Waiting..."}</span>}
+                                    </p>
+                                </div>
+                                {file2 ? (
+                                    <div className="flex items-center gap-1">
+                                        <Check className="h-5 w-5 text-green-500" />
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); setFile2(null); }}
+                                            className="h-6 w-6 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+                                        >
+                                            <X className="h-4 w-4 text-gray-500" />
+                                        </button>
+                                    </div>
+                                ) : null}
+                            </div>
                         </div>
                     </div>
-                    <h1 className="text-2xl font-bold text-center mb-2 text-gray-900 dark:text-white">Compare PDFs</h1>
-                    <p className="text-center text-gray-600 dark:text-gray-400 mb-6">Upload two PDFs to compare</p>
-                    <div className="grid grid-cols-2 gap-4 mb-6">
-                        <div>
-                            <h3 className="text-sm font-medium mb-2 text-center text-gray-700 dark:text-gray-300">Original PDF</h3>
-                            <FileUpload
-                                onFilesSelected={handleFile1Selected}
-                                maxFiles={1}
-                                accept={{ "application/pdf": [".pdf"] }}
-                                description="Drop original PDF here"
-                            />
-                        </div>
-                        <div>
-                            <h3 className="text-sm font-medium mb-2 text-center text-gray-700 dark:text-gray-300">Modified PDF</h3>
-                            <FileUpload
-                                onFilesSelected={handleFile2Selected}
-                                maxFiles={1}
-                                accept={{ "application/pdf": [".pdf"] }}
-                                description="Drop modified PDF here"
-                            />
-                        </div>
-                    </div>
-                    <div className="mt-6 text-center">
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                            Compare PDFs side-by-side, overlay, or with difference highlighting
-                        </p>
-                    </div>
-                </div>
+                )}
             </div>
         );
     }
@@ -558,11 +636,11 @@ export function ComparePdfTool() {
                 <div className="flex items-center gap-1">
                     {/* Navigation */}
                     <div className="flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-1 mr-2">
-                        <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8" 
-                            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} 
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                             disabled={currentPage === 1}
                         >
                             <ChevronLeft className="h-4 w-4" />
@@ -570,17 +648,17 @@ export function ComparePdfTool() {
                         <span className="text-sm font-medium px-2 min-w-20 text-center text-gray-700 dark:text-gray-300">
                             {currentPage} / {numPages}
                         </span>
-                        <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8" 
-                            onClick={() => setCurrentPage(Math.min(numPages, currentPage + 1))} 
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => setCurrentPage(Math.min(numPages, currentPage + 1))}
                             disabled={currentPage === numPages}
                         >
                             <ChevronRight className="h-4 w-4" />
                         </Button>
                     </div>
-                    
+
                     {/* Comparison Mode */}
                     <div className="flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-1 mr-2">
                         {comparisonModeOptions.map((mode) => (
@@ -599,63 +677,63 @@ export function ComparePdfTool() {
                             </Button>
                         ))}
                     </div>
-                    
+
                     {/* Zoom Controls */}
                     <div className="flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
-                        <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8" 
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
                             onClick={() => setZoom(Math.max(25, zoom - 25))}
                         >
                             <ZoomOut className="h-4 w-4" />
                         </Button>
                         <span className="text-sm font-medium px-2 min-w-[60px] text-center text-gray-700 dark:text-gray-300">{zoom}%</span>
-                        <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8" 
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
                             onClick={() => setZoom(Math.min(200, zoom + 25))}
                         >
                             <ZoomIn className="h-4 w-4" />
                         </Button>
                         <div className="w-px h-4 bg-gray-300 dark:bg-gray-600 mx-1" />
-                        <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8" 
-                            onClick={fitToPage} 
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={fitToPage}
                             title="Fit to Page"
                         >
                             <Maximize className="h-4 w-4" />
                         </Button>
                     </div>
-                    
+
                     {/* Actions */}
                     <div className="flex items-center gap-1 ml-2">
-                        <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8" 
-                            onClick={undo} 
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={undo}
                             disabled={historyIndex <= 0}
                             title="Undo"
                         >
                             <Undo className="h-4 w-4" />
                         </Button>
-                        <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8" 
-                            onClick={redo} 
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={redo}
                             disabled={historyIndex >= history.length - 1}
                             title="Redo"
                         >
                             <Redo className="h-4 w-4" />
                         </Button>
-                        <Button 
-                            onClick={exportComparison} 
-                            disabled={isProcessing} 
+                        <Button
+                            onClick={exportComparison}
+                            disabled={isProcessing}
                             className="h-8 px-3 bg-blue-600 hover:bg-blue-700 text-white"
                         >
                             {isProcessing ? "Processing..." : <><Download className="h-4 w-4 mr-1" /> Export</>}
@@ -663,7 +741,7 @@ export function ComparePdfTool() {
                     </div>
                 </div>
             </div>
-            
+
             {/* Properties Panel */}
             <div className={cn(
                 "fixed right-4 top-20 z-40 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-4 w-80 transition-all duration-300",
@@ -671,16 +749,16 @@ export function ComparePdfTool() {
             )}>
                 <div className="flex items-center justify-between mb-4">
                     <h3 className="font-semibold text-gray-900 dark:text-white">Comparison Properties</h3>
-                    <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-6 w-6" 
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
                         onClick={() => setShowProperties(false)}
                     >
                         <X className="h-4 w-4" />
                     </Button>
                 </div>
-                
+
                 {/* Opacity Control */}
                 {comparisonMode === "overlay" && (
                     <div className="mb-4">
@@ -699,7 +777,7 @@ export function ComparePdfTool() {
                         />
                     </div>
                 )}
-                
+
                 {/* Annotation Tools */}
                 <div className="mb-4">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Annotation Tools</label>
@@ -746,7 +824,7 @@ export function ComparePdfTool() {
                         </Button>
                     </div>
                 </div>
-                
+
                 {/* Color Picker */}
                 <div className="mb-4">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Color</label>
@@ -775,7 +853,7 @@ export function ComparePdfTool() {
                         />
                     </div>
                 </div>
-                
+
                 {/* Stroke Width */}
                 <div className="mb-4">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Stroke Width: {strokeWidth}px</label>
@@ -792,7 +870,7 @@ export function ComparePdfTool() {
                         className="w-full"
                     />
                 </div>
-                
+
                 {/* Font Options */}
                 {activeTool === 'text' && (
                     <div className="mb-4">
@@ -830,7 +908,7 @@ export function ComparePdfTool() {
                         </div>
                     </div>
                 )}
-                
+
                 {/* File Info */}
                 <div className="mb-4 p-3 bg-gray-100 dark:bg-gray-700 rounded-lg">
                     <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
@@ -840,7 +918,7 @@ export function ComparePdfTool() {
                     </div>
                 </div>
             </div>
-            
+
             {/* Settings Panel */}
             <div className="fixed bottom-4 left-4 z-40">
                 <div className="flex items-center gap-2 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-2">
@@ -908,9 +986,9 @@ export function ComparePdfTool() {
                     </Button>
                 </div>
             </div>
-            
+
             {/* Main Canvas Area */}
-            <div 
+            <div
                 ref={scrollContainerRef}
                 className="flex-1 bg-gray-50 dark:bg-gray-900 overflow-auto p-8 relative"
             >
@@ -920,20 +998,20 @@ export function ComparePdfTool() {
                             <div className="flex flex-col items-center">
                                 <h3 className="text-lg font-semibold mb-2 text-gray-700 dark:text-gray-300">{file1?.name || "File 1"}</h3>
                                 {Array.from({ length: numPages }, (_, i) => (
-                                    <div 
-                                        key={i} 
+                                    <div
+                                        key={i}
                                         className="relative mb-4 shadow-2xl transition-transform duration-200 ease-out"
-                                        style={{ 
-                                            width: "fit-content", 
+                                        style={{
+                                            width: "fit-content",
                                             height: "fit-content",
                                             transform: `scale(${zoom / 100})`
                                         }}
                                     >
-                                        <canvas 
-                                            ref={el => { canvas1Refs.current[i] = el; }} 
-                                            className="max-w-none block bg-white" 
+                                        <canvas
+                                            ref={el => { canvas1Refs.current[i] = el; }}
+                                            className="max-w-none block bg-white"
                                         />
-                                        
+
                                         {/* Page Number */}
                                         <div className="absolute bottom-4 right-4 bg-gray-800 bg-opacity-70 text-white px-2 py-1 rounded text-sm">
                                             Page {i + 1}
@@ -941,24 +1019,24 @@ export function ComparePdfTool() {
                                     </div>
                                 ))}
                             </div>
-                            
+
                             <div className="flex flex-col items-center">
                                 <h3 className="text-lg font-semibold mb-2 text-gray-700 dark:text-gray-300">{file2?.name || "File 2"}</h3>
                                 {Array.from({ length: numPages }, (_, i) => (
-                                    <div 
-                                        key={i} 
+                                    <div
+                                        key={i}
                                         className="relative mb-4 shadow-2xl transition-transform duration-200 ease-out"
-                                        style={{ 
-                                            width: "fit-content", 
+                                        style={{
+                                            width: "fit-content",
                                             height: "fit-content",
                                             transform: `scale(${zoom / 100})`
                                         }}
                                     >
-                                        <canvas 
-                                            ref={el => { canvas2Refs.current[i] = el; }} 
-                                            className="max-w-none block bg-white" 
+                                        <canvas
+                                            ref={el => { canvas2Refs.current[i] = el; }}
+                                            className="max-w-none block bg-white"
                                         />
-                                        
+
                                         {/* Page Number */}
                                         <div className="absolute bottom-4 right-4 bg-gray-800 bg-opacity-70 text-white px-2 py-1 rounded text-sm">
                                             Page {i + 1}
@@ -968,38 +1046,38 @@ export function ComparePdfTool() {
                             </div>
                         </div>
                     )}
-                    
+
                     {comparisonMode === "overlay" && (
                         <div className="relative">
                             <h3 className="text-lg font-semibold mb-4 text-center text-gray-700 dark:text-gray-300">
                                 {file1?.name || "File 1"} vs {file2?.name || "File 2"}
                             </h3>
                             {Array.from({ length: numPages }, (_, i) => (
-                                <div 
-                                    key={i} 
+                                <div
+                                    key={i}
                                     className="relative mb-4 shadow-2xl transition-transform duration-200 ease-out"
-                                    style={{ 
-                                        width: "fit-content", 
+                                    style={{
+                                        width: "fit-content",
                                         height: "fit-content",
                                         transform: `scale(${zoom / 100})`
                                     }}
                                 >
-                                    <canvas 
-                                        ref={el => { canvas1Refs.current[i] = el; }} 
-                                        className="max-w-none block bg-white" 
+                                    <canvas
+                                        ref={el => { canvas1Refs.current[i] = el; }}
+                                        className="max-w-none block bg-white"
                                     />
-                                    
+
                                     {/* Overlay second PDF */}
-                                    <div 
+                                    <div
                                         className="absolute inset-0"
                                         style={{ opacity: opacity / 100 }}
                                     >
-                                        <canvas 
-                                            ref={el => { canvas2Refs.current[i] = el; }} 
-                                            className="max-w-none block" 
+                                        <canvas
+                                            ref={el => { canvas2Refs.current[i] = el; }}
+                                            className="max-w-none block"
                                         />
                                     </div>
-                                    
+
                                     {/* Page Number */}
                                     <div className="absolute bottom-4 right-4 bg-gray-800 bg-opacity-70 text-white px-2 py-1 rounded text-sm">
                                         Page {i + 1}
@@ -1008,7 +1086,7 @@ export function ComparePdfTool() {
                             ))}
                         </div>
                     )}
-                    
+
                     {comparisonMode === "diff" && (
                         <div className="flex flex-col items-center">
                             <h3 className="text-lg font-semibold mb-4 text-center text-gray-700 dark:text-gray-300">
@@ -1021,28 +1099,28 @@ export function ComparePdfTool() {
                                 </div>
                             ) : (
                                 Array.from({ length: numPages }, (_, i) => (
-                                    <div 
-                                        key={i} 
+                                    <div
+                                        key={i}
                                         className="relative mb-4 shadow-2xl transition-transform duration-200 ease-out"
-                                        style={{ 
-                                            width: "fit-content", 
+                                        style={{
+                                            width: "fit-content",
                                             height: "fit-content",
                                             transform: `scale(${zoom / 100})`
                                         }}
                                     >
                                         {diffImage && i === 0 ? (
-                                            <img 
-                                                src={diffImage} 
-                                                alt="Difference" 
-                                                className="max-w-none block bg-white" 
+                                            <img
+                                                src={diffImage}
+                                                alt="Difference"
+                                                className="max-w-none block bg-white"
                                             />
                                         ) : (
-                                            <canvas 
-                                                ref={el => { diffCanvasRefs.current[i] = el; }} 
-                                                className="max-w-none block bg-white" 
+                                            <canvas
+                                                ref={el => { diffCanvasRefs.current[i] = el; }}
+                                                className="max-w-none block bg-white"
                                             />
                                         )}
-                                        
+
                                         {/* Page Number */}
                                         <div className="absolute bottom-4 right-4 bg-gray-800 bg-opacity-70 text-white px-2 py-1 rounded text-sm">
                                             Page {i + 1}
@@ -1052,7 +1130,7 @@ export function ComparePdfTool() {
                             )}
                         </div>
                     )}
-                    
+
                     {comparisonMode === "slide" && (
                         <div className="flex flex-col items-center">
                             <div className="flex items-center gap-4 mb-4">
@@ -1087,44 +1165,44 @@ export function ComparePdfTool() {
                                     Both
                                 </Button>
                             </div>
-                            
+
                             {Array.from({ length: numPages }, (_, i) => (
-                                <div 
-                                    key={i} 
+                                <div
+                                    key={i}
                                     className="relative mb-4 shadow-2xl transition-transform duration-200 ease-out"
-                                    style={{ 
-                                        width: "fit-content", 
+                                    style={{
+                                        width: "fit-content",
                                         height: "fit-content",
                                         transform: `scale(${zoom / 100})`
                                     }}
                                 >
                                     {showFile1Only && (
-                                        <canvas 
-                                            ref={el => { canvas1Refs.current[i] = el; }} 
-                                            className="max-w-none block bg-white" 
+                                        <canvas
+                                            ref={el => { canvas1Refs.current[i] = el; }}
+                                            className="max-w-none block bg-white"
                                         />
                                     )}
-                                    
+
                                     {showFile2Only && (
-                                        <canvas 
-                                            ref={el => { canvas2Refs.current[i] = el; }} 
-                                            className="max-w-none block bg-white" 
+                                        <canvas
+                                            ref={el => { canvas2Refs.current[i] = el; }}
+                                            className="max-w-none block bg-white"
                                         />
                                     )}
-                                    
+
                                     {!showFile1Only && !showFile2Only && (
                                         <div className="flex gap-4">
-                                            <canvas 
-                                                ref={el => { canvas1Refs.current[i] = el; }} 
-                                                className="max-w-none block bg-white" 
+                                            <canvas
+                                                ref={el => { canvas1Refs.current[i] = el; }}
+                                                className="max-w-none block bg-white"
                                             />
-                                            <canvas 
-                                                ref={el => { canvas2Refs.current[i] = el; }} 
-                                                className="max-w-none block bg-white" 
+                                            <canvas
+                                                ref={el => { canvas2Refs.current[i] = el; }}
+                                                className="max-w-none block bg-white"
                                             />
                                         </div>
                                     )}
-                                    
+
                                     {/* Page Number */}
                                     <div className="absolute bottom-4 right-4 bg-gray-800 bg-opacity-70 text-white px-2 py-1 rounded text-sm">
                                         Page {i + 1}
@@ -1135,7 +1213,7 @@ export function ComparePdfTool() {
                     )}
                 </div>
             </div>
-            
+
             {/* Help Button */}
             <div className="fixed bottom-4 right-4 z-40">
                 <Button

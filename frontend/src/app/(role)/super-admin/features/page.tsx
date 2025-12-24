@@ -36,7 +36,12 @@ export default function SuperAdminFeaturesPage() {
     const loadFeatures = async () => {
         try {
             const data = await api.getFeatures();
-            setFeatures(data);
+            // Filter to only show PDF Tools and exclude specific system features
+            const toolFeatures = data.filter((f: any) =>
+                f.category === 'TOOL' &&
+                !['UPDATE_PROFILE', 'UPLOAD_FILE'].includes(f.code)
+            );
+            setFeatures(toolFeatures);
         } catch (error) {
             toast.error("Failed to load features");
         } finally {
@@ -78,7 +83,14 @@ export default function SuperAdminFeaturesPage() {
     const handleUpdateFeature = async () => {
         if (!editingFeature) return;
         try {
-            await api.updateFeature(editingFeature.id, editingFeature);
+            // Sanitize payload: Remove icon if it's a string (URL)
+            // also ensure 'code' is not changed or handle validation
+            const payload: any = { ...editingFeature };
+            if (typeof payload.icon === 'string') {
+                delete payload.icon;
+            }
+
+            await api.updateFeature(editingFeature.id, payload);
             toast.success("Feature updated");
             setIsEditOpen(false);
             loadFeatures();

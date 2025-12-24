@@ -6,7 +6,7 @@ import { FileUpload } from "../ui/file-upload";
 import { Button } from "../ui/button";
 import { ArrowRight, Trash2, Settings } from "lucide-react";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
-import { pdfApi } from "@/lib/services/pdf-api";
+import { pdfStrategyManager } from "@/lib/services/pdf-service";
 import { toast } from "@/lib/hooks/use-toast";
 import { useRouter } from "next/navigation";
 
@@ -41,12 +41,14 @@ export function JpgToPdfTool() {
         setIsProcessing(true);
 
         try {
-            // Backend-first with client-side fallback
-            // Note: Backend currently takes single file, so process first file
-            // For multiple files, falls back to client-side
-            const result = await pdfApi.jpgToPdf(files[0]);
+            // Use pdfStrategyManager with page settings options
+            const result = await pdfStrategyManager.execute('convert-to-pdf', files, {
+                pageSize,
+                orientation,
+                margin,
+            });
 
-            saveAs(result.blob, result.fileName);
+            saveAs(result.blob, result.fileName || 'converted-images.pdf');
 
             toast.show({
                 title: "Success",
@@ -98,12 +100,12 @@ export function JpgToPdfTool() {
         <div className="space-y-8">
             <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold">Selected Images ({files.length})</h2>
-                <div className="flex gap-4">
+                <div className="flex gap-2">
                     <FileUpload
                         onFilesSelected={handleFilesSelected}
                         accept={{ "image/jpeg": [".jpg", ".jpeg"], "image/png": [".png"], "image/gif": [".gif"], "image/webp": [".webp"], "image/bmp": [".bmp"] }}
                         maxFiles={50}
-                        description="Add more"
+                        variant="compact"
                     />
                     <Button variant="outline" onClick={() => setFiles([])}>
                         Clear All
@@ -128,16 +130,54 @@ export function JpgToPdfTool() {
                                                     ref={provided.innerRef}
                                                     {...provided.draggableProps}
                                                     {...provided.dragHandleProps}
-                                                    className="relative flex flex-col items-center rounded-xl border bg-card p-2 shadow-sm transition-shadow hover:shadow-md"
+                                                    className="relative flex flex-col items-center rounded-xl border bg-card p-4 shadow-sm transition-shadow hover:shadow-md"
                                                 >
-                                                    <div className="relative mb-2 aspect-square w-full overflow-hidden rounded-lg bg-muted/20">
-                                                        <img
-                                                            src={URL.createObjectURL(file)}
-                                                            alt={file.name}
-                                                            className="h-full w-full object-cover"
-                                                        />
+                                                    {/* Page Frame Preview - reflects page size, orientation, margins */}
+                                                    <div className="flex items-center justify-center w-full" style={{ minHeight: 150 }}>
+                                                        <div
+                                                            className="relative bg-white border-2 border-gray-300 shadow-lg flex items-center justify-center transition-all duration-300"
+                                                            style={{
+                                                                // Page dimensions: A4 (1:1.414), Letter (1:1.294), Auto (square)
+                                                                width: (() => {
+                                                                    if (pageSize === 'auto') return 120;
+                                                                    const isLandscape = orientation === 'landscape';
+                                                                    return isLandscape ? 160 : (pageSize === 'letter' ? 105 : 100);
+                                                                })(),
+                                                                height: (() => {
+                                                                    if (pageSize === 'auto') return 120;
+                                                                    const isLandscape = orientation === 'landscape';
+                                                                    if (isLandscape) {
+                                                                        return pageSize === 'letter' ? 105 : 100;
+                                                                    }
+                                                                    return pageSize === 'letter' ? 130 : 140;
+                                                                })(),
+                                                            }}
+                                                        >
+                                                            {/* Margin indicator */}
+                                                            <div
+                                                                className="absolute inset-0 border-dashed border-blue-400 transition-all duration-300"
+                                                                style={{
+                                                                    margin: margin === 'none' ? 0 : margin === 'small' ? 4 : 10,
+                                                                    borderWidth: margin === 'none' ? 0 : 2,
+                                                                }}
+                                                            />
+                                                            {/* Image inside page */}
+                                                            <div
+                                                                className="overflow-hidden flex items-center justify-center transition-all duration-300"
+                                                                style={{
+                                                                    width: `calc(100% - ${margin === 'none' ? 0 : margin === 'small' ? 12 : 24}px)`,
+                                                                    height: `calc(100% - ${margin === 'none' ? 0 : margin === 'small' ? 12 : 24}px)`,
+                                                                }}
+                                                            >
+                                                                <img
+                                                                    src={URL.createObjectURL(file)}
+                                                                    alt={file.name}
+                                                                    className="max-h-full max-w-full object-contain"
+                                                                />
+                                                            </div>
+                                                        </div>
                                                     </div>
-                                                    <p className="mb-1 w-full truncate text-center text-xs font-medium" title={file.name}>
+                                                    <p className="mt-3 w-full truncate text-center text-xs font-medium" title={file.name}>
                                                         {file.name}
                                                     </p>
                                                     <button

@@ -4,12 +4,12 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { saveAs } from "file-saver";
 import { FileUpload } from "../ui/file-upload";
 import { Button } from "../ui/button";
-import { 
-    Crop, 
-    CheckSquare, 
-    Square, 
-    ChevronLeft, 
-    ChevronRight, 
+import {
+    Crop,
+    CheckSquare,
+    Square,
+    ChevronLeft,
+    ChevronRight,
     RotateCw,
     ZoomIn,
     ZoomOut,
@@ -62,13 +62,13 @@ export function CropPdfTool() {
     const [numPages, setNumPages] = useState(0);
     const [applyToAll, setApplyToAll] = useState(true);
     const [zoom, setZoom] = useState(100);
-    
+
     // Crop box in percentages (0-100)
     const [cropBox, setCropBox] = useState({ x: 10, y: 10, width: 80, height: 80 });
     const [rotation, setRotation] = useState(0);
     const [isDragging, setIsDragging] = useState(false);
     const [dragHandle, setDragHandle] = useState<string | null>(null);
-    
+
     // UI state
     const [showToolbar, setShowToolbar] = useState(true);
     const [showProperties, setShowProperties] = useState(true);
@@ -81,7 +81,7 @@ export function CropPdfTool() {
     const [aspectRatio, setAspectRatio] = useState<number | null>(null);
     const [cropHistory, setCropHistory] = useState<CropHistoryState[]>([]);
     const [historyIndex, setHistoryIndex] = useState(-1);
-    
+
     // Canvas refs
     const canvasRefs = useRef<(HTMLCanvasElement | null)[]>([]);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -91,10 +91,10 @@ export function CropPdfTool() {
     const cropPresets: CropPreset[] = [
         { name: "Free", aspectRatio: null, icon: <Move className="h-4 w-4" /> },
         { name: "Square", aspectRatio: 1, icon: <SquareIcon className="h-4 w-4" /> },
-        { name: "4:3", aspectRatio: 4/3, icon: <Monitor className="h-4 w-4" /> },
-        { name: "16:9", aspectRatio: 16/9, icon: <RectangleHorizontal className="h-4 w-4" /> },
-        { name: "9:16", aspectRatio: 9/16, icon: <Smartphone className="h-4 w-4" /> },
-        { name: "3:4", aspectRatio: 3/4, icon: <Tablet className="h-4 w-4" /> },
+        { name: "4:3", aspectRatio: 4 / 3, icon: <Monitor className="h-4 w-4" /> },
+        { name: "16:9", aspectRatio: 16 / 9, icon: <RectangleHorizontal className="h-4 w-4" /> },
+        { name: "9:16", aspectRatio: 9 / 16, icon: <Smartphone className="h-4 w-4" /> },
+        { name: "3:4", aspectRatio: 3 / 4, icon: <Tablet className="h-4 w-4" /> },
     ];
 
     const handleFileSelected = async (files: File[]) => {
@@ -120,10 +120,10 @@ export function CropPdfTool() {
             const pdfjsLib = await getPdfJs();
             const arrayBuffer = await file.arrayBuffer();
             const pdf = await (pdfjsLib as any).getDocument(new Uint8Array(arrayBuffer)).promise;
-            
+
             // Apply zoom
             const scale = zoom / 100;
-            
+
             // Render each page
             for (let i = 1; i <= pdf.numPages; i++) {
                 const page = await pdf.getPage(i);
@@ -136,17 +136,17 @@ export function CropPdfTool() {
                     rotationDeg = Math.round(rotationDeg / 90) * 90;
                 }
                 const viewport = page.getViewport({ scale, rotation: rotationDeg });
-                
+
                 // Get or create canvas
                 let canvas = canvasRefs.current[i - 1];
-                
+
                 if (!canvas) continue;
-                
+
                 const context = canvas.getContext("2d")!;
-                
+
                 canvas.height = viewport.height;
                 canvas.width = viewport.width;
-                
+
                 await page.render({
                     canvasContext: context,
                     viewport: viewport,
@@ -154,7 +154,7 @@ export function CropPdfTool() {
                 }).promise;
             }
         };
-        
+
         renderAllPages();
     }, [file, zoom, rotation]);
 
@@ -164,16 +164,16 @@ export function CropPdfTool() {
             cropBox: { ...cropBox },
             rotation
         };
-        
+
         // Remove any states after the current index
         const newHistory = cropHistory.slice(0, historyIndex + 1);
         newHistory.push(newState);
-        
+
         // Limit history to 20 states
         if (newHistory.length > 20) {
             newHistory.shift();
         }
-        
+
         setCropHistory(newHistory);
         setHistoryIndex(newHistory.length - 1);
     }, [cropBox, rotation, cropHistory, historyIndex]);
@@ -201,24 +201,24 @@ export function CropPdfTool() {
     // Apply crop preset
     const applyPreset = (preset: CropPreset) => {
         saveToHistory();
-        
+
         if (preset.aspectRatio === null) {
             setMaintainAspectRatio(false);
             setAspectRatio(null);
         } else {
             setMaintainAspectRatio(true);
             setAspectRatio(preset.aspectRatio);
-            
+
             // Adjust crop box to match aspect ratio
             const canvas = canvasRefs.current[currentPage - 1];
             if (!canvas) return;
-            
+
             const canvasWidth = canvas.width;
             const canvasHeight = canvas.height;
             const canvasAspectRatio = canvasWidth / canvasHeight;
-            
+
             let newWidth, newHeight;
-            
+
             if (preset.aspectRatio > canvasAspectRatio) {
                 // Wider than canvas, match width
                 newWidth = cropBox.width;
@@ -228,11 +228,11 @@ export function CropPdfTool() {
                 newHeight = cropBox.height;
                 newWidth = newHeight * preset.aspectRatio;
             }
-            
+
             // Center the crop box
             const newX = cropBox.x + (cropBox.width - newWidth) / 2;
             const newY = cropBox.y + (cropBox.height - newHeight) / 2;
-            
+
             setCropBox({
                 x: Math.max(0, Math.min(100 - newWidth, newX)),
                 y: Math.max(0, Math.min(100 - newHeight, newY)),
@@ -250,28 +250,28 @@ export function CropPdfTool() {
     const handleMouseDown = (e: React.MouseEvent, pageIndex: number) => {
         e.preventDefault();
         e.stopPropagation();
-        
+
         const canvas = canvasRefs.current[pageIndex];
         if (!canvas) return;
-        
+
         const rect = canvas.getBoundingClientRect();
         let x = ((e.clientX - rect.left) / rect.width) * 100;
         let y = ((e.clientY - rect.top) / rect.height) * 100;
-        
+
         // Snap to grid if enabled
         if (snapToGrid) {
             x = Math.round(x / gridSize) * gridSize;
             y = Math.round(y / gridSize) * gridSize;
         }
-        
+
         // Calculate relative position within the crop box
         const relativeX = (x - cropBox.x) / cropBox.width;
         const relativeY = (y - cropBox.y) / cropBox.height;
-        
+
         // Determine which handle to use based on position
         let detectedHandle: string = 'move';
         const edgeThreshold = 0.25; // 25% from edge for resize handles
-        
+
         if (relativeX < edgeThreshold && relativeY < edgeThreshold) {
             detectedHandle = 'nw';
         } else if (relativeX > 1 - edgeThreshold && relativeY < edgeThreshold) {
@@ -289,7 +289,7 @@ export function CropPdfTool() {
         } else if (relativeY > 1 - edgeThreshold) {
             detectedHandle = 's';
         }
-        
+
         setIsDragging(true);
         setDragHandle(detectedHandle);
     };
@@ -304,7 +304,7 @@ export function CropPdfTool() {
             const rect = canvas.getBoundingClientRect();
             let x = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
             let y = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100));
-            
+
             // Snap to grid if enabled
             if (snapToGrid) {
                 x = Math.round(x / gridSize) * gridSize;
@@ -323,7 +323,7 @@ export function CropPdfTool() {
                 } else if (dragHandle === 'nw') {
                     let newWidth = prev.x + prev.width - x;
                     let newHeight = prev.y + prev.height - y;
-                    
+
                     if (maintainAspectRatio && aspectRatio) {
                         // Maintain aspect ratio
                         const aspectHeight = newWidth / aspectRatio;
@@ -333,7 +333,7 @@ export function CropPdfTool() {
                             newWidth = newHeight * aspectRatio;
                         }
                     }
-                    
+
                     if (newWidth >= 5 && newHeight >= 5) {
                         newBox.width = newWidth;
                         newBox.height = newHeight;
@@ -343,7 +343,7 @@ export function CropPdfTool() {
                 } else if (dragHandle === 'ne') {
                     let newWidth = x - prev.x;
                     let newHeight = prev.y + prev.height - y;
-                    
+
                     if (maintainAspectRatio && aspectRatio) {
                         // Maintain aspect ratio
                         const aspectHeight = newWidth / aspectRatio;
@@ -353,7 +353,7 @@ export function CropPdfTool() {
                             newWidth = newHeight * aspectRatio;
                         }
                     }
-                    
+
                     if (newWidth >= 5 && newHeight >= 5) {
                         newBox.width = newWidth;
                         newBox.height = newHeight;
@@ -362,7 +362,7 @@ export function CropPdfTool() {
                 } else if (dragHandle === 'sw') {
                     let newWidth = prev.x + prev.width - x;
                     let newHeight = y - prev.y;
-                    
+
                     if (maintainAspectRatio && aspectRatio) {
                         // Maintain aspect ratio
                         const aspectHeight = newWidth / aspectRatio;
@@ -372,7 +372,7 @@ export function CropPdfTool() {
                             newWidth = newHeight * aspectRatio;
                         }
                     }
-                    
+
                     if (newWidth >= 5 && newHeight >= 5) {
                         newBox.width = newWidth;
                         newBox.height = newHeight;
@@ -381,7 +381,7 @@ export function CropPdfTool() {
                 } else if (dragHandle === 'se') {
                     let newWidth = x - prev.x;
                     let newHeight = y - prev.y;
-                    
+
                     if (maintainAspectRatio && aspectRatio) {
                         // Maintain aspect ratio
                         const aspectHeight = newWidth / aspectRatio;
@@ -391,7 +391,7 @@ export function CropPdfTool() {
                             newWidth = newHeight * aspectRatio;
                         }
                     }
-                    
+
                     if (newWidth >= 5 && newHeight >= 5) {
                         newBox.width = newWidth;
                         newBox.height = newHeight;
@@ -460,7 +460,7 @@ export function CropPdfTool() {
             });
 
             saveAs(result.blob, result.fileName || `cropped-${file.name}`);
-            
+
             toast.show({
                 title: "Success",
                 message: "PDF cropped successfully!",
@@ -491,27 +491,13 @@ export function CropPdfTool() {
     // If no file, show file upload
     if (!file) {
         return (
-            <div className="flex flex-col items-center justify-center h-[calc(100vh-64px)] bg-linear-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
-                <div className="max-w-md w-full p-8 bg-white dark:bg-gray-800 rounded-2xl shadow-xl">
-                    <div className="flex items-center justify-center mb-6">
-                        <div className="p-4 bg-blue-100 dark:bg-blue-900 rounded-full">
-                            <Crop className="h-12 w-12 text-blue-600 dark:text-blue-400" />
-                        </div>
-                    </div>
-                    <h1 className="text-2xl font-bold text-center mb-2 text-gray-900 dark:text-white">Crop PDF</h1>
-                    <p className="text-center text-gray-600 dark:text-gray-400 mb-6">Upload a PDF to crop it</p>
-                    <FileUpload
-                        onFilesSelected={handleFileSelected}
-                        maxFiles={1}
-                        accept={{ "application/pdf": [".pdf"] }}
-                        description="Drop a PDF file here or click to browse"
-                    />
-                    <div className="mt-6 text-center">
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                            Crop your PDFs with precision and control
-                        </p>
-                    </div>
-                </div>
+            <div className="mx-auto max-w-2xl px-4">
+                <FileUpload
+                    onFilesSelected={handleFileSelected}
+                    maxFiles={1}
+                    accept={{ "application/pdf": [".pdf"] }}
+                    description="Drop a PDF file here or click to browse"
+                />
             </div>
         );
     }
@@ -529,11 +515,11 @@ export function CropPdfTool() {
                 <div className="flex items-center gap-1">
                     {/* Navigation */}
                     <div className="flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-1 mr-2">
-                        <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8" 
-                            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} 
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                             disabled={currentPage === 1}
                         >
                             <ChevronLeft className="h-4 w-4" />
@@ -541,17 +527,17 @@ export function CropPdfTool() {
                         <span className="text-sm font-medium px-2 min-w-20 text-center text-gray-700 dark:text-gray-300">
                             {currentPage} / {numPages}
                         </span>
-                        <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8" 
-                            onClick={() => setCurrentPage(Math.min(numPages, currentPage + 1))} 
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => setCurrentPage(Math.min(numPages, currentPage + 1))}
                             disabled={currentPage === numPages}
                         >
                             <ChevronRight className="h-4 w-4" />
                         </Button>
                     </div>
-                    
+
                     {/* Crop Tools */}
                     <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-1 mr-2">
                         {cropPresets.map((preset) => (
@@ -567,44 +553,44 @@ export function CropPdfTool() {
                             </Button>
                         ))}
                     </div>
-                    
+
                     {/* Zoom Controls */}
                     <div className="flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-1 mr-2">
-                        <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8" 
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
                             onClick={() => setZoom(Math.max(25, zoom - 25))}
                         >
                             <ZoomOut className="h-4 w-4" />
                         </Button>
                         <span className="text-sm font-medium px-2 min-w-[60px] text-center text-gray-700 dark:text-gray-300">{zoom}%</span>
-                        <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8" 
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
                             onClick={() => setZoom(Math.min(200, zoom + 25))}
                         >
                             <ZoomIn className="h-4 w-4" />
                         </Button>
                         <div className="w-px h-4 bg-gray-300 dark:bg-gray-600 mx-1" />
-                        <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8" 
-                            onClick={fitToPage} 
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={fitToPage}
                             title="Fit to Page"
                         >
                             <Maximize className="h-4 w-4" />
                         </Button>
                     </div>
-                    
+
                     {/* Rotation */}
                     <div className="flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-1 mr-2">
-                        <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8" 
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
                             onClick={() => {
                                 saveToHistory();
                                 setRotation((prev) => ((prev - 90 + 360) % 360));
@@ -613,10 +599,10 @@ export function CropPdfTool() {
                         >
                             <RotateCw className="h-4 w-4 rotate-180" />
                         </Button>
-                        <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8" 
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
                             onClick={() => {
                                 saveToHistory();
                                 setRotation((prev) => ((prev + 90) % 360));
@@ -626,32 +612,32 @@ export function CropPdfTool() {
                             <RotateCw className="h-4 w-4" />
                         </Button>
                     </div>
-                    
+
                     {/* Actions */}
                     <div className="flex items-center gap-1 ml-2">
-                        <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8" 
-                            onClick={undo} 
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={undo}
                             disabled={historyIndex <= 0}
                             title="Undo"
                         >
                             <Undo className="h-4 w-4" />
                         </Button>
-                        <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8" 
-                            onClick={redo} 
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={redo}
                             disabled={historyIndex >= cropHistory.length - 1}
                             title="Redo"
                         >
                             <Redo className="h-4 w-4" />
                         </Button>
-                        <Button 
-                            onClick={cropPdf} 
-                            disabled={isProcessing} 
+                        <Button
+                            onClick={cropPdf}
+                            disabled={isProcessing}
                             className="h-8 px-3 bg-blue-600 hover:bg-blue-700 text-white"
                         >
                             {isProcessing ? "Processing..." : <><Download className="h-4 w-4 mr-1" /> Crop</>}
@@ -659,7 +645,7 @@ export function CropPdfTool() {
                     </div>
                 </div>
             </div>
-            
+
             {/* Properties Panel */}
             <div className={cn(
                 "fixed right-4 top-20 z-40 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-4 w-80 transition-all duration-300",
@@ -667,16 +653,16 @@ export function CropPdfTool() {
             )}>
                 <div className="flex items-center justify-between mb-4">
                     <h3 className="font-semibold text-gray-900 dark:text-white">Crop Settings</h3>
-                    <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-6 w-6" 
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
                         onClick={() => setShowProperties(false)}
                     >
                         <X className="h-4 w-4" />
                     </Button>
                 </div>
-                
+
                 {/* Crop Options */}
                 <div className="mb-4 space-y-2">
                     <div className="flex items-center justify-between">
@@ -689,7 +675,7 @@ export function CropPdfTool() {
                             {applyToAll ? <CheckSquare className="h-4 w-4" /> : <Square className="h-4 w-4" />}
                         </Button>
                     </div>
-                    
+
                     <div className="flex items-center justify-between">
                         <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Show grid</label>
                         <Button
@@ -700,7 +686,7 @@ export function CropPdfTool() {
                             {showGrid ? <CheckSquare className="h-4 w-4" /> : <Square className="h-4 w-4" />}
                         </Button>
                     </div>
-                    
+
                     <div className="flex items-center justify-between">
                         <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Snap to grid</label>
                         <Button
@@ -712,7 +698,7 @@ export function CropPdfTool() {
                             {snapToGrid ? <CheckSquare className="h-4 w-4" /> : <Square className="h-4 w-4" />}
                         </Button>
                     </div>
-                    
+
                     {showGrid && (
                         <div className="flex items-center gap-2">
                             <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Grid size</label>
@@ -728,7 +714,7 @@ export function CropPdfTool() {
                         </div>
                     )}
                 </div>
-                
+
                 {/* Crop Info */}
                 <div className="mb-4 p-3 bg-gray-100 dark:bg-gray-700 rounded-lg">
                     <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
@@ -737,12 +723,12 @@ export function CropPdfTool() {
                         <div>Rotation: {rotation}°</div>
                     </div>
                 </div>
-                
+
                 <div className="text-xs text-gray-500 dark:text-gray-400">
                     Drag the edges or corners of the box on the preview to resize the crop area. Drag inside the box to move it.
                 </div>
             </div>
-            
+
             {/* Settings Panel */}
             <div className="fixed bottom-4 left-4 z-40">
                 <div className="flex items-center gap-2 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-2">
@@ -810,47 +796,47 @@ export function CropPdfTool() {
                     </Button>
                 </div>
             </div>
-            
+
             {/* Main Canvas Area */}
-            <div 
+            <div
                 ref={scrollContainerRef}
                 className="flex-1 bg-gray-50 dark:bg-gray-900 overflow-auto p-8 relative"
             >
                 <div className="flex flex-col items-center">
                     {Array.from({ length: numPages }, (_, i) => (
-                        <div 
-                            key={i} 
+                        <div
+                            key={i}
                             className="relative mb-8 shadow-2xl transition-transform duration-200 ease-out"
-                            style={{ 
-                                width: "fit-content", 
+                            style={{
+                                width: "fit-content",
                                 height: "fit-content",
                                 transform: `scale(${zoom / 100})`
                             }}
                         >
-                            <canvas 
-                                ref={el => { canvasRefs.current[i] = el; }} 
-                                className="max-w-none block bg-white" 
+                            <canvas
+                                ref={el => { canvasRefs.current[i] = el; }}
+                                className="max-w-none block bg-white"
                             />
-                            
+
                             {/* Grid Overlay */}
                             {showGrid && (
                                 <div className="absolute inset-0 pointer-events-none">
                                     <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
                                         <defs>
                                             <pattern id="grid" width={`${gridSize}%`} height={`${gridSize}%`} patternUnits="userSpaceOnUse">
-                                                <path d={`M ${gridSize}% 0 L 0 0 0 ${gridSize}%`} fill="none" stroke="rgba(0,0,0,0.1)" strokeWidth="0.5"/>
+                                                <path d={`M ${gridSize}% 0 L 0 0 0 ${gridSize}%`} fill="none" stroke="rgba(0,0,0,0.1)" strokeWidth="0.5" />
                                             </pattern>
                                         </defs>
                                         <rect width="100%" height="100%" fill="url(#grid)" />
                                     </svg>
                                 </div>
                             )}
-                            
+
                             {/* Crop Overlay */}
                             {i === currentPage - 1 && (
                                 <div className="absolute inset-0 pointer-events-none">
                                     {/* Top overlay */}
-                                    <div 
+                                    <div
                                         className="absolute bg-black/50"
                                         style={{
                                             left: 0,
@@ -860,7 +846,7 @@ export function CropPdfTool() {
                                         }}
                                     />
                                     {/* Bottom overlay */}
-                                    <div 
+                                    <div
                                         className="absolute bg-black/50"
                                         style={{
                                             left: 0,
@@ -870,7 +856,7 @@ export function CropPdfTool() {
                                         }}
                                     />
                                     {/* Left overlay */}
-                                    <div 
+                                    <div
                                         className="absolute bg-black/50"
                                         style={{
                                             left: 0,
@@ -880,7 +866,7 @@ export function CropPdfTool() {
                                         }}
                                     />
                                     {/* Right overlay */}
-                                    <div 
+                                    <div
                                         className="absolute bg-black/50"
                                         style={{
                                             left: `${cropBox.x + cropBox.width}%`,
@@ -889,9 +875,9 @@ export function CropPdfTool() {
                                             height: `${cropBox.height}%`
                                         }}
                                     />
-                                    
+
                                     {/* Crop box border */}
-                                    <div 
+                                    <div
                                         className="absolute border-2 border-white cursor-move pointer-events-auto"
                                         style={{
                                             left: `${cropBox.x}%`,
@@ -901,9 +887,9 @@ export function CropPdfTool() {
                                         }}
                                         onMouseDown={(e) => handleMouseDown(e, i)}
                                     />
-                                    
+
                                     {/* Corner handles */}
-                                    <div 
+                                    <div
                                         className="absolute w-3 h-3 bg-white border-2 border-blue-500 rounded-full pointer-events-auto cursor-nw-resize"
                                         style={{
                                             left: `${cropBox.x}%`,
@@ -912,7 +898,7 @@ export function CropPdfTool() {
                                         }}
                                         onMouseDown={(e) => handleMouseDown(e, i)}
                                     />
-                                    <div 
+                                    <div
                                         className="absolute w-3 h-3 bg-white border-2 border-blue-500 rounded-full pointer-events-auto cursor-ne-resize"
                                         style={{
                                             left: `${cropBox.x + cropBox.width}%`,
@@ -921,7 +907,7 @@ export function CropPdfTool() {
                                         }}
                                         onMouseDown={(e) => handleMouseDown(e, i)}
                                     />
-                                    <div 
+                                    <div
                                         className="absolute w-3 h-3 bg-white border-2 border-blue-500 rounded-full pointer-events-auto cursor-sw-resize"
                                         style={{
                                             left: `${cropBox.x}%`,
@@ -930,7 +916,7 @@ export function CropPdfTool() {
                                         }}
                                         onMouseDown={(e) => handleMouseDown(e, i)}
                                     />
-                                    <div 
+                                    <div
                                         className="absolute w-3 h-3 bg-white border-2 border-blue-500 rounded-full pointer-events-auto cursor-se-resize"
                                         style={{
                                             left: `${cropBox.x + cropBox.width}%`,
@@ -941,7 +927,7 @@ export function CropPdfTool() {
                                     />
                                 </div>
                             )}
-                            
+
                             {/* Page Number */}
                             <div className="absolute bottom-4 right-4 bg-gray-800 bg-opacity-70 text-white px-2 py-1 rounded text-sm">
                                 Page {i + 1} of {numPages}
@@ -950,7 +936,7 @@ export function CropPdfTool() {
                     ))}
                 </div>
             </div>
-            
+
             {/* Help Button */}
             <div className="fixed bottom-4 right-4 z-40">
                 <Button

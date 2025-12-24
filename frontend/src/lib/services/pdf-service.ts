@@ -266,95 +266,169 @@ async function splitPdf(file: File, options: { selectedPages: number[], splitMod
 }
 
 async function watermarkPdf(file: File, options: any): Promise<StrategyResult> {
-    const { type, text, image, color, opacity, rotation, fontSize, position } = options;
     const arrayBuffer = await file.arrayBuffer();
     const pdfDoc = await PDFDocument.load(arrayBuffer);
     const pages = pdfDoc.getPages();
 
-    let font, embeddedImage, rgbColor;
+    console.log(`Watermarking PDF with ${pages.length} pages`); // Debug
 
-    if (type === 'text') {
-        font = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-        switch (color) {
-            case 'red': rgbColor = rgb(1, 0, 0); break;
-            case 'blue': rgbColor = rgb(0, 0, 1); break;
-            case 'gray': rgbColor = rgb(0.5, 0.5, 0.5); break;
-            default: rgbColor = rgb(0, 0, 0);
+    // Handle both old format ({ type, text, ... }) and new format ({ watermarks: [...] })
+    const watermarks = options.watermarks || [options];
+
+    for (const wm of watermarks) {
+        const {
+            type = 'text',
+            content,           // New format uses 'content' for text
+            text,              // Old format uses 'text'
+            imageBytes,
+            color = '#FF0000',
+            opacity = 0.3,
+            rotation = 45,
+            fontSize = 50,
+            position = 'center',
+            fontFamily = 'Helvetica',
+            fontWeight = 'normal',
+            page: targetPage,   // undefined means all pages
+            layer = 'over'      // 'over' or 'below' content
+        } = wm;
+
+        // For "below" layer, use lower opacity to simulate being behind content
+        const effectiveOpacity = layer === 'below' ? Math.min(opacity, 0.15) : opacity;
+
+        const actualText = content || text;
+
+        // Parse color - handle hex colors
+        let rgbColor;
+        if (typeof color === 'string' && color.startsWith('#')) {
+            const hex = color.slice(1);
+            const r = parseInt(hex.substring(0, 2), 16) / 255;
+            const g = parseInt(hex.substring(2, 4), 16) / 255;
+            const b = parseInt(hex.substring(4, 6), 16) / 255;
+            rgbColor = rgb(r, g, b);
+        } else {
+            // Named colors
+            switch (color) {
+                case 'red': rgbColor = rgb(1, 0, 0); break;
+                case 'blue': rgbColor = rgb(0, 0, 1); break;
+                case 'green': rgbColor = rgb(0, 1, 0); break;
+                case 'gray': rgbColor = rgb(0.5, 0.5, 0.5); break;
+                case 'white': rgbColor = rgb(1, 1, 1); break;
+                default: rgbColor = rgb(0, 0, 0);
+            }
         }
-    } else if (type === 'image' && image) {
-        const imageBytes = await fetch(image).then(res => res.arrayBuffer());
-        embeddedImage = image.includes('image/png')
-            ? await pdfDoc.embedPng(imageBytes)
-            : await pdfDoc.embedJpg(imageBytes);
-    }
 
-    for (const page of pages) {
-        const { width, height } = page.getSize();
+        // Embed font
+        const font = fontWeight === 'bold'
+            ? await pdfDoc.embedFont(StandardFonts.HelveticaBold)
+            : await pdfDoc.embedFont(StandardFonts.Helvetica);
 
-        if (type === 'text' && text && font && rgbColor) {
-            const textWidth = font.widthOfTextAtSize(text, fontSize);
-            const textHeight = font.heightAtSize(fontSize);
-            const drawOptions = {
-                size: fontSize,
-                font,
-                color: rgbColor,
-                opacity,
-                rotate: degrees(rotation),
-            };
+        // Apply watermark to pages
+        for (let i = 0; i < pages.length; i++) {
+            // Skip if watermark is for specific page only and this isn't it
+            if (targetPage !== undefined && targetPage !== i + 1) continue;
 
-            if (position === 'tiled') {
-                const xStep = width / 3;
-                const yStep = height / 4;
-                for (let x = xStep / 2; x < width; x += xStep) {
-                    for (let y = yStep / 2; y < height; y += yStep) {
-                        page.drawText(text, {
-                            ...drawOptions,
-                            x: x - textWidth / 2,
-                            y: y - textHeight / 2,
-                        });
+            const page = pages[i];
+            const { width, height } = page.getSize();
+
+            if (type === 'text' && actualText) {
+                const textWidth = font.widthOfTextAtSize(actualText, fontSize);
+                const textHeight = font.heightAtSize(fontSize);
+
+                const drawOptions = {
+                    size: fontSize,
+                    font,
+                    color: rgbColor,
+                    opacity: effectiveOpacity,
+                    rotate: degrees(rotation),
+                };
+
+                if (position === 'tiled') {
+                    // Draw watermark in grid pattern (3x4)
+                    const xStep = width / 3;
+                    const yStep = height / 4;
+                    for (let x = xStep / 2; x < width; x += xStep) {
+                        for (let y = yStep / 2; y < height; y += yStep) {
+                            page.drawText(actualText, {
+                                ...drawOptions,
+                                x: x - textWidth / 2,
+                                y: y - textHeight / 2,
+                            });
+                        }
                     }
-                }
-            } else {
-                let x = width / 2 - textWidth / 2;
-                let y = height / 2 - textHeight / 2;
-                if (position === 'top') y = height - 150;
-                if (position === 'bottom') y = 150;
-                page.drawText(text, { ...drawOptions, x, y });
-            }
-        } else if (type === 'image' && embeddedImage) {
-            let imgWidth = fontSize * 2;
-            let imgHeight = (imgWidth / embeddedImage.width) * embeddedImage.height;
+                } else if (position === 'mosaic') {
+                    // Simple 3x3 grid (9 watermarks per page) like ilovepdf
+                    const cols = 3;
+                    const rows = 3;
+                    const xStep = width / cols;
+                    const yStep = height / rows;
 
-            if (position === 'tiled') {
-                imgWidth = fontSize;
-                imgHeight = (imgWidth / embeddedImage.width) * embeddedImage.height;
-            }
-
-            const drawOptions = {
-                opacity,
-                rotate: degrees(rotation),
-                width: imgWidth,
-                height: imgHeight,
-            };
-
-            if (position === 'tiled') {
-                const xStep = width / 3;
-                const yStep = height / 4;
-                for (let x = xStep / 2; x < width; x += xStep) {
-                    for (let y = yStep / 2; y < height; y += yStep) {
-                        page.drawImage(embeddedImage, {
-                            ...drawOptions,
-                            x: x - imgWidth / 2,
-                            y: y - imgHeight / 2,
-                        });
+                    for (let row = 0; row < rows; row++) {
+                        for (let col = 0; col < cols; col++) {
+                            const x = (col * xStep) + (xStep / 2) - textWidth / 2;
+                            const y = (row * yStep) + (yStep / 2) - textHeight / 2;
+                            page.drawText(actualText, {
+                                ...drawOptions,
+                                x,
+                                y,
+                            });
+                        }
                     }
+                } else {
+                    // Single watermark at position
+                    let x = width / 2 - textWidth / 2;
+                    let y = height / 2 - textHeight / 2;
+                    if (position === 'top') y = height - 100;
+                    if (position === 'bottom') y = 50;
+                    page.drawText(actualText, { ...drawOptions, x, y });
                 }
-            } else {
-                let x = width / 2 - imgWidth / 2;
-                let y = height / 2 - imgHeight / 2;
-                if (position === 'top') y = height - 150;
-                if (position === 'bottom') y = 150;
-                page.drawImage(embeddedImage, { ...drawOptions, x, y });
+            } else if (type === 'image' && imageBytes) {
+                try {
+                    const embeddedImage = await pdfDoc.embedJpg(new Uint8Array(imageBytes));
+                    let imgWidth = fontSize * 2;
+                    let imgHeight = (imgWidth / embeddedImage.width) * embeddedImage.height;
+
+                    const drawOptions = {
+                        opacity,
+                        rotate: degrees(rotation),
+                        width: imgWidth,
+                        height: imgHeight,
+                    };
+
+                    if (position === 'tiled') {
+                        const xStep = width / 3;
+                        const yStep = height / 4;
+                        for (let x = xStep / 2; x < width; x += xStep) {
+                            for (let y = yStep / 2; y < height; y += yStep) {
+                                page.drawImage(embeddedImage, {
+                                    ...drawOptions,
+                                    x: x - imgWidth / 2,
+                                    y: y - imgHeight / 2,
+                                });
+                            }
+                        }
+                    } else if (position === 'mosaic') {
+                        // Denser mosaic pattern (5x7 grid)
+                        const xStep = width / 5;
+                        const yStep = height / 7;
+                        for (let x = xStep / 2; x < width; x += xStep) {
+                            for (let y = yStep / 2; y < height; y += yStep) {
+                                page.drawImage(embeddedImage, {
+                                    ...drawOptions,
+                                    x: x - imgWidth / 2,
+                                    y: y - imgHeight / 2,
+                                });
+                            }
+                        }
+                    } else {
+                        let x = width / 2 - imgWidth / 2;
+                        let y = height / 2 - imgHeight / 2;
+                        if (position === 'top') y = height - 100;
+                        if (position === 'bottom') y = 50;
+                        page.drawImage(embeddedImage, { ...drawOptions, x, y });
+                    }
+                } catch (imgError) {
+                    console.error("Failed to embed image watermark:", imgError);
+                }
             }
         }
     }
@@ -438,23 +512,35 @@ async function signPdf(file: File, options: any): Promise<StrategyResult> {
     };
 }
 
-async function rotatePdf(file: File, options: { rotations: Record<number, number> }): Promise<StrategyResult> {
+async function rotatePdf(file: File, options: any): Promise<StrategyResult> {
     const arrayBuffer = await file.arrayBuffer();
     const pdfDoc = await PDFDocument.load(arrayBuffer);
     const pages = pdfDoc.getPages();
 
-    for (let i = 0; i < pages.length; i++) {
-        const rotation = options.rotations[i + 1] || 0;
-        if (rotation !== 0) {
-            const normalizedRotation = ((rotation % 360) + 360) % 360;
-            let targetRotation: number;
-            switch (normalizedRotation) {
-                case 90: targetRotation = 90; break;
-                case 180: targetRotation = 180; break;
-                case 270: targetRotation = 270; break;
-                default: targetRotation = 0;
+    // Handle two formats:
+    // 1. Old format: { rotations: { 1: 90, 2: 180, ... } } (page number -> rotation)
+    // 2. New format: { pages: [{ originalIndex, rotation }, ...] }
+
+    if (options.pages && Array.isArray(options.pages)) {
+        // New format from RotatePdfTool component
+        for (const pageInfo of options.pages) {
+            const pageIndex = pageInfo.originalIndex; // 0-based
+            const rotation = pageInfo.rotation || 0;
+
+            if (pageIndex >= 0 && pageIndex < pages.length && rotation !== 0) {
+                const normalizedRotation = ((rotation % 360) + 360) % 360;
+                // pdf-lib accepts any valid rotation in degrees
+                pages[pageIndex].setRotation(degrees(normalizedRotation));
             }
-            pages[i].setRotation(degrees(targetRotation));
+        }
+    } else if (options.rotations) {
+        // Old format
+        for (let i = 0; i < pages.length; i++) {
+            const rotation = options.rotations[i + 1] || 0; // 1-based page number
+            if (rotation !== 0) {
+                const normalizedRotation = ((rotation % 360) + 360) % 360;
+                pages[i].setRotation(degrees(normalizedRotation));
+            }
         }
     }
 
@@ -699,9 +785,20 @@ async function protectPdf(file: File, options: any): Promise<StrategyResult> {
     const arrayBuffer = await file.arrayBuffer();
     const pdfDoc = await PDFDocument.load(arrayBuffer);
 
+    // Handle both formats:
+    // 1. Old: { userPassword, ownerPassword, permissions: {...} }
+    // 2. New from pdfApi: { password, permissions: {...} }
+    const userPassword = options.userPassword || options.password || '';
+    const ownerPassword = options.ownerPassword || options.password || userPassword;
+
+    // Ensure at least one password is provided
+    if (!userPassword && !ownerPassword) {
+        throw new Error('A password is required to protect the PDF.');
+    }
+
     (pdfDoc as any).encrypt({
-        userPassword: options.userPassword || '',
-        ownerPassword: options.ownerPassword || options.userPassword || '',
+        userPassword: userPassword,
+        ownerPassword: ownerPassword,
         permissions: {
             printing: options.permissions?.printing ? 'highResolution' : undefined,
             modifying: options.permissions?.modifying,
@@ -1001,10 +1098,13 @@ async function organizePdf(file: File, options: { pages: Array<{ id: string, ori
     };
 }
 
-// OCR using pdfjs-dist text extraction
+// OCR using Tesseract.js for scanned PDFs and images
 async function ocrPdf(files: File[], options: any): Promise<StrategyResult> {
-    const { onProgress } = options;
+    const { lang = 'eng', onProgress } = options;
     const allText: string[] = [];
+
+    // Dynamically import Tesseract
+    const Tesseract = await import('tesseract.js');
 
     for (let fileIndex = 0; fileIndex < files.length; fileIndex++) {
         const file = files[fileIndex];
@@ -1022,43 +1122,112 @@ async function ocrPdf(files: File[], options: any): Promise<StrategyResult> {
                 for (let i = 1; i <= pdf.numPages; i++) {
                     try {
                         const page = await pdf.getPage(i);
-                        const textContent = await page.getTextContent();
 
+                        // First try to extract embedded text
+                        const textContent = await page.getTextContent();
                         const textItems = textContent.items
                             .filter((item: any) => 'str' in item && item.str.trim())
                             .map((item: any) => item.str);
 
                         const pageText = textItems.join(' ');
 
-                        if (pageText.trim()) {
+                        if (pageText.trim() && pageText.length > 50) {
+                            // Has embedded text, use it
                             allText.push(`\n--- Page ${i} ---\n${pageText}\n`);
                         } else {
-                            allText.push(`\n--- Page ${i} ---\n[No text found]\n`);
+                            // No embedded text - render to canvas and OCR
+                            if (onProgress) {
+                                onProgress({
+                                    status: 'recognizing text',
+                                    progress: ((i - 1) / pdf.numPages) * 0.5
+                                });
+                            }
+
+                            // Render PDF page to canvas
+                            const viewport = page.getViewport({ scale: 2.0 }); // Higher scale for better OCR
+                            const canvas = document.createElement('canvas');
+                            const context = canvas.getContext('2d');
+                            canvas.height = viewport.height;
+                            canvas.width = viewport.width;
+
+                            await page.render({
+                                canvasContext: context,
+                                viewport: viewport
+                            }).promise;
+
+                            // Convert canvas to image data
+                            const imageData = canvas.toDataURL('image/png');
+
+                            // Run Tesseract OCR
+                            const { data: { text } } = await Tesseract.default.recognize(
+                                imageData,
+                                lang,
+                                {
+                                    logger: (m: any) => {
+                                        if (onProgress && m.status === 'recognizing text') {
+                                            onProgress({
+                                                status: m.status,
+                                                progress: ((i - 1) / pdf.numPages) + (m.progress / pdf.numPages) * 0.5
+                                            });
+                                        }
+                                    }
+                                }
+                            );
+
+                            if (text.trim()) {
+                                allText.push(`\n--- Page ${i} ---\n${text.trim()}\n`);
+                            } else {
+                                allText.push(`\n--- Page ${i} ---\n[No text could be recognized]\n`);
+                            }
                         }
 
                         if (onProgress) {
                             onProgress({
-                                currentPage: i,
-                                totalPages: pdf.numPages,
-                                pageProgress: 100,
-                                message: `Extracted text from page ${i} of ${pdf.numPages}`
+                                status: 'recognizing text',
+                                progress: i / pdf.numPages
                             });
                         }
                     } catch (pageError) {
-                        console.error(`Error extracting text from page ${i}:`, pageError);
-                        allText.push(`\n--- Page ${i} ---\n[Error extracting text]\n`);
+                        console.error(`Error processing page ${i}:`, pageError);
+                        allText.push(`\n--- Page ${i} ---\n[Error processing page]\n`);
                     }
                 }
             } catch (pdfError) {
                 console.error(`Error processing PDF:`, pdfError);
                 allText.push(`[Error processing PDF: ${file.name}]`);
             }
-        } else {
-            allText.push(`[Image file: ${file.name} - Text extraction only works for PDFs with embedded text]`);
+        } else if (file.type.startsWith('image/')) {
+            // Direct image OCR
+            try {
+                if (onProgress) {
+                    onProgress({ status: 'recognizing text', progress: 0 });
+                }
+
+                const { data: { text } } = await Tesseract.default.recognize(
+                    file,
+                    lang,
+                    {
+                        logger: (m: any) => {
+                            if (onProgress && m.status === 'recognizing text') {
+                                onProgress({ status: m.status, progress: m.progress });
+                            }
+                        }
+                    }
+                );
+
+                if (text.trim()) {
+                    allText.push(`\n--- ${file.name} ---\n${text.trim()}\n`);
+                } else {
+                    allText.push(`\n--- ${file.name} ---\n[No text could be recognized]\n`);
+                }
+            } catch (imgError) {
+                console.error(`Error processing image:`, imgError);
+                allText.push(`[Error processing image: ${file.name}]`);
+            }
         }
     }
 
-    const textContent = allText.join('\n');
+    const textContent = allText.join('\n') || '[No text extracted]';
     const blob = new Blob([textContent], { type: 'text/plain' });
     return {
         blob,
@@ -1081,21 +1250,38 @@ async function convertToPdf(files: File[], options: any): Promise<StrategyResult
             embeddedImage = await pdfDoc.embedJpg(imageBytes);
         }
 
-        let pageWidth = 595.28; // A4
-        let pageHeight = 841.89;
+        let pageWidth: number;
+        let pageHeight: number;
 
-        if (pageSize === 'letter') {
+        if (pageSize === 'auto') {
+            // Use image dimensions for page size
+            pageWidth = embeddedImage.width;
+            pageHeight = embeddedImage.height;
+
+            // Respect orientation even in auto mode
+            if (orientation === 'landscape' && pageHeight > pageWidth) {
+                [pageWidth, pageHeight] = [pageHeight, pageWidth];
+            } else if (orientation === 'portrait' && pageWidth > pageHeight) {
+                [pageWidth, pageHeight] = [pageHeight, pageWidth];
+            }
+        } else if (pageSize === 'letter') {
             pageWidth = 612;
             pageHeight = 792;
-        }
-
-        if (orientation === 'landscape') {
-            [pageWidth, pageHeight] = [pageHeight, pageWidth];
+            if (orientation === 'landscape') {
+                [pageWidth, pageHeight] = [pageHeight, pageWidth];
+            }
+        } else {
+            // A4 (default)
+            pageWidth = 595.28;
+            pageHeight = 841.89;
+            if (orientation === 'landscape') {
+                [pageWidth, pageHeight] = [pageHeight, pageWidth];
+            }
         }
 
         const page = pdfDoc.addPage([pageWidth, pageHeight]);
 
-        let marginSize = 20;
+        let marginSize = 20; // small (default)
         if (margin === 'none') marginSize = 0;
         if (margin === 'large') marginSize = 50;
 

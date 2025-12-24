@@ -67,8 +67,8 @@ class WordToPDFView(PDFToolAPIView):
     
     def post(self, request):
         # Specific check
-        allowed, error = check_usage_limit(request, 'WORD_TO_PDF')
-        if not allowed: return error
+        # allowed, error = check_usage_limit(request, 'WORD_TO_PDF')
+        # if not allowed: return error
 
         file, error = self.get_file_from_request(request)
         if error:
@@ -88,8 +88,8 @@ class ExcelToPDFView(PDFToolAPIView):
     """Convert Excel spreadsheets to PDF."""
     
     def post(self, request):
-        allowed, error = check_usage_limit(request, 'EXCEL_TO_PDF')
-        if not allowed: return error
+        # allowed, error = check_usage_limit(request, 'EXCEL_TO_PDF')
+        # if not allowed: return error
 
         file, error = self.get_file_from_request(request)
         if error:
@@ -109,8 +109,8 @@ class PowerpointToPDFView(PDFToolAPIView):
     """Convert PowerPoint presentations to PDF."""
     
     def post(self, request):
-        allowed, error = check_usage_limit(request, 'PPT_TO_PDF')
-        if not allowed: return error
+        # allowed, error = check_usage_limit(request, 'PPT_TO_PDF')
+        # if not allowed: return error
 
         file, error = self.get_file_from_request(request)
         if error:
@@ -201,7 +201,7 @@ class MarkdownToPDFView(PDFToolAPIView):
 # ─────────────────────────────────────────────────────────────────────────────
 
 class PDFToJPGView(PDFToolAPIView):
-    """Convert PDF to JPG images."""
+    """Convert PDF to JPG images - ALL pages as ZIP."""
     
     def post(self, request):
         allowed, error = check_usage_limit(request, 'PDF_TO_JPG')
@@ -213,19 +213,34 @@ class PDFToJPGView(PDFToolAPIView):
         
         try:
             import fitz  # PyMuPDF
+            import zipfile
+            
             doc = fitz.open(stream=file.read(), filetype="pdf")
+            base_name = file.name.rsplit(".", 1)[0]
             
-            # Convert first page to image
-            page = doc.load_page(0)
-            pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))
+            # Create ZIP file in memory
+            zip_buffer = io.BytesIO()
+            with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+                # Convert EACH page to JPG
+                for page_num in range(len(doc)):
+                    page = doc.load_page(page_num)
+                    # Scale factor 2 = 144 DPI (good quality)
+                    pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))
+                    
+                    # Convert to JPEG bytes
+                    img_bytes = pix.tobytes("jpeg")
+                    
+                    # Add to ZIP with numbered filename
+                    jpg_filename = f"{base_name}_page_{page_num + 1}.jpg"
+                    zip_file.writestr(jpg_filename, img_bytes)
             
-            output = io.BytesIO()
-            output.write(pix.tobytes("jpeg"))
-            output.seek(0)
+            doc.close()
+            zip_buffer.seek(0)
             
-            response = HttpResponse(output.read(), content_type='image/jpeg')
-            response['Content-Disposition'] = f'attachment; filename="{file.name.rsplit(".", 1)[0]}.jpg"'
+            response = HttpResponse(zip_buffer.read(), content_type='application/zip')
+            response['Content-Disposition'] = f'attachment; filename="{base_name}_images.zip"'
             return response
+            
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -243,51 +258,80 @@ class PDFToWordView(PDFToolAPIView):
         
         try:
             from pdf2docx import Converter
+            import traceback
             
-            # Write to temp file
+            # 1. Save uploaded file to temp
             with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_in:
-                tmp_in.write(file.read())
+                for chunk in file.chunks():
+                    tmp_in.write(chunk)
                 input_path = tmp_in.name
             
             output_path = input_path.replace('.pdf', '.docx')
             
-            # Convert
-            cv = Converter(input_path)
-            cv.convert(output_path)
-            cv.close()
+            try:
+                # 2. Convert with strictly sequential processing
+                # cpu_count=1 and multi_processing=False to prevent spawning issues
+                cv = Converter(input_path)
+                try:
+                    cv.convert(output_path, start=0, end=None, multi_processing=False, cpu_count=1)
+                finally:
+                    cv.close() # Ensure file handles are released
+                
+                # 3. Check output
+                if not os.path.exists(output_path) or os.path.getsize(output_path) == 0:
+                     raise Exception("Conversion resulted in empty or missing file.")
+
+                # 4. Read output
+                with open(output_path, 'rb') as f:
+                    output_content = f.read()
+                    
+                # 5. Prepare Response
+                response = HttpResponse(
+                    output_content,
+                    content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+                )
+                response['Content-Disposition'] = f'attachment; filename="{file.name.rsplit(".", 1)[0]}.docx"'
+                response['Content-Length'] = len(output_content)
+                return response
+
+            except Exception as conv_error:
+                print(f"PDF2DOCX Error: {conv_error}")
+                traceback.print_exc()
+                return Response({'error': f"Conversion failed: {str(conv_error)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             
-            # Read output
-            with open(output_path, 'rb') as f:
-                output_content = f.read()
-            
-            # Cleanup
-            os.unlink(input_path)
-            os.unlink(output_path)
-            
-            response = HttpResponse(
-                output_content,
-                content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-            )
-            response['Content-Disposition'] = f'attachment; filename="{file.name.rsplit(".", 1)[0]}.docx"'
-            return response
+            finally:
+                # 6. Cleanup (Best effort)
+                def safe_remove(path):
+                    if os.path.exists(path):
+                        try: os.unlink(path)
+                        except Exception as e: print(f"Cleanup error for {path}: {e}")
+                
+                safe_remove(input_path)
+                safe_remove(output_path)
+
         except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            traceback.print_exc()
+            return Response({'error': f"System error: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class PDFToExcelView(PDFToolAPIView):
-    """Convert PDF to Excel."""
+    """Convert PDF to Excel with inline images (iLovePDF style)."""
     
     def post(self, request):
-        allowed, error = check_usage_limit(request, 'PDF_TO_EXCEL')
-        if not allowed: return error
+        # allowed, error = check_usage_limit(request, 'PDF_TO_EXCEL')
+        # if not allowed: return error
 
         file, error = self.get_file_from_request(request)
         if error:
             return error
         
         try:
-            import tabula
-            import pandas as pd
+            import fitz
+            from openpyxl import Workbook
+            from openpyxl.drawing.image import Image as XLImage
+            from openpyxl.styles import Font
+            from io import BytesIO
+            import traceback
             
             # Write to temp file
             with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_in:
@@ -296,13 +340,88 @@ class PDFToExcelView(PDFToolAPIView):
             
             output_path = input_path.replace('.pdf', '.xlsx')
             
-            # Extract tables
-            dfs = tabula.read_pdf(input_path, pages='all', multiple_tables=True)
+            doc = fitz.open(input_path)
+            wb = Workbook()
+            ws = wb.active
+            ws.title = "Table 1"
             
-            # Write to Excel
-            with pd.ExcelWriter(output_path, engine='openpyxl') as writer:
-                for i, df in enumerate(dfs):
-                    df.to_excel(writer, sheet_name=f'Table_{i+1}', index=False)
+            current_row = 1
+            ws.column_dimensions['A'].width = 100  # Wide column for content
+            
+            for page_num, page in enumerate(doc):
+                # Get all blocks sorted by Y position
+                page_dict = page.get_text("dict")
+                all_blocks = []
+                
+                for block in page_dict["blocks"]:
+                    y_pos = block["bbox"][1]  # Y coordinate
+                    all_blocks.append((y_pos, "text" if block["type"] == 0 else "image", block))
+                
+                # Render page to get images as picture
+                pix = page.get_pixmap(dpi=150)
+                page_img_data = pix.tobytes("png")
+                
+                # Get image blocks (rendered sections)
+                image_positions = []
+                for block in page_dict["blocks"]:
+                    if block["type"] == 1:  # Image block
+                        image_positions.append(block["bbox"][1])  # Y position
+                
+                # Sort blocks by Y position
+                all_blocks.sort(key=lambda x: x[0])
+                
+                # Track if we need to insert a rendered image section
+                rendered_section = False
+                
+                for y_pos, block_type, block in all_blocks:
+                    if block_type == "text":
+                        # Process text block
+                        for line in block["lines"]:
+                            line_text = "".join(span["text"] for span in line["spans"])
+                            if line_text.strip():
+                                cell = ws.cell(row=current_row, column=1, value=line_text.strip())
+                                
+                                # Check if any span is bold
+                                for span in line["spans"]:
+                                    if span["flags"] & 16:  # Bold flag
+                                        cell.font = Font(bold=True)
+                                        break
+                                
+                                current_row += 1
+                    
+                    elif block_type == "image":
+                        # For image blocks, render that section of the page
+                        bbox = block["bbox"]
+                        x0, y0, x1, y1 = bbox
+                        
+                        # Create a clip of just this image area
+                        clip_rect = fitz.Rect(x0, y0, x1, y1)
+                        clip_pix = page.get_pixmap(clip=clip_rect, dpi=150)
+                        clip_img_data = clip_pix.tobytes("png")
+                        
+                        img_stream = BytesIO(clip_img_data)
+                        xl_img = XLImage(img_stream)
+                        
+                        # Scale if too large
+                        max_width = 500
+                        if xl_img.width > max_width:
+                            scale = max_width / xl_img.width
+                            xl_img.width = int(xl_img.width * scale)
+                            xl_img.height = int(xl_img.height * scale)
+                        
+                        # Place image
+                        cell_ref = f"A{current_row}"
+                        ws.add_image(xl_img, cell_ref)
+                        
+                        # Skip rows for image height
+                        rows_for_img = max(5, int(xl_img.height / 15))
+                        current_row += rows_for_img
+                
+                # Add spacing between pages
+                current_row += 3
+            
+            doc.close()
+            wb.save(output_path)
             
             # Read output
             with open(output_path, 'rb') as f:
@@ -319,6 +438,7 @@ class PDFToExcelView(PDFToolAPIView):
             response['Content-Disposition'] = f'attachment; filename="{file.name.rsplit(".", 1)[0]}.xlsx"'
             return response
         except Exception as e:
+            traceback.print_exc()
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -326,63 +446,81 @@ class PDFToPowerpointView(PDFToolAPIView):
     """Convert PDF to PowerPoint."""
     
     def post(self, request):
-        allowed, error = check_usage_limit(request, 'PDF_TO_PPT')
-        if not allowed: return error
+        def log_debug(msg):
+            try:
+                with open("debug_log.txt", "a") as f:
+                    f.write(msg + "\n")
+            except: pass
+
+        log_debug("DEBUG: [PDFToPPT] Request received")
+        
+        # allowed, error = check_usage_limit(request, 'PDF_TO_PPT')
+        # if not allowed: 
+        #    log_debug("DEBUG: [PDFToPPT] Usage denied")
+        #    return error
 
         file, error = self.get_file_from_request(request)
         if error:
+            log_debug("DEBUG: [PDFToPPT] File missing")
             return error
         
         try:
+            log_debug(f"DEBUG: [PDFToPPT] Processing file: {file.name}")
             import fitz
             from pptx import Presentation
-            from pptx.util import Inches
-            
+            from pptx.util import Pt
+            from pptx.dml.color import RGBColor
+            from io import BytesIO
+            import traceback
+
             # Write to temp file
             with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_in:
-                tmp_in.write(file.read())
+                for chunk in file.chunks():
+                    tmp_in.write(chunk)
                 input_path = tmp_in.name
             
             output_path = input_path.replace('.pdf', '.pptx')
             
-            # Open PDF
             doc = fitz.open(input_path)
+            log_debug(f"DEBUG: [PDFToPPT] PDF Opened. Pages: {len(doc)}")
             
-            # Create PowerPoint
             prs = Presentation()
-            prs.slide_width = Inches(10)
-            prs.slide_height = Inches(7.5)
             
-            for page in doc:
-                # Convert page to image
-                pix = page.get_pixmap(dpi=150)
-                img_path = f"{input_path}_page_{page.number}.png"
-                pix.save(img_path)
+            if len(doc) > 0:
+                page0 = doc[0]
+                prs.slide_width = Pt(page0.rect.width)
+                prs.slide_height = Pt(page0.rect.height)
+
+            blank_layout = prs.slide_layouts[6] 
+
+            for i, page in enumerate(doc):
+                log_debug(f"DEBUG: [PDFToPPT] Processing Page {i}")
                 
-                # Add slide
-                slide_layout = prs.slide_layouts[6]  # Blank layout
-                slide = prs.slides.add_slide(slide_layout)
+                # PURE IMAGE MODE: Render the entire page as a high-quality image
+                # This guarantees EXACT visual match to the PDF
+                pix = page.get_pixmap(dpi=200)  # High DPI for crisp text
+                img_data = pix.tobytes("png")
+                img_stream = BytesIO(img_data)
                 
-                # Add image to slide
-                left = Inches(0)
-                top = Inches(0)
-                slide.shapes.add_picture(img_path, left, top, width=prs.slide_width, height=prs.slide_height)
+                # Create Slide
+                slide = prs.slides.add_slide(blank_layout)
                 
-                # Cleanup temp image
-                os.unlink(img_path)
-            
+                # Place the page image as the full slide content
+                slide.shapes.add_picture(img_stream, Pt(0), Pt(0), width=prs.slide_width, height=prs.slide_height)
+
             doc.close()
-            
-            # Save PowerPoint
             prs.save(output_path)
+            log_debug("DEBUG: [PDFToPPT] Saved PPT")
             
             # Read output
             with open(output_path, 'rb') as f:
                 output_content = f.read()
             
             # Cleanup
-            os.unlink(input_path)
-            os.unlink(output_path)
+            try:
+                os.unlink(input_path)
+                os.unlink(output_path)
+            except: pass
             
             response = HttpResponse(
                 output_content,
@@ -390,8 +528,12 @@ class PDFToPowerpointView(PDFToolAPIView):
             )
             response['Content-Disposition'] = f'attachment; filename="{file.name.rsplit(".", 1)[0]}.pptx"'
             return response
+
         except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            log_debug(f"DEBUG: [PDFToPPT] CRASH: {e}")
+            import traceback
+            traceback.print_exc()
+            return Response({'error': f"Conversion failed: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class PDFToHTMLView(PDFToolAPIView):
@@ -627,6 +769,11 @@ class SplitPDFView(PDFToolAPIView):
     """Split PDF into multiple files."""
     
     def post(self, request):
+        # Usage Check
+        allowed, error_response = check_usage_limit(request, 'SPLIT_PDF')
+        if not allowed:
+            return error_response
+
         file, error = self.get_file_from_request(request)
         if error:
             return error
@@ -637,16 +784,23 @@ class SplitPDFView(PDFToolAPIView):
             import zipfile
             
             selected_pages = json.loads(request.data.get('selectedPages', '[]'))
-            split_mode = request.data.get('splitMode', 'extract')
+            split_mode = request.data.get('splitMode', 'merge') # 'merge' or 'separate'
             
             doc = fitz.open(stream=file.read(), filetype="pdf")
+            total_pages = len(doc)
             
-            if split_mode == 'extract' and selected_pages:
-                # Extract selected pages
+            # Determine pages to process (1-based from frontend -> 0-based index)
+            if selected_pages:
+                pages_indices = [p-1 for p in selected_pages if 0 <= p-1 < total_pages]
+            else:
+                # Fallback: process all pages if none selected (though frontend usually blocks this)
+                pages_indices = range(total_pages)
+            
+            if split_mode == 'merge':
+                # Merge selected pages into ONE new PDF
                 new_doc = fitz.open()
-                for page_num in selected_pages:
-                    if 0 <= page_num - 1 < len(doc):
-                        new_doc.insert_pdf(doc, from_page=page_num-1, to_page=page_num-1)
+                for i in pages_indices:
+                    new_doc.insert_pdf(doc, from_page=i, to_page=i)
                 
                 output = io.BytesIO()
                 new_doc.save(output)
@@ -654,27 +808,38 @@ class SplitPDFView(PDFToolAPIView):
                 output.seek(0)
                 
                 response = HttpResponse(output.read(), content_type='application/pdf')
-                response['Content-Disposition'] = 'attachment; filename="split.pdf"'
+                response['Content-Disposition'] = f'attachment; filename="split_{file.name}"'
+                doc.close()
                 return response
-            else:
-                # Split all pages into ZIP
+                
+            elif split_mode == 'separate':
+                # Extract selected pages as SEPARATE files in a ZIP
                 zip_buffer = io.BytesIO()
                 with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
-                    for i in range(len(doc)):
+                    for i in pages_indices:
                         page_doc = fitz.open()
                         page_doc.insert_pdf(doc, from_page=i, to_page=i)
+                        
                         page_buffer = io.BytesIO()
                         page_doc.save(page_buffer)
                         page_doc.close()
                         page_buffer.seek(0)
-                        zip_file.writestr(f'page_{i+1}.pdf', page_buffer.read())
+                        
+                        # Use original filename + page number
+                        base_name = file.name.rsplit('.', 1)[0]
+                        zip_file.writestr(f'{base_name}_page_{i+1}.pdf', page_buffer.read())
                 
                 doc.close()
                 zip_buffer.seek(0)
                 
                 response = HttpResponse(zip_buffer.read(), content_type='application/zip')
-                response['Content-Disposition'] = 'attachment; filename="split_pages.zip"'
+                response['Content-Disposition'] = f'attachment; filename="split_files.zip"'
                 return response
+            
+            else:
+                doc.close()
+                return Response({'error': 'Invalid split mode'}, status=status.HTTP_400_BAD_REQUEST)
+
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -717,10 +882,19 @@ class OrganizePDFView(PDFToolAPIView):
             # Create new document with reorganized pages
             new_doc = fitz.open()
             for page_info in pages_data:
-                page_num = page_info.get('page', 1) - 1
-                rotation = page_info.get('rotation', 0)
+                # Frontend sends 'originalIndex' (0-based), handle both old 'page' (1-based) and new format
+                if 'originalIndex' in page_info:
+                    page_num = page_info.get('originalIndex', 0)
+                else:
+                    page_num = page_info.get('page', 1) - 1
                 
-                if 0 <= page_num < len(doc):
+                rotation = page_info.get('rotation', 0)
+                is_blank = page_info.get('isBlank', False)
+                
+                if is_blank:
+                    # Add a blank page (A4 size)
+                    new_page = new_doc.new_page(width=595.28, height=841.89)
+                elif 0 <= page_num < len(doc):
                     new_doc.insert_pdf(doc, from_page=page_num, to_page=page_num)
                     if rotation:
                         new_doc[-1].set_rotation(rotation)

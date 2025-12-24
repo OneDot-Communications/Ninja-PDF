@@ -53,7 +53,7 @@ export default function RBACPermissionsPage() {
         }
     };
 
-    // Group permissions by category
+
     const groupByCategory = (permissions: Permission[]) => {
         const groups: Record<string, Permission[]> = {
             'Account & Identity': [],
@@ -156,42 +156,7 @@ export default function RBACPermissionsPage() {
                 </div>
             </div>
 
-            {/* Stats */}
-            <div className="grid grid-cols-3 gap-4">
-                <Card className="border-purple-200 bg-purple-50">
-                    <CardContent className="pt-6">
-                        <div className="flex items-center gap-3">
-                            <Crown className="w-8 h-8 text-purple-600" />
-                            <div>
-                                <p className="text-2xl font-bold text-purple-700">{superAdminPerms.length}</p>
-                                <p className="text-sm text-purple-600">Super Admin</p>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-                <Card className="border-blue-200 bg-blue-50">
-                    <CardContent className="pt-6">
-                        <div className="flex items-center gap-3">
-                            <Users className="w-8 h-8 text-blue-600" />
-                            <div>
-                                <p className="text-2xl font-bold text-blue-700">{adminPerms.length}</p>
-                                <p className="text-sm text-blue-600">Admin</p>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-                <Card className="border-green-200 bg-green-50">
-                    <CardContent className="pt-6">
-                        <div className="flex items-center gap-3">
-                            <User className="w-8 h-8 text-green-600" />
-                            <div>
-                                <p className="text-2xl font-bold text-green-700">{userPerms.length}</p>
-                                <p className="text-sm text-green-600">User</p>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
+
 
             {/* Search */}
             <div className="relative">

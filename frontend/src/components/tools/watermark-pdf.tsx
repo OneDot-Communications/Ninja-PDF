@@ -67,7 +67,8 @@ interface WatermarkElement {
     fontWeight?: string;
     fontStyle?: string;
     page?: number; // 1-based, undefined means all pages
-    position?: "center" | "top" | "bottom" | "tiled" | "custom";
+    position?: "center" | "top" | "bottom" | "tiled" | "mosaic" | "custom";
+    layer?: "over" | "below"; // Over or below PDF content
 }
 
 // History state for undo/redo
@@ -101,8 +102,9 @@ export function WatermarkPdfTool() {
     const [fontFamily, setFontFamily] = useState("Arial");
     const [isBold, setIsBold] = useState(false);
     const [isItalic, setIsItalic] = useState(false);
-    const [position, setPosition] = useState<"center" | "top" | "bottom" | "tiled" | "custom">("center");
+    const [position, setPosition] = useState<"center" | "top" | "bottom" | "tiled" | "mosaic" | "custom">("center");
     const [applyToAll, setApplyToAll] = useState(true);
+    const [layer, setLayer] = useState<"over" | "below">("over");
 
     // UI state
     const [showToolbar, setShowToolbar] = useState(true);
@@ -184,6 +186,27 @@ export function WatermarkPdfTool() {
         renderAllPages();
     }, [file, zoom]);
 
+    // Load selected watermark's properties into the form
+    useEffect(() => {
+        if (selectedWatermarkId) {
+            const wm = watermarks.find(w => w.id === selectedWatermarkId);
+            if (wm) {
+                if (wm.type === 'text') {
+                    if (wm.content) setText(wm.content);
+                    if (wm.fontSize) setFontSize(wm.fontSize);
+                    if (wm.color) setColor(wm.color);
+                    if (wm.fontFamily) setFontFamily(wm.fontFamily);
+                    setIsBold(wm.fontWeight === 'bold');
+                    setIsItalic(wm.fontStyle === 'italic');
+                }
+                if (wm.opacity !== undefined) setOpacity(wm.opacity);
+                if (wm.rotation !== undefined) setRotation(wm.rotation);
+                if (wm.position) setPosition(wm.position);
+                setApplyToAll(wm.page === undefined);
+            }
+        }
+    }, [selectedWatermarkId]); // Only run when selection changes
+
     // Save current state to history
     const saveToHistory = useCallback(() => {
         const newState = {
@@ -246,7 +269,8 @@ export function WatermarkPdfTool() {
             fontWeight: isBold ? 'bold' : 'normal',
             fontStyle: isItalic ? 'italic' : 'normal',
             position: position,
-            page: applyToAll ? undefined : currentPage
+            page: applyToAll ? undefined : currentPage,
+            layer: layer
         };
 
         saveToHistory();
@@ -349,27 +373,13 @@ export function WatermarkPdfTool() {
     // If no file, show file upload
     if (!file) {
         return (
-            <div className="flex flex-col items-center justify-center h-[calc(100vh-64px)] bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
-                <div className="max-w-md w-full p-8 bg-white dark:bg-gray-800 rounded-2xl shadow-xl">
-                    <div className="flex items-center justify-center mb-6">
-                        <div className="p-4 bg-blue-100 dark:bg-blue-900 rounded-full">
-                            <Droplets className="h-12 w-12 text-blue-600 dark:text-blue-400" />
-                        </div>
-                    </div>
-                    <h1 className="text-2xl font-bold text-center mb-2 text-gray-900 dark:text-white">Watermark PDF</h1>
-                    <p className="text-center text-gray-600 dark:text-gray-400 mb-6">Upload a PDF to add watermarks</p>
-                    <FileUpload
-                        onFilesSelected={handleFileSelected}
-                        maxFiles={1}
-                        accept={{ "application/pdf": [".pdf"] }}
-                        description="Drop a PDF file here or click to browse"
-                    />
-                    <div className="mt-6 text-center">
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                            Add text or image watermarks to your PDFs
-                        </p>
-                    </div>
-                </div>
+            <div className="mx-auto max-w-2xl px-4">
+                <FileUpload
+                    onFilesSelected={handleFileSelected}
+                    maxFiles={1}
+                    accept={{ "application/pdf": [".pdf"] }}
+                    description="Drop a PDF file here or click to browse"
+                />
             </div>
         );
     }
@@ -527,7 +537,7 @@ export function WatermarkPdfTool() {
                         <Button
                             variant="outline"
                             className="flex-1"
-                            onClick={() => { }}
+                            onClick={addTextWatermark}
                         >
                             <Type className="h-4 w-4 mr-2" /> Text
                         </Button>
@@ -539,6 +549,7 @@ export function WatermarkPdfTool() {
                             <ImageIcon className="h-4 w-4 mr-2" /> Image
                         </Button>
                     </div>
+                    <p className="text-xs text-gray-500 mt-2">Click to add a watermark to your PDF</p>
                 </div>
 
                 {/* Text Content */}
@@ -547,7 +558,10 @@ export function WatermarkPdfTool() {
                     <input
                         type="text"
                         value={text}
-                        onChange={(e) => setText(e.target.value)}
+                        onChange={(e) => {
+                            setText(e.target.value);
+                            if (selectedWatermarkId) updateSelectedWatermark({ content: e.target.value });
+                        }}
                         className="w-full h-10 rounded-md border border-gray-300 dark:border-gray-500 px-3 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                         placeholder="Enter watermark text"
                     />
@@ -558,7 +572,10 @@ export function WatermarkPdfTool() {
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Font Family</label>
                     <select
                         value={fontFamily}
-                        onChange={(e) => setFontFamily(e.target.value)}
+                        onChange={(e) => {
+                            setFontFamily(e.target.value);
+                            if (selectedWatermarkId) updateSelectedWatermark({ fontFamily: e.target.value });
+                        }}
                         className="w-full h-10 rounded-md border border-gray-300 dark:border-gray-500 px-3 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                     >
                         {fontOptions.map(font => (
@@ -575,7 +592,11 @@ export function WatermarkPdfTool() {
                             variant={isBold ? "secondary" : "ghost"}
                             size="icon"
                             className="h-8 w-8"
-                            onClick={() => setIsBold(!isBold)}
+                            onClick={() => {
+                                const newBold = !isBold;
+                                setIsBold(newBold);
+                                if (selectedWatermarkId) updateSelectedWatermark({ fontWeight: newBold ? 'bold' : 'normal' });
+                            }}
                             title="Bold"
                         >
                             <span className="font-bold">B</span>
@@ -584,7 +605,11 @@ export function WatermarkPdfTool() {
                             variant={isItalic ? "secondary" : "ghost"}
                             size="icon"
                             className="h-8 w-8"
-                            onClick={() => setIsItalic(!isItalic)}
+                            onClick={() => {
+                                const newItalic = !isItalic;
+                                setIsItalic(newItalic);
+                                if (selectedWatermarkId) updateSelectedWatermark({ fontStyle: newItalic ? 'italic' : 'normal' });
+                            }}
                             title="Italic"
                         >
                             <span className="italic">I</span>
@@ -601,7 +626,11 @@ export function WatermarkPdfTool() {
                         max="200"
                         step="5"
                         value={fontSize}
-                        onChange={(e) => setFontSize(Number(e.target.value))}
+                        onChange={(e) => {
+                            const val = Number(e.target.value);
+                            setFontSize(val);
+                            if (selectedWatermarkId) updateSelectedWatermark({ fontSize: val });
+                        }}
                         className="w-full"
                     />
                 </div>
@@ -615,14 +644,20 @@ export function WatermarkPdfTool() {
                                 key={c}
                                 className={cn("w-6 h-6 rounded-full border-2 border-gray-300 dark:border-gray-600", color === c && "ring-2 ring-offset-2 ring-blue-500")}
                                 style={{ backgroundColor: c }}
-                                onClick={() => setColor(c)}
+                                onClick={() => {
+                                    setColor(c);
+                                    if (selectedWatermarkId) updateSelectedWatermark({ color: c });
+                                }}
                                 title={c}
                             />
                         ))}
                         <input
                             type="color"
                             value={color}
-                            onChange={(e) => setColor(e.target.value)}
+                            onChange={(e) => {
+                                setColor(e.target.value);
+                                if (selectedWatermarkId) updateSelectedWatermark({ color: e.target.value });
+                            }}
                             className="h-8 w-8 rounded border border-gray-300 dark:border-gray-500 cursor-pointer bg-transparent p-0"
                             title="Custom Color"
                         />
@@ -638,7 +673,11 @@ export function WatermarkPdfTool() {
                         max="1"
                         step="0.1"
                         value={opacity}
-                        onChange={(e) => setOpacity(Number(e.target.value))}
+                        onChange={(e) => {
+                            const val = Number(e.target.value);
+                            setOpacity(val);
+                            if (selectedWatermarkId) updateSelectedWatermark({ opacity: val });
+                        }}
                         className="w-full"
                     />
                 </div>
@@ -652,7 +691,11 @@ export function WatermarkPdfTool() {
                         max="180"
                         step="5"
                         value={rotation}
-                        onChange={(e) => setRotation(Number(e.target.value))}
+                        onChange={(e) => {
+                            const val = Number(e.target.value);
+                            setRotation(val);
+                            if (selectedWatermarkId) updateSelectedWatermark({ rotation: val });
+                        }}
                         className="w-full"
                     />
                 </div>
@@ -660,18 +703,52 @@ export function WatermarkPdfTool() {
                 {/* Position */}
                 <div className="mb-4">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Position</label>
-                    <div className="grid grid-cols-2 gap-2">
-                        {["center", "top", "bottom", "tiled"].map((p) => (
+                    <div className="grid grid-cols-3 gap-2">
+                        {["center", "top", "bottom", "tiled", "mosaic"].map((p) => (
                             <Button
                                 key={p}
                                 variant={position === p ? "secondary" : "ghost"}
                                 size="sm"
-                                onClick={() => setPosition(p as any)}
+                                onClick={() => {
+                                    setPosition(p as any);
+                                    if (selectedWatermarkId) updateSelectedWatermark({ position: p as any });
+                                }}
                                 className="capitalize"
                             >
                                 {p}
                             </Button>
                         ))}
+                    </div>
+                </div>
+
+                {/* Layer - Over or Below content */}
+                <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Layer</label>
+                    <div className="grid grid-cols-2 gap-2">
+                        <Button
+                            variant={layer === "over" ? "secondary" : "ghost"}
+                            size="sm"
+                            onClick={() => {
+                                setLayer("over");
+                                if (selectedWatermarkId) updateSelectedWatermark({ layer: "over" });
+                            }}
+                            className="flex flex-col items-center py-3"
+                        >
+                            <Layers className="h-4 w-4 mb-1" />
+                            <span className="text-xs">Over content</span>
+                        </Button>
+                        <Button
+                            variant={layer === "below" ? "secondary" : "ghost"}
+                            size="sm"
+                            onClick={() => {
+                                setLayer("below");
+                                if (selectedWatermarkId) updateSelectedWatermark({ layer: "below" });
+                            }}
+                            className="flex flex-col items-center py-3"
+                        >
+                            <Layers className="h-4 w-4 mb-1 rotate-180" />
+                            <span className="text-xs">Below content</span>
+                        </Button>
                     </div>
                 </div>
 

@@ -38,16 +38,14 @@ class InvoiceSerializer(serializers.Serializer):
     created_at = serializers.DateTimeField(read_only=True)
 
 
-class FeatureSerializer(serializers.Serializer):
-    id = serializers.IntegerField(read_only=True)
-    name = serializers.CharField()
-    code = serializers.CharField()
-    description = serializers.CharField(allow_blank=True)
-    category = serializers.CharField(read_only=True)
-    permission_id = serializers.IntegerField(read_only=True, allow_null=True)
-    is_active = serializers.BooleanField(default=True)
-    is_premium_default = serializers.BooleanField(default=False)
-    icon = serializers.ImageField(allow_null=True, required=False)
+from apps.subscriptions.models.subscription import Feature
+
+class FeatureSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Feature
+        fields = ['id', 'name', 'code', 'description', 'category', 'permission_id', 'is_active', 'is_premium_default', 'icon', 'free_limit']
+        read_only_fields = ['id', 'category', 'permission_id']
+
 
 
 class UserFeatureOverrideSerializer(serializers.Serializer):

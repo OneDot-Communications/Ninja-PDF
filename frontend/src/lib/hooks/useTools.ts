@@ -4,79 +4,84 @@ import { useState, useEffect } from "react";
 import { tools as staticTools } from "@/lib/tools";
 import { api } from "@/lib/services/api";
 
-// Module-level cache to prevent repeated fetches
-let cachedTools: any[] | null = null;
-let fetchingPromise: Promise<any[]> | null = null;
-
 export function useTools() {
-    // Initialize with cached tools if available, otherwise static
-    const [tools, setTools] = useState(cachedTools || staticTools);
-    const [loading, setLoading] = useState(!cachedTools);
+    // Initialize with static tools
+    const [tools, setTools] = useState(staticTools);
+    const [loading, setLoading] = useState(true);
+
+    // Map frontend-derived codes to backend codes where they differ
+    const CODE_OVERRIDES: Record<string, string> = {
+        'POWERPOINT_TO_PDF': 'PPT_TO_PDF',
+        'PDF_TO_POWERPOINT': 'PDF_TO_PPT',
+    };
 
     useEffect(() => {
-        // If we already have data, just ensure state matches and exit
-        if (cachedTools) {
-            setTools(cachedTools);
-            setLoading(false);
-            return;
-        }
+        let isMounted = true;
 
         async function fetchTools() {
             try {
-                // Deduplicate in-flight requests
-                if (!fetchingPromise) {
-                    fetchingPromise = (async () => {
-                        const dbFeatures: any[] = await api.getFeatures();
+                // Always fetch fresh data to reflect Admin updates immediately
+                const dbFeatures: any[] = await api.getFeatures();
+                if (!isMounted) return;
 
-                        // Merge DB features with static tools
-                        const merged = staticTools.map(staticTool => {
-                            const code = staticTool.href.replace('/', '').replace(/-/g, '_');
-                            const dbFeature = dbFeatures.find(f => f.code === code || f.name === staticTool.title);
+                // Merge DB features with static tools
+                const merged = staticTools.map(staticTool => {
+                    let code = staticTool.href.replace('/', '').replace(/-/g, '_').toUpperCase();
+                    if (CODE_OVERRIDES[code]) {
+                        code = CODE_OVERRIDES[code];
+                    }
 
-                            if (dbFeature) {
-                                return {
-                                    ...staticTool,
-                                    title: dbFeature.name,
-                                    description: dbFeature.description,
-                                    icon: dbFeature.icon || staticTool.icon,
-                                    isPremium: dbFeature.is_premium_default
-                                };
-                            }
-                            return staticTool;
-                        });
+                    const dbFeature = dbFeatures.find(f => f.code === code || f.name === staticTool.title);
 
-                        const newFeatures = dbFeatures.filter(f => {
-                            const code = f.code;
-                            const exists = merged.some(m => m.href.replace('/', '').replace(/-/g, '_') === code || m.title === f.name);
-                            return !exists;
-                        }).map(f => ({
-                            title: f.name,
-                            description: f.description,
-                            icon: f.icon,
-                            href: `/tools/${f.code.replace(/_/g, '-')}`,
-                            category: "Other",
-                            color: "#000000",
-                            isNew: true
-                        }));
+                    if (dbFeature) {
+                        return {
+                            ...staticTool,
+                            title: dbFeature.name,
+                            description: dbFeature.description,
+                            icon: dbFeature.icon || staticTool.icon,
+                            isPremium: dbFeature.is_premium_default
+                        };
+                    }
+                    return staticTool;
+                });
 
-                        return [...merged, ...newFeatures];
-                    })();
+                const newFeatures = dbFeatures.filter(f => {
+                    const code = f.code;
+                    // Check existence using the same override logic
+                    const exists = merged.some(m => {
+                        let mCode = m.href.replace('/', '').replace(/-/g, '_').toUpperCase();
+                        if (CODE_OVERRIDES[mCode]) mCode = CODE_OVERRIDES[mCode];
+                        return mCode === code || m.title === f.name;
+                    });
+                    return !exists;
+                }).map(f => ({
+                    title: f.name,
+                    description: f.description,
+                    icon: f.icon,
+                    href: `/tools/${f.code.replace(/_/g, '-')}`,
+                    category: "Other",
+                    color: "#000000",
+                    isNew: true
+                }));
+
+                const finalTools = [...merged, ...newFeatures];
+
+                if (isMounted) {
+                    setTools(finalTools);
                 }
-
-                const finalTools = await fetchingPromise;
-                cachedTools = finalTools; // Set cache
-                setTools(finalTools);
 
             } catch (err) {
                 console.error("Failed to fetch dynamic features:", err);
-                // If fail, we stick to static tools (which are already set initally)
             } finally {
-                setLoading(false);
-                fetchingPromise = null; // Reset promise wrapper if needed, though cache is now set
+                if (isMounted) setLoading(false);
             }
         }
 
         fetchTools();
+
+        return () => {
+            isMounted = false;
+        };
     }, []);
 
     return { tools, loading };

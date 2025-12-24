@@ -30,7 +30,7 @@ features = [
     {'code': 'SPLIT_PDF', 'name': 'Split PDF', 'free_limit': 5},
     
     # Premium Only (0 limit, premium_default=True)
-    {'code': 'EDIT_PDF_AI', 'name': 'AI Edit PDF', 'free_limit': 0, 'is_premium_default': True},
+
     {'code': 'OCR_PDF', 'name': 'OCR PDF', 'free_limit': 0, 'is_premium_default': True},
 ]
 

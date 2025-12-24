@@ -4,12 +4,12 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { saveAs } from "file-saver";
 import { FileUpload } from "../ui/file-upload";
 import { Button } from "../ui/button";
-import { 
-    Hash, 
-    Type, 
-    FileText, 
-    ChevronLeft, 
-    ChevronRight, 
+import {
+    Hash,
+    Type,
+    FileText,
+    ChevronLeft,
+    ChevronRight,
     ZoomIn,
     ZoomOut,
     Maximize,
@@ -87,19 +87,25 @@ export function PageNumbersTool() {
     const [numPages, setNumPages] = useState(0);
     const [isProcessing, setIsProcessing] = useState(false);
     const [zoom, setZoom] = useState(100);
-    
+
+    // Processed PDF state for separate download
+    const [processedBlob, setProcessedBlob] = useState<Blob | null>(null);
+    const [processedFileName, setProcessedFileName] = useState<string>("");
+
     // Page number element state
     const [pageNumberElement, setPageNumberElement] = useState<PageNumberElement | null>(null);
-    
+
     // Canvas refs
     const canvasRefs = useRef<(HTMLCanvasElement | null)[]>([]);
     const containerRef = useRef<HTMLDivElement>(null);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
-    
+
     // Properties state
     const [format, setFormat] = useState<"n" | "page-n" | "n-of-m" | "page-n-of-m">("n-of-m");
     const [startFrom, setStartFrom] = useState(1);
     const [pageRange, setPageRange] = useState(""); // e.g. "1-5, 8"
+    const [pageRangeFrom, setPageRangeFrom] = useState(1);
+    const [pageRangeTo, setPageRangeTo] = useState(1);
     const [fontFamily, setFontFamily] = useState("Helvetica");
     const [fontSize, setFontSize] = useState(12);
     const [color, setColor] = useState("#000000");
@@ -112,7 +118,7 @@ export function PageNumbersTool() {
     const [rotation, setRotation] = useState(0);
     const [verticalAlignment, setVerticalAlignment] = useState<"top" | "middle" | "bottom">("bottom");
     const [horizontalAlignment, setHorizontalAlignment] = useState<"left" | "center" | "right">("center");
-    
+
     // UI state
     const [showToolbar, setShowToolbar] = useState(true);
     const [showProperties, setShowProperties] = useState(true);
@@ -121,24 +127,24 @@ export function PageNumbersTool() {
     const [showGrid, setShowGrid] = useState(false);
     const [snapToGrid, setSnapToGrid] = useState(false);
     const [gridSize, setGridSize] = useState(10);
-    
+
     // History state for undo/redo
     const [history, setHistory] = useState<HistoryState[]>([]);
     const [historyIndex, setHistoryIndex] = useState(-1);
-    
+
     // Font options
     const fontOptions = [
-        "Helvetica", "Times New Roman", "Courier New", 
-        "Georgia", "Verdana", "Comic Sans MS", "Impact", 
+        "Helvetica", "Times New Roman", "Courier New",
+        "Georgia", "Verdana", "Comic Sans MS", "Impact",
         "Lucida Console", "Tahoma", "Trebuchet MS", "Palatino"
     ];
-    
+
     // Color presets
     const colorPresets = [
-        "#000000", "#FF0000", "#0000FF", "#00FF00", 
+        "#000000", "#FF0000", "#0000FF", "#00FF00",
         "#FFFF00", "#FF00FF", "#00FFFF", "#888888"
     ];
-    
+
     // Format options
     const formatOptions = [
         { id: "n", label: "1", example: "1" },
@@ -146,7 +152,7 @@ export function PageNumbersTool() {
         { id: "n-of-m", label: "1 of N", example: "1 of 5" },
         { id: "page-n-of-m", label: "Page 1 of N", example: "Page 1 of 5" }
     ];
-    
+
     // Position options
     const positionOptions = [
         { id: "top-left", icon: <ArrowUp className="h-3 w-3 mr-1" />, label: "Top Left" },
@@ -161,16 +167,21 @@ export function PageNumbersTool() {
         if (files.length > 0) {
             setFile(files[0]);
             setCurrentPage(1);
-            
+
             // Load PDF to get page count
             const pdfjsLib = await getPdfJs();
             const arrayBuffer = await files[0].arrayBuffer();
             const pdf = await (pdfjsLib as any).getDocument(new Uint8Array(arrayBuffer)).promise;
             setNumPages(pdf.numPages);
-            
+
+            // Auto-set page range to all pages
+            setPageRangeFrom(1);
+            setPageRangeTo(pdf.numPages);
+            setPageRange(`1-${pdf.numPages}`);
+
             // Initialize canvas refs
             canvasRefs.current = Array(pdf.numPages).fill(null);
-            
+
             // Initialize page number element
             const newPageNumberElement: PageNumberElement = {
                 id: Math.random().toString(36).substr(2, 9),
@@ -190,7 +201,7 @@ export function PageNumbersTool() {
                 verticalAlignment,
                 horizontalAlignment
             };
-            
+
             setPageNumberElement(newPageNumberElement);
             setHistory([{
                 pageNumberElement: newPageNumberElement,
@@ -201,60 +212,66 @@ export function PageNumbersTool() {
     };
 
     useEffect(() => {
-        if (!file) return;
+        if (!file || numPages === 0) return;
 
         const renderAllPages = async () => {
+            // Small delay to ensure canvas elements are mounted
+            await new Promise(resolve => setTimeout(resolve, 100));
+
             const pdfjsLib = await getPdfJs();
             const arrayBuffer = await file.arrayBuffer();
             const pdf = await (pdfjsLib as any).getDocument(new Uint8Array(arrayBuffer)).promise;
-            
-            // Apply zoom
-            const scale = zoom / 100;
-            
+
+            // Apply zoom (use 1.0 for rendering, CSS handles visual zoom)
+            const scale = 1.0;
+
             // Render each page
             for (let i = 1; i <= pdf.numPages; i++) {
                 const page = await pdf.getPage(i);
                 const viewport = page.getViewport({ scale });
-                
-                // Get or create canvas
+
+                // Get canvas
                 let canvas = canvasRefs.current[i - 1];
-                
-                if (!canvas) continue;
-                
-                const context = canvas.getContext("2d")!;
-                
+
+                if (!canvas) {
+                    console.warn(`Canvas not found for page ${i}`);
+                    continue;
+                }
+
+                const context = canvas.getContext("2d");
+                if (!context) continue;
+
                 canvas.height = viewport.height;
                 canvas.width = viewport.width;
-                
+
                 await page.render({
                     canvasContext: context,
                     viewport: viewport,
-                    canvas: canvas,
                 }).promise;
             }
         };
-        
+
         renderAllPages();
-    }, [file, zoom]);
+    }, [file, numPages]); // Removed zoom dependency since CSS handles visual scaling
 
     // Save current state to history
     const saveToHistory = useCallback(() => {
         if (!pageNumberElement) return;
-        
+
         const newState = {
             pageNumberElement: { ...pageNumberElement },
             currentPage
         };
-        
+
         // Remove any states after the current index
         const newHistory = history.slice(0, historyIndex + 1);
         newHistory.push(newState);
-        
+
         // Limit history to 20 states
         if (newHistory.length > 20) {
             newHistory.shift();
         }
-        
+
         setHistory(newHistory);
         setHistoryIndex(newHistory.length - 1);
     }, [pageNumberElement, currentPage, history, historyIndex]);
@@ -266,7 +283,7 @@ export function PageNumbersTool() {
             setPageNumberElement(prevState.pageNumberElement);
             setCurrentPage(prevState.currentPage);
             setHistoryIndex(historyIndex - 1);
-            
+
             // Update local state
             if (prevState.pageNumberElement) {
                 setFormat(prevState.pageNumberElement.format);
@@ -295,7 +312,7 @@ export function PageNumbersTool() {
             setPageNumberElement(nextState.pageNumberElement);
             setCurrentPage(nextState.currentPage);
             setHistoryIndex(historyIndex + 1);
-            
+
             // Update local state
             if (nextState.pageNumberElement) {
                 setFormat(nextState.pageNumberElement.format);
@@ -322,10 +339,10 @@ export function PageNumbersTool() {
         setZoom(100);
     };
 
-    // Update page number element
-    const updatePageNumberElement = useCallback(() => {
+    // Auto-sync all property states to pageNumberElement (fixes React batching issue)
+    useEffect(() => {
         if (!pageNumberElement) return;
-        
+
         const updatedElement: PageNumberElement = {
             ...pageNumberElement,
             format,
@@ -344,26 +361,36 @@ export function PageNumbersTool() {
             verticalAlignment,
             horizontalAlignment
         };
-        
-        setPageNumberElement(updatedElement);
-        saveToHistory();
-    }, [pageNumberElement, format, startFrom, pageRange, fontFamily, fontSize, color, margin, position, isBold, isItalic, isUnderline, opacity, rotation, verticalAlignment, horizontalAlignment, saveToHistory]);
 
-    // Apply page numbers to PDF
+        // Only update if something actually changed
+        if (JSON.stringify(updatedElement) !== JSON.stringify(pageNumberElement)) {
+            setPageNumberElement(updatedElement);
+        }
+    }, [format, startFrom, pageRange, fontFamily, fontSize, color, margin, position, isBold, isItalic, isUnderline, opacity, rotation, verticalAlignment, horizontalAlignment]);
+
+    // Update page number element (now just triggers save to history)
+    const updatePageNumberElement = useCallback(() => {
+        saveToHistory();
+    }, [saveToHistory]);
+
+    // Apply page numbers to PDF (processes but doesn't download)
     const applyPageNumbers = async () => {
         if (!file || !pageNumberElement) return;
         setIsProcessing(true);
+        setProcessedBlob(null); // Reset previous result
 
         try {
             const result = await pdfStrategyManager.execute('page-numbers', [file], {
                 ...pageNumberElement
             });
 
-            saveAs(result.blob, result.fileName || `numbered-${file.name}`);
-            
+            // Store the result for separate download
+            setProcessedBlob(result.blob);
+            setProcessedFileName(result.fileName || `numbered-${file.name}`);
+
             toast.show({
-                title: "Success",
-                message: "Page numbers added successfully!",
+                title: "Ready to Download",
+                message: "Page numbers applied! Click Download to save the file.",
                 variant: "success",
                 position: "top-right",
             });
@@ -388,13 +415,26 @@ export function PageNumbersTool() {
         }
     };
 
+    // Download the processed PDF
+    const downloadPdf = () => {
+        if (processedBlob && processedFileName) {
+            saveAs(processedBlob, processedFileName);
+            toast.show({
+                title: "Downloaded",
+                message: "Your PDF has been downloaded!",
+                variant: "success",
+                position: "top-right",
+            });
+        }
+    };
+
     // Generate page number text for display
     const generatePageNumberText = (pageNum: number) => {
         if (!pageNumberElement) return "";
-        
+
         const { format, startFrom } = pageNumberElement;
         const adjustedPageNum = pageNum - 1 + startFrom;
-        
+
         switch (format) {
             case "n":
                 return `${adjustedPageNum}`;
@@ -412,27 +452,13 @@ export function PageNumbersTool() {
     // If no file, show file upload
     if (!file) {
         return (
-            <div className="flex flex-col items-center justify-center h-[calc(100vh-64px)] bg-linear-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
-                <div className="max-w-md w-full p-8 bg-white dark:bg-gray-800 rounded-2xl shadow-xl">
-                    <div className="flex items-center justify-center mb-6">
-                        <div className="p-4 bg-blue-100 dark:bg-blue-900 rounded-full">
-                            <Hash className="h-12 w-12 text-blue-600 dark:text-blue-400" />
-                        </div>
-                    </div>
-                    <h1 className="text-2xl font-bold text-center mb-2 text-gray-900 dark:text-white">Add Page Numbers</h1>
-                    <p className="text-center text-gray-600 dark:text-gray-400 mb-6">Upload a PDF to add page numbers</p>
-                    <FileUpload
-                        onFilesSelected={handleFileSelected}
-                        maxFiles={1}
-                        accept={{ "application/pdf": [".pdf"] }}
-                        description="Drop a PDF file here or click to browse"
-                    />
-                    <div className="mt-6 text-center">
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                            Add professional page numbers to your PDFs
-                        </p>
-                    </div>
-                </div>
+            <div className="mx-auto max-w-2xl px-4">
+                <FileUpload
+                    onFilesSelected={handleFileSelected}
+                    maxFiles={1}
+                    accept={{ "application/pdf": [".pdf"] }}
+                    description="Drop a PDF file here or click to browse"
+                />
             </div>
         );
     }
@@ -450,11 +476,11 @@ export function PageNumbersTool() {
                 <div className="flex items-center gap-1">
                     {/* Navigation */}
                     <div className="flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-1 mr-2">
-                        <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8" 
-                            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} 
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                             disabled={currentPage === 1}
                         >
                             <ChevronLeft className="h-4 w-4" />
@@ -462,81 +488,89 @@ export function PageNumbersTool() {
                         <span className="text-sm font-medium px-2 min-w-20 text-center text-gray-700 dark:text-gray-300">
                             {currentPage} / {numPages}
                         </span>
-                        <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8" 
-                            onClick={() => setCurrentPage(Math.min(numPages, currentPage + 1))} 
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => setCurrentPage(Math.min(numPages, currentPage + 1))}
                             disabled={currentPage === numPages}
                         >
                             <ChevronRight className="h-4 w-4" />
                         </Button>
                     </div>
-                    
+
                     {/* Zoom Controls */}
                     <div className="flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-1 mr-2">
-                        <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8" 
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
                             onClick={() => setZoom(Math.max(25, zoom - 25))}
                         >
                             <ZoomOut className="h-4 w-4" />
                         </Button>
                         <span className="text-sm font-medium px-2 min-w-[60px] text-center text-gray-700 dark:text-gray-300">{zoom}%</span>
-                        <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8" 
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
                             onClick={() => setZoom(Math.min(200, zoom + 25))}
                         >
                             <ZoomIn className="h-4 w-4" />
                         </Button>
                         <div className="w-px h-4 bg-gray-300 dark:bg-gray-600 mx-1" />
-                        <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8" 
-                            onClick={fitToPage} 
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={fitToPage}
                             title="Fit to Page"
                         >
                             <Maximize className="h-4 w-4" />
                         </Button>
                     </div>
-                    
+
                     {/* Actions */}
                     <div className="flex items-center gap-1 ml-2">
-                        <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8" 
-                            onClick={undo} 
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={undo}
                             disabled={historyIndex <= 0}
                             title="Undo"
                         >
                             <Undo className="h-4 w-4" />
                         </Button>
-                        <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8" 
-                            onClick={redo} 
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={redo}
                             disabled={historyIndex >= history.length - 1}
                             title="Redo"
                         >
                             <Redo className="h-4 w-4" />
                         </Button>
-                        <Button 
-                            onClick={applyPageNumbers} 
-                            disabled={isProcessing || !pageNumberElement} 
+                        <Button
+                            onClick={applyPageNumbers}
+                            disabled={isProcessing || !pageNumberElement}
                             className="h-8 px-3 bg-blue-600 hover:bg-blue-700 text-white"
                         >
-                            {isProcessing ? "Processing..." : <><Download className="h-4 w-4 mr-1" /> Apply</>}
+                            {isProcessing ? "Processing..." : <><Check className="h-4 w-4 mr-1" /> Apply</>}
                         </Button>
+                        {processedBlob && (
+                            <Button
+                                onClick={downloadPdf}
+                                className="h-8 px-3 bg-green-600 hover:bg-green-700 text-white"
+                            >
+                                <Download className="h-4 w-4 mr-1" /> Download
+                            </Button>
+                        )}
                     </div>
                 </div>
             </div>
-            
+
             {/* Properties Panel */}
             <div className={cn(
                 "fixed right-4 top-20 z-40 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-4 w-80 transition-all duration-300",
@@ -544,16 +578,16 @@ export function PageNumbersTool() {
             )}>
                 <div className="flex items-center justify-between mb-4">
                     <h3 className="font-semibold text-gray-900 dark:text-white">Page Number Properties</h3>
-                    <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-6 w-6" 
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
                         onClick={() => setShowProperties(false)}
                     >
                         <X className="h-4 w-4" />
                     </Button>
                 </div>
-                
+
                 {/* Format Options */}
                 <div className="mb-4">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Format</label>
@@ -574,37 +608,58 @@ export function PageNumbersTool() {
                         ))}
                     </div>
                 </div>
-                
+
                 {/* Start From and Page Range */}
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Start From</label>
+                <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Start From</label>
+                    <input
+                        type="number"
+                        min="1"
+                        value={startFrom}
+                        onChange={(e) => {
+                            setStartFrom(parseInt(e.target.value) || 1);
+                            updatePageNumberElement();
+                        }}
+                        className="w-full h-10 rounded-md border border-gray-300 dark:border-gray-500 px-3 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                    />
+                </div>
+
+                {/* Which pages to number - ilovepdf style */}
+                <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Which pages to number?</label>
+                    <div className="flex items-center gap-2">
+                        <span className="text-sm text-gray-500 dark:text-gray-400">from page</span>
                         <input
                             type="number"
                             min="1"
-                            value={startFrom}
+                            max={numPages}
+                            value={pageRangeFrom}
                             onChange={(e) => {
-                                setStartFrom(parseInt(e.target.value) || 1);
+                                const val = Math.max(1, Math.min(numPages, parseInt(e.target.value) || 1));
+                                setPageRangeFrom(val);
+                                setPageRange(`${val}-${pageRangeTo}`);
                                 updatePageNumberElement();
                             }}
-                            className="w-full h-10 rounded-md border border-gray-300 dark:border-gray-500 px-3 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                            className="w-16 h-10 rounded-md border border-gray-300 dark:border-gray-500 px-2 text-center bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                         />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Page Range</label>
+                        <span className="text-sm text-gray-500 dark:text-gray-400">to</span>
                         <input
-                            type="text"
-                            placeholder="e.g. 1-5, 8"
-                            value={pageRange}
+                            type="number"
+                            min="1"
+                            max={numPages}
+                            value={pageRangeTo}
                             onChange={(e) => {
-                                setPageRange(e.target.value);
+                                const val = Math.max(1, Math.min(numPages, parseInt(e.target.value) || numPages));
+                                setPageRangeTo(val);
+                                setPageRange(`${pageRangeFrom}-${val}`);
                                 updatePageNumberElement();
                             }}
-                            className="w-full h-10 rounded-md border border-gray-300 dark:border-gray-500 px-3 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                            className="w-16 h-10 rounded-md border border-gray-300 dark:border-gray-500 px-2 text-center bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                         />
                     </div>
+                    <p className="text-xs text-gray-400 mt-1">Total: {numPages} pages • Selected: {pageRangeFrom} to {pageRangeTo}</p>
                 </div>
-                
+
                 {/* Font Selection */}
                 <div className="mb-4">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Font Family</label>
@@ -621,7 +676,7 @@ export function PageNumbersTool() {
                         ))}
                     </select>
                 </div>
-                
+
                 {/* Text Style Controls */}
                 <div className="mb-4">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Text Style</label>
@@ -664,7 +719,7 @@ export function PageNumbersTool() {
                         </Button>
                     </div>
                 </div>
-                
+
                 {/* Font Size and Margin */}
                 <div className="grid grid-cols-2 gap-4 mb-4">
                     <div>
@@ -696,7 +751,7 @@ export function PageNumbersTool() {
                         />
                     </div>
                 </div>
-                
+
                 {/* Color Picker */}
                 <div className="mb-4">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Color</label>
@@ -725,7 +780,7 @@ export function PageNumbersTool() {
                         />
                     </div>
                 </div>
-                
+
                 {/* Opacity */}
                 <div className="mb-4">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Opacity: {Math.round(opacity * 100)}%</label>
@@ -742,7 +797,7 @@ export function PageNumbersTool() {
                         className="w-full"
                     />
                 </div>
-                
+
                 {/* Rotation */}
                 <div className="mb-4">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Rotation: {rotation}°</label>
@@ -759,7 +814,7 @@ export function PageNumbersTool() {
                         className="w-full"
                     />
                 </div>
-                
+
                 {/* Position */}
                 <div className="mb-4">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Position</label>
@@ -781,7 +836,7 @@ export function PageNumbersTool() {
                         ))}
                     </div>
                 </div>
-                
+
                 {/* Alignment */}
                 <div className="mb-4">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Alignment</label>
@@ -822,113 +877,50 @@ export function PageNumbersTool() {
                     </div>
                 </div>
             </div>
-            
-            {/* Settings Panel */}
-            <div className="fixed bottom-4 left-4 z-40">
-                <div className="flex items-center gap-2 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-2">
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => setShowToolbar(!showToolbar)}
-                        title={showToolbar ? "Hide Toolbar" : "Show Toolbar"}
-                    >
-                        <Settings className="h-4 w-4" />
-                    </Button>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => setShowProperties(!showProperties)}
-                        title={showProperties ? "Hide Properties" : "Show Properties"}
-                    >
-                        <Sliders className="h-4 w-4" />
-                    </Button>
-                    <div className="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-1" />
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => setShowGrid(!showGrid)}
-                        title={showGrid ? "Hide Grid" : "Show Grid"}
-                    >
-                        <Grid3x3 className={cn("h-4 w-4", showGrid && "text-blue-600 dark:text-blue-400")} />
-                    </Button>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => setSnapToGrid(!snapToGrid)}
-                        title={snapToGrid ? "Disable Snap to Grid" : "Enable Snap to Grid"}
-                    >
-                        <Move className={cn("h-4 w-4", snapToGrid && "text-blue-600 dark:text-blue-400")} />
-                    </Button>
-                    <div className="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-1" />
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => setDarkMode(!darkMode)}
-                        title={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
-                    >
-                        {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-                    </Button>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => {
-                            if (viewMode === 'desktop') setViewMode('tablet');
-                            else if (viewMode === 'tablet') setViewMode('mobile');
-                            else setViewMode('desktop');
-                        }}
-                        title={`View Mode: ${viewMode}`}
-                    >
-                        {viewMode === 'desktop' && <Monitor className="h-4 w-4" />}
-                        {viewMode === 'tablet' && <Tablet className="h-4 w-4" />}
-                        {viewMode === 'mobile' && <Smartphone className="h-4 w-4" />}
-                    </Button>
-                </div>
-            </div>
-            
+
             {/* Main Canvas Area */}
-            <div 
+            <div
                 ref={scrollContainerRef}
-                className="flex-1 bg-gray-50 dark:bg-gray-900 overflow-auto p-8 relative"
+                className={cn(
+                    "flex-1 bg-gray-100 dark:bg-gray-900 overflow-auto transition-all duration-300",
+                    showProperties && "mr-[340px]" // Add right margin when properties panel is open
+                )}
             >
-                <div className="flex flex-col items-center">
+                <div className="flex flex-col items-center pt-20 pb-8 px-8">
                     {Array.from({ length: numPages }, (_, i) => (
-                        <div 
-                            key={i} 
-                            className="relative mb-8 shadow-2xl transition-transform duration-200 ease-out"
-                            style={{ 
-                                width: "fit-content", 
-                                height: "fit-content",
-                                transform: `scale(${zoom / 100})`
+                        <div
+                            key={i}
+                            className="relative mb-8 shadow-lg bg-white"
+                            style={{
+                                maxWidth: '90%'
                             }}
                         >
-                            <canvas 
-                                ref={el => { canvasRefs.current[i] = el; }} 
-                                className="max-w-none block bg-white" 
+                            <canvas
+                                ref={el => { canvasRefs.current[i] = el; }}
+                                className="block max-w-full h-auto"
+                                style={{
+                                    maxWidth: '100%',
+                                    height: 'auto'
+                                }}
                             />
-                            
+
                             {/* Grid Overlay */}
                             {showGrid && (
                                 <div className="absolute inset-0 pointer-events-none">
                                     <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
                                         <defs>
                                             <pattern id="grid" width={`${gridSize}%`} height={`${gridSize}%`} patternUnits="userSpaceOnUse">
-                                                <path d={`M ${gridSize}% 0 L 0 0 0 ${gridSize}%`} fill="none" stroke="rgba(0,0,0,0.1)" strokeWidth="0.5"/>
+                                                <path d={`M ${gridSize}% 0 L 0 0 0 ${gridSize}%`} fill="none" stroke="rgba(0,0,0,0.1)" strokeWidth="0.5" />
                                             </pattern>
                                         </defs>
                                         <rect width="100%" height="100%" fill="url(#grid)" />
                                     </svg>
                                 </div>
                             )}
-                            
+
                             {/* Page Number Overlay */}
                             {pageNumberElement && (
-                                <div 
+                                <div
                                     className="absolute p-2 font-bold whitespace-nowrap select-none transition-all duration-300"
                                     style={{
                                         fontFamily: pageNumberElement.fontFamily,
@@ -940,19 +932,19 @@ export function PageNumbersTool() {
                                         opacity: pageNumberElement.opacity,
                                         ...(
                                             pageNumberElement.position === "bottom-center" ? { bottom: `${pageNumberElement.margin}px`, left: "50%", transform: `translateX(-50%) rotate(${pageNumberElement.rotation}deg)` } :
-                                            pageNumberElement.position === "bottom-right" ? { bottom: `${pageNumberElement.margin}px`, right: `${pageNumberElement.margin}px`, transform: `rotate(${pageNumberElement.rotation}deg)` } :
-                                            pageNumberElement.position === "bottom-left" ? { bottom: `${pageNumberElement.margin}px`, left: `${pageNumberElement.margin}px`, transform: `rotate(${pageNumberElement.rotation}deg)` } :
-                                            pageNumberElement.position === "top-center" ? { top: `${pageNumberElement.margin}px`, left: "50%", transform: `translateX(-50%) rotate(${pageNumberElement.rotation}deg)` } :
-                                            pageNumberElement.position === "top-right" ? { top: `${pageNumberElement.margin}px`, right: `${pageNumberElement.margin}px`, transform: `rotate(${pageNumberElement.rotation}deg)` } :
-                                            pageNumberElement.position === "top-left" ? { top: `${pageNumberElement.margin}px`, left: `${pageNumberElement.margin}px`, transform: `rotate(${pageNumberElement.rotation}deg)` } :
-                                            { transform: `rotate(${pageNumberElement.rotation}deg)` }
+                                                pageNumberElement.position === "bottom-right" ? { bottom: `${pageNumberElement.margin}px`, right: `${pageNumberElement.margin}px`, transform: `rotate(${pageNumberElement.rotation}deg)` } :
+                                                    pageNumberElement.position === "bottom-left" ? { bottom: `${pageNumberElement.margin}px`, left: `${pageNumberElement.margin}px`, transform: `rotate(${pageNumberElement.rotation}deg)` } :
+                                                        pageNumberElement.position === "top-center" ? { top: `${pageNumberElement.margin}px`, left: "50%", transform: `translateX(-50%) rotate(${pageNumberElement.rotation}deg)` } :
+                                                            pageNumberElement.position === "top-right" ? { top: `${pageNumberElement.margin}px`, right: `${pageNumberElement.margin}px`, transform: `rotate(${pageNumberElement.rotation}deg)` } :
+                                                                pageNumberElement.position === "top-left" ? { top: `${pageNumberElement.margin}px`, left: `${pageNumberElement.margin}px`, transform: `rotate(${pageNumberElement.rotation}deg)` } :
+                                                                    { transform: `rotate(${pageNumberElement.rotation}deg)` }
                                         )
                                     }}
                                 >
                                     {generatePageNumberText(i + 1)}
                                 </div>
                             )}
-                            
+
                             {/* Page Number */}
                             <div className="absolute bottom-4 right-4 bg-gray-800 bg-opacity-70 text-white px-2 py-1 rounded text-sm">
                                 Page {i + 1} of {numPages}
@@ -961,7 +953,7 @@ export function PageNumbersTool() {
                     ))}
                 </div>
             </div>
-            
+
             {/* Help Button */}
             <div className="fixed bottom-4 right-4 z-40">
                 <Button

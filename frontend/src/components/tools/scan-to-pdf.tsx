@@ -10,14 +10,38 @@ import { cn } from "@/lib/utils";
 export function ScanToPdfTool() {
     const videoRef = useRef<HTMLVideoElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
     const [isStreaming, setIsStreaming] = useState(false);
     const [capturedImages, setCapturedImages] = useState<string[]>([]);
     const [isProcessing, setIsProcessing] = useState(false);
     const [filter, setFilter] = useState<"original" | "grayscale" | "bw">("original");
 
+    // Handle file upload
+    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = e.target.files;
+        if (!files) return;
+
+        Array.from(files).forEach(file => {
+            if (file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    if (event.target?.result) {
+                        setCapturedImages(prev => [...prev, event.target!.result as string]);
+                    }
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Reset input so same file can be selected again
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
+    };
+
     const startCamera = async () => {
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ 
+            const stream = await navigator.mediaDevices.getUserMedia({
                 video: { facingMode: "environment" } // Prefer back camera on mobile
             });
             if (videoRef.current) {
@@ -40,7 +64,7 @@ export function ScanToPdfTool() {
             const r = data[i];
             const g = data[i + 1];
             const b = data[i + 2];
-            
+
             // Grayscale
             const gray = 0.299 * r + 0.587 * g + 0.114 * b;
 
@@ -67,9 +91,9 @@ export function ScanToPdfTool() {
                 canvasRef.current.width = videoRef.current.videoWidth;
                 canvasRef.current.height = videoRef.current.videoHeight;
                 context.drawImage(videoRef.current, 0, 0);
-                
+
                 applyFilter(context, canvasRef.current.width, canvasRef.current.height);
-                
+
                 const imageData = canvasRef.current.toDataURL("image/jpeg", 0.8);
                 setCapturedImages((prev) => [...prev, imageData]);
             }
@@ -94,7 +118,7 @@ export function ScanToPdfTool() {
 
         try {
             const pdfDoc = await PDFDocument.create();
-            
+
             for (const imageData of capturedImages) {
                 const jpgImage = await pdfDoc.embedJpg(imageData);
                 // A4 size logic or fit to image? Let's fit to image for scans usually
@@ -138,14 +162,32 @@ export function ScanToPdfTool() {
                 {!isStreaming && (
                     <div className="flex h-full flex-col items-center justify-center gap-4 text-white">
                         <Camera className="h-16 w-16 opacity-50" />
-                        <Button onClick={startCamera} size="lg" className="z-10">
-                            Start Camera
-                        </Button>
-                        <p className="text-sm text-gray-400">Allow camera access to scan documents</p>
+                        <div className="flex gap-3 z-10">
+                            <Button onClick={startCamera} size="lg">
+                                <Camera className="h-4 w-4 mr-2" /> Start Camera
+                            </Button>
+                            <Button
+                                onClick={() => fileInputRef.current?.click()}
+                                size="lg"
+                                variant="outline"
+                                className="bg-white/10 border-white/30 text-white hover:bg-white/20"
+                            >
+                                <ImageIcon className="h-4 w-4 mr-2" /> Upload Images
+                            </Button>
+                        </div>
+                        <p className="text-sm text-gray-400">Use camera to scan or upload existing images</p>
+                        <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            className="hidden"
+                            onChange={handleFileUpload}
+                        />
                     </div>
                 )}
                 <canvas ref={canvasRef} className="hidden" />
-                
+
                 {isStreaming && (
                     <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-4">
                         <Button onClick={captureImage} size="lg" className="rounded-full h-16 w-16 p-0 border-4 border-white/20 bg-white text-black hover:bg-white/90 hover:scale-105 transition-all">
@@ -191,7 +233,7 @@ export function ScanToPdfTool() {
                             Clear All
                         </Button>
                     </div>
-                    
+
                     <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
                         {capturedImages.map((img, idx) => (
                             <div key={idx} className="group relative aspect-3/4 overflow-hidden rounded-lg border bg-muted shadow-sm">

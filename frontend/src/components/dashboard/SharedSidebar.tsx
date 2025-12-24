@@ -63,7 +63,7 @@ export function SharedSidebar({ className, type }: SharedSidebarProps) {
         { href: "/super-admin/admins", label: "Admins", icon: ShieldAlert },
         { href: "/super-admin/users", label: "All Users", icon: Users },
         { href: "/super-admin/features", label: "PDF Tools", icon: ShieldCheck },
-        { href: "/super-admin/permissions", label: "RBAC Permissions", icon: Shield },
+
         { href: "/super-admin/subscriptions", label: "Global Revenue", icon: CreditCard },
         { href: "/super-admin/payments", label: "Payments", icon: Banknote },
         { href: "/super-admin/sla", label: "SLA Monitoring", icon: Activity },
