@@ -8,7 +8,7 @@ export function middleware(request: NextRequest) {
     // 1. Protected Admin Routes
     if (path.startsWith('/admin') || path.startsWith('/super-admin')) {
         if (!token) {
-            const url = new URL('/auth/login', request.url);
+            const url = new URL('/login', request.url);
             url.searchParams.set('redirect', path);
             return NextResponse.redirect(url);
         }
@@ -21,14 +21,14 @@ export function middleware(request: NextRequest) {
     // 2. Dashboard Protection
     if (path.startsWith('/dashboard')) {
         if (!token) {
-            const url = new URL('/auth/login', request.url);
+            const url = new URL('/login', request.url);
             url.searchParams.set('redirect', path);
             return NextResponse.redirect(url);
         }
     }
 
     // 3. Auth Routes (Redirect to dashboard if already logged in)
-    if (path.startsWith('/auth/login') || path.startsWith('/auth/signup')) {
+    if (path === '/login' || path === '/signup') {
         if (token) {
             return NextResponse.redirect(new URL('/dashboard', request.url));
         }
@@ -42,6 +42,8 @@ export const config = {
         '/admin/:path*',
         '/super-admin/:path*',
         '/dashboard/:path*',
-        '/auth/:path*',
+        '/login',
+        '/signup',
     ],
 };
+
