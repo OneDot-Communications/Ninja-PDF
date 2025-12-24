@@ -79,11 +79,7 @@ export function Header() {
                                 Hello, {user.first_name || user.email?.split('@')[0] || 'User'}
                             </span>
                             <a
-                                href={
-                                    user.role === 'SUPER_ADMIN' ? "/super-admin/dashboard" :
-                                        user.role === 'ADMIN' ? "/admin/dashboard" :
-                                            "/profile"
-                                }
+                                href="/profile"
                                 className="cursor-pointer"
                             >
                                 <Avatar className="w-9 h-9 ring-2 ring-slate-200 hover:ring-slate-300 transition-all">
@@ -277,9 +273,9 @@ export function Header() {
                                                         </span>
                                                     </div>
                                                 </div>
-                                                <Link href={user.role === 'ADMIN' || user.role === 'SUPER_ADMIN' ? "/admin/dashboard" : "/profile"} onClick={() => setIsMobileMenuOpen(false)}>
+                                                <Link href="/profile" onClick={() => setIsMobileMenuOpen(false)}>
                                                     <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700 hover:bg-blue-50">
-                                                        {user.role === 'ADMIN' || user.role === 'SUPER_ADMIN' ? "Dashboard" : "Profile"}
+                                                        Profile
                                                     </Button>
                                                 </Link>
                                             </div>
