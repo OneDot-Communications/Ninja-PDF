@@ -15,7 +15,7 @@ import {
     Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter
 } from "@/components/ui/dialog";
 import {
-    FileIcon, Lock, Unlock, Share2, Trash2, Download, Eye, Plus, Copy, Loader2
+    FileIcon, Lock, Unlock, Share2, Trash2, Download, Eye, Plus, Copy, Loader2, ExternalLink, AlertCircle, CheckCircle2
 } from "lucide-react";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -26,7 +26,10 @@ export default function MyFilesPage() {
     const [loading, setLoading] = useState(true);
     const [uploadOpen, setUploadOpen] = useState(false);
     const [shareOpen, setShareOpen] = useState(false);
+    const [previewOpen, setPreviewOpen] = useState(false);
     const [selectedFile, setSelectedFile] = useState<any>(null);
+    const [previewUrl, setPreviewUrl] = useState<string>("");
+    const [loadingAction, setLoadingAction] = useState<number | null>(null);
 
     // Upload State
     const [uploadFile, setUploadFile] = useState<File | null>(null);
@@ -86,6 +89,63 @@ export default function MyFilesPage() {
         setShareOpen(true);
     };
 
+    const handlePreview = async (file: any) => {
+        try {
+            setLoadingAction(file.id);
+            // The file object already contains the URL from the serializer
+            if (file.url) {
+                setPreviewUrl(file.url);
+                setSelectedFile(file);
+                setPreviewOpen(true);
+            } else {
+                // Fetch fresh file details if URL not present
+                const fileData = await api.getFileUrl(file.id);
+                if (fileData.url) {
+                    setPreviewUrl(fileData.url);
+                    setSelectedFile(file);
+                    setPreviewOpen(true);
+                } else {
+                    toast.error("Could not get file URL");
+                }
+            }
+        } catch (error: any) {
+            toast.error(error.message || "Failed to load preview");
+        } finally {
+            setLoadingAction(null);
+        }
+    };
+
+    const handleDownload = async (file: any) => {
+        try {
+            setLoadingAction(file.id);
+            let downloadUrl = file.url;
+
+            // Fetch fresh URL if not present
+            if (!downloadUrl) {
+                const fileData = await api.getFileUrl(file.id);
+                downloadUrl = fileData.url;
+            }
+
+            if (downloadUrl) {
+                // Create a temporary link and trigger download
+                const link = document.createElement('a');
+                link.href = downloadUrl;
+                link.download = file.name;
+                link.target = '_blank';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                toast.success("Download started");
+            } else {
+                toast.error("Could not get download URL");
+            }
+        } catch (error: any) {
+            toast.error(error.message || "Failed to download file");
+        } finally {
+            setLoadingAction(null);
+        }
+    };
+
     const copyToClipboard = () => {
         navigator.clipboard.writeText(shareUrl);
         toast.success("Link copied to clipboard");
@@ -104,6 +164,15 @@ export default function MyFilesPage() {
         } catch (error) {
             toast.error("Failed to update password");
         }
+    };
+
+    // Helper function to check if file is previewable
+    const isPreviewable = (mimeType: string) => {
+        if (!mimeType) return false;
+        return mimeType.startsWith('image/') ||
+            mimeType === 'application/pdf' ||
+            mimeType.startsWith('video/') ||
+            mimeType.startsWith('audio/');
     };
 
     if (loading) {
@@ -208,6 +277,7 @@ export default function MyFilesPage() {
                             <TableRow>
                                 <TableHead>Name</TableHead>
                                 <TableHead>Size</TableHead>
+                                <TableHead>Status</TableHead>
                                 <TableHead>Protection</TableHead>
                                 <TableHead>Stats</TableHead>
                                 <TableHead>Uploaded</TableHead>
@@ -222,6 +292,21 @@ export default function MyFilesPage() {
                                         {file.name}
                                     </TableCell>
                                     <TableCell>{(file.size_bytes / 1024).toFixed(1)} KB</TableCell>
+                                    <TableCell>
+                                        {file.exists_in_storage === true ? (
+                                            <div className="flex items-center text-green-600 text-xs font-medium bg-green-50 w-fit px-2 py-1 rounded" title="File exists in storage">
+                                                <CheckCircle2 className="w-3 h-3 mr-1" /> Synced
+                                            </div>
+                                        ) : file.exists_in_storage === false ? (
+                                            <div className="flex items-center text-red-600 text-xs font-medium bg-red-50 w-fit px-2 py-1 rounded" title="File missing from storage">
+                                                <AlertCircle className="w-3 h-3 mr-1" /> Missing
+                                            </div>
+                                        ) : (
+                                            <div className="flex items-center text-gray-500 text-xs font-medium bg-gray-50 w-fit px-2 py-1 rounded" title="Storage status unknown">
+                                                <AlertCircle className="w-3 h-3 mr-1" /> Unknown
+                                            </div>
+                                        )}
+                                    </TableCell>
                                     <TableCell>
                                         {file.is_protected ? (
                                             <div className="flex items-center text-green-600 text-xs font-medium bg-green-50 w-fit px-2 py-1 rounded">
@@ -241,11 +326,43 @@ export default function MyFilesPage() {
                                     </TableCell>
                                     <TableCell>{new Date(file.created_at).toLocaleDateString()}</TableCell>
                                     <TableCell className="text-right">
-                                        <div className="flex justify-end gap-2">
-                                            <Button size="icon" variant="ghost" onClick={() => handleShare(file)}>
+                                        <div className="flex justify-end gap-1">
+                                            {/* Preview Button */}
+                                            <Button
+                                                size="icon"
+                                                variant="ghost"
+                                                onClick={() => handlePreview(file)}
+                                                disabled={loadingAction === file.id}
+                                                title="Preview"
+                                            >
+                                                {loadingAction === file.id ? (
+                                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                                ) : (
+                                                    <Eye className="w-4 h-4 text-blue-500" />
+                                                )}
+                                            </Button>
+                                            {/* Download Button */}
+                                            <Button
+                                                size="icon"
+                                                variant="ghost"
+                                                onClick={() => handleDownload(file)}
+                                                disabled={loadingAction === file.id}
+                                                title="Download"
+                                            >
+                                                <Download className="w-4 h-4 text-green-500" />
+                                            </Button>
+                                            {/* Share Button */}
+                                            <Button size="icon" variant="ghost" onClick={() => handleShare(file)} title="Share">
                                                 <Share2 className="w-4 h-4 text-slate-500" />
                                             </Button>
-                                            <Button size="icon" variant="ghost" className="text-destructive hover:bg-destructive/10" onClick={() => handleDelete(file.id)}>
+                                            {/* Delete Button */}
+                                            <Button
+                                                size="icon"
+                                                variant="ghost"
+                                                className="text-destructive hover:bg-destructive/10"
+                                                onClick={() => handleDelete(file.id)}
+                                                title="Delete"
+                                            >
                                                 <Trash2 className="w-4 h-4" />
                                             </Button>
                                         </div>
@@ -254,7 +371,7 @@ export default function MyFilesPage() {
                             ))}
                             {files.length === 0 && (
                                 <TableRow>
-                                    <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                                    <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
                                         No files found. Upload your first secure file.
                                     </TableCell>
                                 </TableRow>
@@ -264,6 +381,7 @@ export default function MyFilesPage() {
                 </CardContent>
             </Card>
 
+            {/* Share Dialog */}
             <Dialog open={shareOpen} onOpenChange={setShareOpen}>
                 <DialogContent>
                     <DialogHeader>
@@ -292,6 +410,72 @@ export default function MyFilesPage() {
                                         <Lock className="w-4 h-4 mr-2" /> Add Password Protection
                                     </Button>
                                 )}
+                            </div>
+                        )}
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Preview Dialog */}
+            <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+                <DialogContent className="max-w-4xl max-h-[90vh]">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <FileIcon className="w-5 h-5" />
+                            {selectedFile?.name}
+                        </DialogTitle>
+                    </DialogHeader>
+                    <div className="py-4">
+                        {selectedFile && previewUrl && (
+                            <div className="space-y-4">
+                                {/* Preview based on file type */}
+                                {selectedFile.mime_type?.startsWith('image/') ? (
+                                    <div className="flex justify-center">
+                                        <img
+                                            src={previewUrl}
+                                            alt={selectedFile.name}
+                                            className="max-w-full max-h-[60vh] object-contain rounded-lg border"
+                                        />
+                                    </div>
+                                ) : selectedFile.mime_type === 'application/pdf' ? (
+                                    <iframe
+                                        src={previewUrl}
+                                        className="w-full h-[60vh] rounded-lg border"
+                                        title={selectedFile.name}
+                                    />
+                                ) : selectedFile.mime_type?.startsWith('video/') ? (
+                                    <video
+                                        src={previewUrl}
+                                        controls
+                                        className="w-full max-h-[60vh] rounded-lg"
+                                    >
+                                        Your browser does not support video playback.
+                                    </video>
+                                ) : selectedFile.mime_type?.startsWith('audio/') ? (
+                                    <audio
+                                        src={previewUrl}
+                                        controls
+                                        className="w-full"
+                                    >
+                                        Your browser does not support audio playback.
+                                    </audio>
+                                ) : (
+                                    <div className="text-center py-12 text-muted-foreground">
+                                        <FileIcon className="w-16 h-16 mx-auto mb-4 text-slate-300" />
+                                        <p>Preview not available for this file type</p>
+                                        <p className="text-sm">({selectedFile.mime_type || 'Unknown type'})</p>
+                                    </div>
+                                )}
+
+                                {/* Action Buttons */}
+                                <div className="flex justify-center gap-3 pt-4 border-t">
+                                    <Button onClick={() => handleDownload(selectedFile)} className="gap-2">
+                                        <Download className="w-4 h-4" /> Download
+                                    </Button>
+                                    <Button variant="outline" onClick={() => window.open(previewUrl, '_blank')} className="gap-2">
+                                        <ExternalLink className="w-4 h-4" /> Open in New Tab
+                                    </Button>
+                                </div>
                             </div>
                         )}
                     </div>

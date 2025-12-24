@@ -222,18 +222,15 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # EMAIL CONFIGURATION (Zepto Mail - Production Ready)
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
-# EMAIL CONFIGURATION (Zepto Mail - Production Ready)
+# EMAIL CONFIGURATION (Zepto Mail - API)
 # -----------------------------------------------------------------------------
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'noreply@18pluspdf.com')
-# FORCE SMTP BACKEND (No console fallback anymore)
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+# Use Custom Zepto API Backend
+EMAIL_BACKEND = 'core.email_backend.ZeptoEmailBackend'
 
 # Zepto Mail Configuration
-EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.zeptomail.com') # Strict Zepto Default
-EMAIL_PORT = int(os.getenv('EMAIL_PORT', 587))
-EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True') == 'True'
-EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
-EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
+ZEPTO_API_URL = "https://api.zeptomail.in/v1.1/email"
+ZEPTO_API_KEY = os.getenv('ZEPTO_API_KEY')
 
 
 # -----------------------------------------------------------------------------
@@ -283,8 +280,9 @@ REST_AUTH = {
     'JWT_AUTH_COOKIE': 'access-token',
     'JWT_AUTH_REFRESH_COOKIE': 'refresh-token',
     'JWT_AUTH_HTTPONLY': True,  # Prevent JS access
-    # Recommend SameSite=Strict in production for CSRF protection on cookies
-    'JWT_AUTH_SAMESITE': os.getenv('JWT_AUTH_SAMESITE', 'Lax'),
+    'JWT_AUTH_SECURE': os.getenv('JWT_AUTH_SECURE', 'true').lower() == 'true',  # Secure cookies (HTTPS only)
+    # SameSite=None required for cross-origin requests (must use Secure=True)
+    'JWT_AUTH_SAMESITE': os.getenv('JWT_AUTH_SAMESITE', 'None'),
     # For local development don't hardcode a cookie domain so it's host-specific.
     # This avoids issues when frontend runs on `localhost` while backend is `127.0.0.1`.
     'JWT_AUTH_COOKIE_DOMAIN': None,
@@ -294,7 +292,8 @@ REST_AUTH = {
 }
 
 # Cookie config used by helpers
-JWT_COOKIE_SAMESITE = REST_AUTH.get('JWT_AUTH_SAMESITE', 'Strict')
+JWT_COOKIE_SAMESITE = REST_AUTH.get('JWT_AUTH_SAMESITE', 'None')
+JWT_COOKIE_SECURE = REST_AUTH.get('JWT_AUTH_SECURE', True)
 
 # AllAuth Configuration
 # AllAuth Configuration (2025 Modern Standards)
@@ -306,7 +305,8 @@ ACCOUNT_SIGNUP_FIELDS = ['email*', 'password1*', 'password2*'] # Standard flow w
 ACCOUNT_EMAIL_VERIFICATION = 'mandatory'
 
 # CSRF Settings for JWT Auth
-CSRF_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_SAMESITE = os.getenv('CSRF_COOKIE_SAMESITE', 'None')
+CSRF_COOKIE_SECURE = os.getenv('CSRF_COOKIE_SECURE', 'true').lower() == 'true'
 CSRF_COOKIE_HTTPONLY = False  # Critical: Frontend needs to read this cookie
 CSRF_USE_SESSIONS = False 
 
@@ -400,15 +400,15 @@ LOGGING = {
 # ASYNC & CACHE CONFIGURATION (REDIS)
 # -----------------------------------------------------------------------------
 # Use Redis for Caching
-# CACHES = {
-#     "default": {
-#         "BACKEND": "django_redis.cache.RedisCache",
-#         "LOCATION": os.getenv("REDIS_URL", "redis://127.0.0.1:6379/1"),
-#         "OPTIONS": {
-#             "CLIENT_CLASS": "django_redis.client.DefaultClient",
-#         }
-#     }
-# }
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": os.getenv("REDIS_URL", "redis://127.0.0.1:6379/1"),
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        }
+    }
+}
 
 # Celery Configuration
 CELERY_BROKER_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')

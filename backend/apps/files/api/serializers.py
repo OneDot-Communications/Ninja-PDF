@@ -1,5 +1,9 @@
 from rest_framework import serializers
 from apps.files.models.user_file import UserFile
+from core.storage import StorageService
+import logging
+
+logger = logging.getLogger(__name__)
 
 class UserFileSerializer(serializers.ModelSerializer):
     url = serializers.SerializerMethodField()
@@ -19,8 +23,14 @@ class UserFileSerializer(serializers.ModelSerializer):
         }
 
     def get_url(self, obj):
-        if obj.file:
-            return obj.file.url
+        """Generate signed URL for file access from DigitalOcean Spaces."""
+        if obj.file and obj.file.name:
+            try:
+                url = StorageService.get_signed_url(obj.file.name, expiration=3600)
+                return url
+            except Exception as e:
+                logger.error(f"UserFileSerializer:get_url error for file_id={obj.id}: {e}")
+                return None
         return None
 
     def get_is_protected(self, obj):

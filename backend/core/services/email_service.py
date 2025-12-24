@@ -22,6 +22,28 @@ class EmailService:
         except Exception as e:
             logger.error(f"Failed to send email to {to_email}: {e}")
 
+    @staticmethod
+    def send_verification_email(user, verification_url):
+        """Send email verification link to new user."""
+        subject = "Verify your email for 18+ PDF"
+        message = f"""
+Hey {user.first_name or 'there'}!
+
+Welcome to 18+ PDF! 🎉
+
+Just one quick step to get started - please verify your email by clicking the link below:
+
+{verification_url}
+
+This link will expire in 24 hours.
+
+If you didn't sign up for 18+ PDF, you can safely ignore this email.
+
+Cheers,
+The 18+ PDF Team
+"""
+        EmailService._send(user.email, subject, message)
+
     # 🚀 GROWTH & ONBOARDING
     
     @staticmethod
