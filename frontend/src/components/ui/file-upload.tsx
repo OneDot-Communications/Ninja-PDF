@@ -36,7 +36,7 @@ export const FileUpload = ({
     onDragLeave: () => setIsDragOver(false),
     onDropAccepted: () => setIsDragOver(false),
     onDropRejected: () => setIsDragOver(false),
-    noClick: variant === 'compact' // Manual 'open' trigger for compact button to avoid double triggering if wrapping weirdly, though usually fine. Actually let's just let dropzone handle it.
+    noClick: true // We handle clicks manually for better control
   });
 
   if (variant === 'compact') {
@@ -61,6 +61,7 @@ export const FileUpload = ({
     <div className="w-full p-4 md:p-6 flex justify-center">
       <div
         {...getRootProps()}
+        onClick={open}
         className={cn(
           "group relative flex flex-col items-center justify-center min-h-[200px] w-full transition-all focus:outline-none cursor-pointer",
           isDragActive && "scale-[1.01]"
@@ -73,7 +74,8 @@ export const FileUpload = ({
 
           {/* Main Action Button - Centered */}
           <Button
-            type="button" // Prevent form submission if any
+            type="button"
+            onClick={(e) => { e.stopPropagation(); open(); }}
             className={cn(
               "h-14 px-8 text-lg font-bold rounded-xl shadow-lg transition-all duration-300",
               "bg-[#0057B7] hover:bg-[#004494] text-white border-0 ring-0 outline-none" // Krishna Blue

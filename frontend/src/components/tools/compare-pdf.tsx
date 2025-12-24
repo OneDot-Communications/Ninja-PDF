@@ -6,615 +6,342 @@ import { FileUpload } from "../ui/file-upload";
 import { Button } from "../ui/button";
 import {
     GitCompare,
-    ChevronLeft,
-    ChevronRight,
     ZoomIn,
     ZoomOut,
-    Maximize,
-    Grid3x3,
-    Settings,
-    Undo,
-    Redo,
-    Download,
     X,
-    Move,
-    Square as SquareIcon,
-    Monitor,
-    Smartphone,
-    Tablet,
-    Sliders,
-    HelpCircle,
-    Sun,
-    Moon,
-    Layers,
-    History,
-    Scan,
-    Command,
+    Download,
     FileText,
-    ArrowRight,
-    ArrowLeft,
-    ArrowUp,
-    ArrowDown,
-    Eye,
-    EyeOff,
-    StretchHorizontal,
-    Copy,
-    Plus,
     Check,
-    ChevronDown,
-    RotateCw,
-    Palette,
-    Loader2,
-    Type,
-    Circle
+    Search,
+    Link2,
+    Link2Off,
+    UploadCloud
 } from "lucide-react";
-import { pdfStrategyManager, getPdfJs } from "@/lib/services/pdf-service";
+import { getPdfJs } from "@/lib/services/pdf-service";
 import { toast } from "@/lib/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
-// Comparison mode
-type ComparisonMode = "side-by-side" | "overlay" | "diff" | "slide";
-
-// Comparison element interface
-interface ComparisonElement {
+interface TextChange {
     id: string;
-    type: "rectangle" | "circle" | "arrow" | "text";
-    x: number; // Percentage 0-100 relative to container
-    y: number; // Percentage 0-100 relative to container
-    width?: number; // Percentage
-    height?: number; // Percentage
-    page: number; // 1-based
-    content?: string; // for text
-    color?: string;
-    strokeWidth?: number;
-    opacity?: number;
-    fontSize?: number;
-    fontFamily?: string;
-    points?: { x: number, y: number }[]; // for arrow
+    page: number;
+    oldText: string;
+    newText: string;
 }
 
-// History state for undo/redo
-interface HistoryState {
-    comparisonElements: ComparisonElement[];
-    currentPage: number;
-    comparisonMode: ComparisonMode;
-    opacity: number;
-}
-
-export function ComparePdfTool() {
-    // File and PDF state
+export function ComparePdfTool({ onModeChange }: { onModeChange?: (mode: 'default' | 'editor') => void }) {
+    const [step, setStep] = useState<0 | 1 | 2>(0); // 0: Select File 1, 1: Select File 2, 2: Compare
     const [file1, setFile1] = useState<File | null>(null);
     const [file2, setFile2] = useState<File | null>(null);
-    const [currentPage, setCurrentPage] = useState(1);
-    const [numPages, setNumPages] = useState(0);
-    const [isProcessing, setIsProcessing] = useState(false);
-    const [zoom, setZoom] = useState(100);
+    const [numPages1, setNumPages1] = useState(0);
+    const [numPages2, setNumPages2] = useState(0);
+    const [zoom, setZoom] = useState(40);
+    const [isLoading, setIsLoading] = useState(false);
+    const [scrollSync, setScrollSync] = useState(true);
+    const [changes, setChanges] = useState<TextChange[]>([]);
+    const [searchQuery, setSearchQuery] = useState("");
 
-    // Canvas refs
+    const leftScrollRef = useRef<HTMLDivElement>(null);
+    const rightScrollRef = useRef<HTMLDivElement>(null);
     const canvas1Refs = useRef<(HTMLCanvasElement | null)[]>([]);
     const canvas2Refs = useRef<(HTMLCanvasElement | null)[]>([]);
-    const diffCanvasRefs = useRef<(HTMLCanvasElement | null)[]>([]);
-    const containerRef = useRef<HTMLDivElement>(null);
-    const scrollContainerRef = useRef<HTMLDivElement>(null);
+    const isScrolling = useRef(false);
 
-    // Comparison state
-    const [comparisonMode, setComparisonMode] = useState<ComparisonMode>("side-by-side");
-    const [opacity, setOpacity] = useState(50);
-    const [comparisonElements, setComparisonElements] = useState<ComparisonElement[]>([]);
-    const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
-    const [activeTool, setActiveTool] = useState<"select" | "rectangle" | "circle" | "arrow" | "text">("select");
-    const [strokeWidth, setStrokeWidth] = useState(2);
-    const [color, setColor] = useState("#FF0000");
-    const [fontSize, setFontSize] = useState(16);
-    const [fontFamily, setFontFamily] = useState("Arial");
-    const [isComputingDiff, setIsComputingDiff] = useState(false);
-    const [diffImage, setDiffImage] = useState<string | null>(null);
-    const [showFile1Only, setShowFile1Only] = useState(false);
-    const [showFile2Only, setShowFile2Only] = useState(false);
-
-    // UI state
-    const [showToolbar, setShowToolbar] = useState(true);
-    const [showProperties, setShowProperties] = useState(true);
-    const [darkMode, setDarkMode] = useState(false);
-    const [viewMode, setViewMode] = useState<"desktop" | "tablet" | "mobile">("desktop");
-    const [showGrid, setShowGrid] = useState(false);
-    const [snapToGrid, setSnapToGrid] = useState(false);
-    const [gridSize, setGridSize] = useState(10);
-
-    // History state for undo/redo
-    const [history, setHistory] = useState<HistoryState[]>([]);
-    const [historyIndex, setHistoryIndex] = useState(-1);
-
-    // Color presets
-    const colorPresets = [
-        "#FF0000", "#0000FF", "#00FF00", "#FFFF00",
-        "#FF00FF", "#00FFFF", "#000000", "#888888"
-    ];
-
-    // Font options
-    const fontOptions = [
-        "Arial", "Helvetica", "Times New Roman", "Courier New",
-        "Georgia", "Verdana", "Comic Sans MS", "Impact"
-    ];
-
-    // Comparison mode options
-    const comparisonModeOptions = [
-        { id: "side-by-side", icon: <ArrowLeft className="h-4 w-4 mr-2" />, label: "Side by Side" },
-        { id: "overlay", icon: <Layers className="h-4 w-4 mr-2" />, label: "Overlay" },
-        { id: "diff", icon: <GitCompare className="h-4 w-4 mr-2" />, label: "Difference" },
-        { id: "slide", icon: <StretchHorizontal className="h-4 w-4 mr-2" />, label: "Slider" }
-    ];
-
-    const handleFile1Selected = async (files: File[]) => {
-        if (files.length > 0) {
-            setFile1(files[0]);
-            setCurrentPage(1);
-
-            // Load PDF to get page count
-            const pdfjsLib = await getPdfJs();
-            const arrayBuffer = await files[0].arrayBuffer();
-            const pdf = await (pdfjsLib as any).getDocument(new Uint8Array(arrayBuffer)).promise;
-            setNumPages(pdf.numPages);
-
-            // Initialize canvas refs
-            canvas1Refs.current = Array(pdf.numPages).fill(null);
-            canvas2Refs.current = Array(pdf.numPages).fill(null);
-            diffCanvasRefs.current = Array(pdf.numPages).fill(null);
-        }
-    };
-
-    const handleFile2Selected = async (files: File[]) => {
-        if (files.length > 0) {
-            setFile2(files[0]);
-            setCurrentPage(1);
-
-            // Load PDF to get page count
-            const pdfjsLib = await getPdfJs();
-            const arrayBuffer = await files[0].arrayBuffer();
-            const pdf = await (pdfjsLib as any).getDocument(new Uint8Array(arrayBuffer)).promise;
-            setNumPages(pdf.numPages);
-
-            // Initialize canvas refs
-            canvas1Refs.current = Array(pdf.numPages).fill(null);
-            canvas2Refs.current = Array(pdf.numPages).fill(null);
-            diffCanvasRefs.current = Array(pdf.numPages).fill(null);
-        }
-    };
-
+    // Mode synchronization
     useEffect(() => {
-        if (!file1 || !file2) return;
+        if (step === 2) {
+            onModeChange?.('editor');
+        } else {
+            onModeChange?.('default');
+        }
+    }, [step, onModeChange]);
 
-        const renderAllPages = async () => {
+    const handleScroll = useCallback((source: 'left' | 'right') => {
+        if (!scrollSync || isScrolling.current) return;
+        isScrolling.current = true;
+        const sourceEl = source === 'left' ? leftScrollRef.current : rightScrollRef.current;
+        const targetEl = source === 'left' ? rightScrollRef.current : leftScrollRef.current;
+        if (sourceEl && targetEl) {
+            targetEl.scrollTop = sourceEl.scrollTop;
+        }
+        setTimeout(() => { isScrolling.current = false; }, 50);
+    }, [scrollSync]);
+
+    const extractTexts = async (file: File): Promise<string[]> => {
+        const pdfjsLib = await getPdfJs();
+        const ab = await file.arrayBuffer();
+        const pdf = await (pdfjsLib as any).getDocument(new Uint8Array(ab)).promise;
+        const texts: string[] = [];
+        for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            const content = await page.getTextContent();
+            texts.push(content.items.filter((x: any) => 'str' in x).map((x: any) => x.str).join(' ').trim());
+        }
+        return texts;
+    };
+
+    const findChanges = (t1: string[], t2: string[]): TextChange[] => {
+        const result: TextChange[] = [];
+        const max = Math.max(t1.length, t2.length);
+        for (let i = 0; i < max; i++) {
+            const old = (t1[i] || '').slice(0, 400);
+            const neo = (t2[i] || '').slice(0, 400);
+            if (old !== neo) {
+                result.push({ id: `p${i}`, page: i + 1, oldText: old || '[Empty]', newText: neo || '[Empty]' });
+            }
+        }
+        return result;
+    };
+
+    const processFiles = (files: File[]) => {
+        if (files.length === 0) return;
+
+        // Smart handling: if 2 files selected at step 0, take both
+        if (step === 0 && files.length >= 2) {
+            setFile1(files[0]);
+            setFile2(files[1]);
+            setStep(2);
+            return;
+        }
+
+        if (step === 0) {
+            setFile1(files[0]);
+            setStep(1);
+        } else if (step === 1) {
+            setFile2(files[0]);
+            setStep(2);
+        }
+    };
+
+    // Load and Analyze Effect
+    useEffect(() => {
+        if (step !== 2 || !file1 || !file2) return;
+        const load = async () => {
+            setIsLoading(true);
+            try {
+                const pdfjsLib = await getPdfJs();
+
+                const ab1 = await file1.arrayBuffer();
+                const pdf1 = await (pdfjsLib as any).getDocument(new Uint8Array(ab1)).promise;
+                setNumPages1(pdf1.numPages);
+                canvas1Refs.current = Array(pdf1.numPages).fill(null);
+
+                const ab2 = await file2.arrayBuffer();
+                const pdf2 = await (pdfjsLib as any).getDocument(new Uint8Array(ab2)).promise;
+                setNumPages2(pdf2.numPages);
+                canvas2Refs.current = Array(pdf2.numPages).fill(null);
+
+                const [t1, t2] = await Promise.all([extractTexts(file1), extractTexts(file2)]);
+                setChanges(findChanges(t1, t2));
+            } catch (e) {
+                console.error(e);
+                toast.show({ title: "Error", message: "Failed to load PDFs", variant: "error", position: "top-right" });
+                setStep(0); // Reset on error
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        load();
+    }, [step, file1, file2]);
+
+    // Render Effect
+    useEffect(() => {
+        if (step !== 2 || !file1 || !file2 || numPages1 === 0 || numPages2 === 0) return;
+        const render = async () => {
             const pdfjsLib = await getPdfJs();
-
-            // Apply zoom
             const scale = zoom / 100;
 
-            // Render file 1
-            const arrayBuffer1 = await file1.arrayBuffer();
-            const pdf1 = await (pdfjsLib as any).getDocument(new Uint8Array(arrayBuffer1)).promise;
-
-            for (let i = 1; i <= pdf1.numPages; i++) {
-                const page = await pdf1.getPage(i);
-                const viewport = page.getViewport({ scale });
-
-                // Get or create canvas
-                let canvas = canvas1Refs.current[i - 1];
-
-                if (!canvas) continue;
-
-                const context = canvas.getContext("2d")!;
-
-                canvas.height = viewport.height;
-                canvas.width = viewport.width;
-
-                await page.render({
-                    canvasContext: context,
-                    viewport: viewport,
-                    canvas: canvas,
-                }).promise;
+            const ab1 = await file1.arrayBuffer();
+            const pdf1 = await (pdfjsLib as any).getDocument(new Uint8Array(ab1)).promise;
+            for (let i = 0; i < pdf1.numPages; i++) {
+                const c = canvas1Refs.current[i];
+                if (!c) continue;
+                const p = await pdf1.getPage(i + 1);
+                const vp = p.getViewport({ scale });
+                c.width = vp.width;
+                c.height = vp.height;
+                // Add maxWidth/height auto to prevent overflow
+                c.style.maxWidth = "100%";
+                c.style.height = "auto";
+                await p.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise;
             }
 
-            // Render file 2
-            const arrayBuffer2 = await file2.arrayBuffer();
-            const pdf2 = await (pdfjsLib as any).getDocument(new Uint8Array(arrayBuffer2)).promise;
-
-            for (let i = 1; i <= pdf2.numPages; i++) {
-                const page = await pdf2.getPage(i);
-                const viewport = page.getViewport({ scale });
-
-                // Get or create canvas
-                let canvas = canvas2Refs.current[i - 1];
-
-                if (!canvas) continue;
-
-                const context = canvas.getContext("2d")!;
-
-                canvas.height = viewport.height;
-                canvas.width = viewport.width;
-
-                await page.render({
-                    canvasContext: context,
-                    viewport: viewport,
-                    canvas: canvas,
-                }).promise;
-            }
-
-            // Compute diff if in diff mode
-            if (comparisonMode === "diff") {
-                computeDiff();
+            const ab2 = await file2.arrayBuffer();
+            const pdf2 = await (pdfjsLib as any).getDocument(new Uint8Array(ab2)).promise;
+            for (let i = 0; i < pdf2.numPages; i++) {
+                const c = canvas2Refs.current[i];
+                if (!c) continue;
+                const p = await pdf2.getPage(i + 1);
+                const vp = p.getViewport({ scale });
+                c.width = vp.width;
+                c.height = vp.height;
+                // Add maxWidth/height auto to prevent overflow
+                c.style.maxWidth = "100%";
+                c.style.height = "auto";
+                await p.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise;
             }
         };
+        const t = setTimeout(render, 150);
+        return () => clearTimeout(t);
+    }, [step, file1, file2, numPages1, numPages2, zoom]);
 
-        renderAllPages();
-    }, [file1, file2, zoom, comparisonMode]);
+    const downloadReport = () => {
+        let r = `COMPARISON REPORT\n${'='.repeat(50)}\n\nFile 1: ${file1?.name}\nFile 2: ${file2?.name}\nChanges: ${changes.length}\n\n`;
+        changes.forEach(c => { r += `[Page ${c.page}]\nOLD: ${c.oldText}\nNEW: ${c.newText}\n\n`; });
+        saveAs(new Blob([r]), `report-${Date.now()}.txt`);
+    };
 
-    // Compute difference between PDFs
-    const computeDiff = useCallback(async () => {
-        if (!file1 || !file2) return;
-        setIsComputingDiff(true);
-        setDiffImage(null);
+    const filtered = searchQuery
+        ? changes.filter(c => c.oldText.toLowerCase().includes(searchQuery.toLowerCase()) || c.newText.toLowerCase().includes(searchQuery.toLowerCase()))
+        : changes;
 
-        try {
-            // Initialize PDF.js
-            const pdfjsLib = await getPdfJs();
+    const reset = () => {
+        setFile1(null);
+        setFile2(null);
+        setNumPages1(0);
+        setNumPages2(0);
+        setChanges([]);
+        setStep(0);
+    };
 
-            // Get page 1 from both PDFs
-            const arrayBuffer1 = await file1.arrayBuffer();
-            const pdf1 = await (pdfjsLib as any).getDocument(new Uint8Array(arrayBuffer1)).promise;
-            const page1 = await pdf1.getPage(1);
+    // Native File Handling
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [isDragging, setIsDragging] = useState(false);
 
-            const arrayBuffer2 = await file2.arrayBuffer();
-            const pdf2 = await (pdfjsLib as any).getDocument(new Uint8Array(arrayBuffer2)).promise;
-            const page2 = await pdf2.getPage(1);
+    const handleNativeFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files.length > 0) {
+            processFiles(Array.from(e.target.files));
+        }
+        // Reset value to allow selecting same file again if needed
+        if (e.target) e.target.value = '';
+    };
 
-            // Render both pages to canvases
-            const viewport1 = page1.getViewport({ scale: 1 });
-            const viewport2 = page2.getViewport({ scale: 1 });
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(true);
+    };
 
-            // Use larger dimensions
-            const width = Math.max(viewport1.width, viewport2.width);
-            const height = Math.max(viewport1.height, viewport2.height);
+    const handleDragLeave = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(false);
+    };
 
-            const canvas1 = document.createElement("canvas");
-            canvas1.width = width;
-            canvas1.height = height;
-            const ctx1 = canvas1.getContext("2d");
-            if (!ctx1) throw new Error("Could not get context 1");
-
-            const canvas2 = document.createElement("canvas");
-            canvas2.width = width;
-            canvas2.height = height;
-            const ctx2 = canvas2.getContext("2d");
-            if (!ctx2) throw new Error("Could not get context 2");
-
-            // Fill with white background
-            ctx1.fillStyle = "white";
-            ctx1.fillRect(0, 0, width, height);
-            ctx2.fillStyle = "white";
-            ctx2.fillRect(0, 0, width, height);
-
-            await page1.render({ canvasContext: ctx1, viewport: viewport1, canvas: canvas1 }).promise;
-            await page2.render({ canvasContext: ctx2, viewport: viewport2, canvas: canvas2 }).promise;
-
-            // Get image data for comparison
-            const imageData1 = ctx1.getImageData(0, 0, width, height);
-            const imageData2 = ctx2.getImageData(0, 0, width, height);
-
-            // Create diff canvas
-            const diffCanvas = document.createElement("canvas");
-            diffCanvas.width = width;
-            diffCanvas.height = height;
-            const diffCtx = diffCanvas.getContext("2d");
-            if (!diffCtx) throw new Error("Could not get diff context");
-
-            // Create diff image data
-            const diffImageData = diffCtx.createImageData(width, height);
-            const data1 = imageData1.data;
-            const data2 = imageData2.data;
-            const diffData = diffImageData.data;
-
-            // Simple pixel-by-pixel comparison
-            for (let i = 0; i < data1.length; i += 4) {
-                const r1 = data1[i];
-                const g1 = data1[i + 1];
-                const b1 = data1[i + 2];
-                const a1 = data1[i + 3];
-
-                const r2 = data2[i];
-                const g2 = data2[i + 1];
-                const b2 = data2[i + 2];
-                const a2 = data2[i + 3];
-
-                // Calculate difference
-                const diff = Math.abs(r1 - r2) + Math.abs(g1 - g2) + Math.abs(b1 - b2);
-
-                if (diff > 30) {
-                    // Mark as red
-                    diffData[i] = 255;
-                    diffData[i + 1] = 0;
-                    diffData[i + 2] = 0;
-                    diffData[i + 3] = 255;
-                } else {
-                    // Mark as white
-                    diffData[i] = 255;
-                    diffData[i + 1] = 255;
-                    diffData[i + 2] = 255;
-                    diffData[i + 3] = 255;
-                }
+    const handleDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(false);
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            const pdfs = Array.from(e.dataTransfer.files).filter(f => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'));
+            if (pdfs.length > 0) {
+                processFiles(pdfs);
+            } else {
+                toast.show({ title: "Invalid File", message: "Please upload PDF files only.", variant: "error", position: "top-right" });
             }
-
-            // Put diff image data back to canvas
-            diffCtx.putImageData(diffImageData, 0, 0);
-
-            // Convert to data URL
-            const diffImageUrl = diffCanvas.toDataURL();
-            setDiffImage(diffImageUrl);
-
-            // Store diff canvas in refs
-            diffCanvasRefs.current[0] = diffCanvas;
-
-        } catch (error) {
-            console.error("Error computing diff:", error);
-            toast.show({
-                title: "Diff Failed",
-                message: "Failed to compute difference. Please try again.",
-                variant: "error",
-                position: "top-right",
-            });
-        } finally {
-            setIsComputingDiff(false);
-        }
-    }, [file1, file2]);
-
-    // Save current state to history
-    const saveToHistory = useCallback(() => {
-        const newState = {
-            comparisonElements: [...comparisonElements],
-            currentPage,
-            comparisonMode,
-            opacity
-        };
-
-        // Remove any states after the current index
-        const newHistory = history.slice(0, historyIndex + 1);
-        newHistory.push(newState);
-
-        // Limit history to 20 states
-        if (newHistory.length > 20) {
-            newHistory.shift();
-        }
-
-        setHistory(newHistory);
-        setHistoryIndex(newHistory.length - 1);
-    }, [comparisonElements, currentPage, comparisonMode, opacity, history, historyIndex]);
-
-    // Undo
-    const undo = useCallback(() => {
-        if (historyIndex > 0) {
-            const prevState = history[historyIndex - 1];
-            setComparisonElements(prevState.comparisonElements);
-            setCurrentPage(prevState.currentPage);
-            setComparisonMode(prevState.comparisonMode);
-            setOpacity(prevState.opacity);
-            setHistoryIndex(historyIndex - 1);
-        }
-    }, [historyIndex, history]);
-
-    // Redo
-    const redo = useCallback(() => {
-        if (historyIndex < history.length - 1) {
-            const nextState = history[historyIndex + 1];
-            setComparisonElements(nextState.comparisonElements);
-            setCurrentPage(nextState.currentPage);
-            setComparisonMode(nextState.comparisonMode);
-            setOpacity(nextState.opacity);
-            setHistoryIndex(historyIndex + 1);
-        }
-    }, [historyIndex, history]);
-
-    // Fit to page
-    const fitToPage = () => {
-        setZoom(100);
-    };
-
-    // Add comparison element
-    const addComparisonElement = (type: "rectangle" | "circle" | "arrow" | "text") => {
-        const id = Math.random().toString(36).substr(2, 9);
-        const newElement: ComparisonElement = {
-            id,
-            type,
-            x: 50,
-            y: 50,
-            page: currentPage,
-            color: color,
-            strokeWidth: strokeWidth,
-            opacity: opacity / 100
-        };
-
-        if (type === "text") {
-            newElement.content = "Note";
-            newElement.fontSize = fontSize;
-            newElement.fontFamily = fontFamily;
-        } else if (type === "rectangle" || type === "circle") {
-            newElement.width = 20;
-            newElement.height = 10;
-        } else if (type === "arrow") {
-            newElement.points = [
-                { x: 40, y: 50 },
-                { x: 60, y: 50 }
-            ];
-        }
-
-        saveToHistory();
-        setComparisonElements(prev => [...prev, newElement]);
-        setSelectedElementId(id);
-        setActiveTool('select');
-    };
-
-    // Update selected element properties
-    const updateSelectedElement = (updates: Partial<ComparisonElement>) => {
-        if (!selectedElementId) return;
-
-        saveToHistory();
-        setComparisonElements(prev => prev.map(el =>
-            el.id === selectedElementId ? { ...el, ...updates } : el
-        ));
-    };
-
-    // Remove element
-    const removeElement = (id: string) => {
-        saveToHistory();
-        setComparisonElements(prev => prev.filter(el => el.id !== id));
-        if (selectedElementId === id) setSelectedElementId(null);
-    };
-
-    // Export comparison
-    const exportComparison = async () => {
-        if (!file1 || !file2) return;
-        setIsProcessing(true);
-
-        try {
-            // Create a new PDF with comparison elements
-            const result = await pdfStrategyManager.execute('compare', [file1, file2], {
-                comparisonMode,
-                opacity: opacity / 100,
-                comparisonElements
-            });
-
-            saveAs(result.blob, result.fileName || `comparison-${file1.name}-vs-${file2.name}`);
-
-            toast.show({
-                title: "Success",
-                message: "Comparison exported successfully!",
-                variant: "success",
-                position: "top-right",
-            });
-        } catch (error) {
-            console.error("Error exporting comparison:", error);
-            toast.show({
-                title: "Export Failed",
-                message: "Failed to export comparison. Please try again.",
-                variant: "error",
-                position: "top-right",
-            });
-        } finally {
-            setIsProcessing(false);
         }
     };
 
-    // Handle both files from a single upload
-    const handleFilesSelected = async (files: File[]) => {
-        if (files.length >= 1) {
-            setFile1(files[0]);
-        }
-        if (files.length >= 2) {
-            setFile2(files[1]);
-        }
-
-        if (files.length > 0) {
-            // Load PDF to get page count from first file
-            const pdfjsLib = await getPdfJs();
-            const arrayBuffer = await files[0].arrayBuffer();
-            const pdf = await (pdfjsLib as any).getDocument(new Uint8Array(arrayBuffer)).promise;
-            setNumPages(pdf.numPages);
-
-            // Initialize canvas refs
-            canvas1Refs.current = Array(pdf.numPages).fill(null);
-            canvas2Refs.current = Array(pdf.numPages).fill(null);
-            diffCanvasRefs.current = Array(pdf.numPages).fill(null);
-        }
+    const triggerFileSelect = () => {
+        fileInputRef.current?.click();
     };
 
-    // If no files, show file upload
-    if (!file1 || !file2) {
+    // --- RENDER ---
+
+    // Step 0 & 1: File Selection
+    if (step === 0 || step === 1) {
         return (
-            <div className="mx-auto max-w-2xl px-4 py-8">
-                {/* Initial state - no files selected */}
-                {!file1 && (
-                    <FileUpload
-                        onFilesSelected={handleFilesSelected}
-                        maxFiles={2}
-                        accept={{ "application/pdf": [".pdf"] }}
-                        description="Select 2 PDF files to compare"
-                    />
+            <div className="w-full">
+                <input
+                    type="file"
+                    ref={fileInputRef}
+                    className="hidden"
+                    accept=".pdf,application/pdf"
+                    multiple={step === 0} // Allow multiple only on first step
+                    onChange={handleNativeFileSelect}
+                />
+
+                {step === 0 ? (
+                    // STEP 0: First File
+                    <div
+                        className={cn(
+                            "group relative flex flex-col items-center justify-center min-h-[250px] w-full rounded-xl border-2 border-dashed border-slate-200 bg-white/50 hover:bg-white/80 transition-all cursor-pointer",
+                            isDragging && "border-blue-500 bg-blue-50 scale-[1.01]"
+                        )}
+                        onDragOver={handleDragOver}
+                        onDragLeave={handleDragLeave}
+                        onDrop={handleDrop}
+                        onClick={triggerFileSelect}
+                    >
+                        <div className="flex flex-col items-center justify-center p-6 text-center">
+                            <div className="mb-4 p-4 bg-blue-50 text-blue-600 rounded-full group-hover:scale-110 transition-transform duration-300 shadow-sm">
+                                <GitCompare className="w-8 h-8" />
+                            </div>
+                            <h3 className="text-xl font-bold text-slate-800 mb-2">Select PDF files to compare</h3>
+                            <p className="text-slate-500 mb-6 max-w-sm">Drag and drop your files here, or click to browse</p>
+                            <Button size="lg" className="h-12 px-8 bg-[#0057B7] hover:bg-[#004494] text-white shadow-lg rounded-full font-bold">
+                                Select PDF files
+                            </Button>
+                        </div>
+                    </div>
+                ) : (
+                    // STEP 1: Second File
+                    <div
+                        className={cn(
+                            "group relative flex flex-col items-center justify-center min-h-[250px] w-full rounded-xl border-2 border-dashed border-slate-200 bg-white/50 hover:bg-white/80 transition-all cursor-pointer",
+                            isDragging && "border-blue-500 bg-blue-50 scale-[1.01]"
+                        )}
+                        onDragOver={handleDragOver}
+                        onDragLeave={handleDragLeave}
+                        onDrop={handleDrop}
+                        onClick={triggerFileSelect}
+                    >
+                        <div className="flex flex-col items-center justify-center p-6 text-center">
+                            <div className="mb-4 p-4 bg-purple-50 text-purple-600 rounded-full group-hover:scale-110 transition-transform duration-300 shadow-sm">
+                                <UploadCloud className="w-8 h-8" />
+                            </div>
+                            <h3 className="text-xl font-bold text-slate-800 mb-2">Select the second PDF</h3>
+                            <p className="text-slate-500 mb-6 max-w-sm">Upload the modified version to compare</p>
+                            <Button size="lg" className="h-12 px-8 bg-[#0057B7] hover:bg-[#004494] text-white shadow-lg rounded-full font-bold">
+                                Select Second File
+                            </Button>
+                        </div>
+                    </div>
                 )}
 
-                {/* One file selected - show option to add second */}
-                {file1 && !file2 && (
-                    <FileUpload
-                        onFilesSelected={(files) => {
-                            if (files.length > 0) {
-                                setFile2(files[0]);
-                            }
-                        }}
-                        maxFiles={1}
-                        accept={{ "application/pdf": [".pdf"] }}
-                        description="Select the second PDF to compare with"
-                    />
-                )}
-
-                {/* Show selected files status */}
+                {/* File Status Cards */}
                 {(file1 || file2) && (
-                    <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2">
-                        <div
-                            className={cn(
-                                "rounded-xl border bg-card p-4 shadow-sm transition-all hover:shadow-md",
-                                !file1 && "cursor-pointer border-dashed"
-                            )}
-                            onClick={() => !file1 && document.getElementById('file1-input')?.click()}
-                        >
-                            <div className="flex items-center gap-3">
-                                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
-                                    <FileText className="h-5 w-5" />
+                    <div className="mt-8 grid grid-cols-2 gap-6">
+                        {/* File 1 Status */}
+                        <div className="p-4 rounded-xl border border-green-200 bg-green-50 shadow-sm relative overflow-hidden group">
+                            <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
+                                <FileText className="w-24 h-24 text-green-600" />
+                            </div>
+                            <div className="flex items-center gap-3 relative z-10">
+                                <div className="p-2 bg-white rounded-lg shadow-sm">
+                                    <FileText className="w-6 h-6 text-green-600" />
                                 </div>
-                                <div className="flex-1 overflow-hidden">
-                                    <p className="text-xs font-medium text-muted-foreground mb-0.5">Original PDF</p>
-                                    <p className="text-sm font-semibold truncate text-foreground">
-                                        {file1 ? file1.name : <span className="text-muted-foreground italic font-normal">Click to select...</span>}
-                                    </p>
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-xs font-semibold text-green-600 uppercase tracking-wider mb-0.5">Original File</p>
+                                    <p className="text-sm font-medium text-slate-900 truncate">{file1 ? file1.name : "Waiting..."}</p>
                                 </div>
-                                {file1 ? (
-                                    <div className="flex items-center gap-1">
-                                        <Check className="h-5 w-5 text-green-500" />
-                                        <button
-                                            onClick={(e) => { e.stopPropagation(); setFile1(null); }}
-                                            className="h-6 w-6 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
-                                        >
-                                            <X className="h-4 w-4 text-gray-500" />
-                                        </button>
-                                    </div>
-                                ) : null}
+                                {file1 && <Check className="w-5 h-5 text-green-600" />}
                             </div>
                         </div>
 
-                        <div
-                            className={cn(
-                                "rounded-xl border bg-card p-4 shadow-sm transition-all hover:shadow-md",
-                                !file2 && file1 && "cursor-pointer border-dashed border-indigo-300"
-                            )}
-                        >
-                            <div className="flex items-center gap-3">
-                                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400">
-                                    <GitCompare className="h-5 w-5" />
+                        {/* File 2 Status */}
+                        <div className={cn(
+                            "p-4 rounded-xl border shadow-sm relative overflow-hidden transition-all",
+                            file2 ? "border-purple-200 bg-purple-50" : "border-slate-200 bg-slate-50 border-dashed"
+                        )}>
+                            <div className="absolute top-0 right-0 p-2 opacity-10">
+                                <GitCompare className="w-24 h-24 text-purple-600" />
+                            </div>
+                            <div className="flex items-center gap-3 relative z-10">
+                                <div className={cn("p-2 rounded-lg shadow-sm", file2 ? "bg-white" : "bg-slate-200")}>
+                                    <GitCompare className={cn("w-6 h-6", file2 ? "text-purple-600" : "text-slate-400")} />
                                 </div>
-                                <div className="flex-1 overflow-hidden">
-                                    <p className="text-xs font-medium text-muted-foreground mb-0.5">Modified PDF</p>
-                                    <p className="text-sm font-semibold truncate text-foreground">
-                                        {file2 ? file2.name : <span className="text-muted-foreground italic font-normal">{file1 ? "↑ Select above" : "Waiting..."}</span>}
-                                    </p>
+                                <div className="flex-1 min-w-0">
+                                    <p className={cn("text-xs font-semibold uppercase tracking-wider mb-0.5", file2 ? "text-purple-600" : "text-slate-500")}>Modified File</p>
+                                    <p className="text-sm font-medium text-slate-900 truncate">{file2 ? file2.name : "Waiting for selection..."}</p>
                                 </div>
-                                {file2 ? (
-                                    <div className="flex items-center gap-1">
-                                        <Check className="h-5 w-5 text-green-500" />
-                                        <button
-                                            onClick={(e) => { e.stopPropagation(); setFile2(null); }}
-                                            className="h-6 w-6 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
-                                        >
-                                            <X className="h-4 w-4 text-gray-500" />
-                                        </button>
-                                    </div>
-                                ) : null}
+                                {file2 && <Check className="w-5 h-5 text-purple-600" />}
                             </div>
                         </div>
                     </div>
@@ -623,615 +350,139 @@ export function ComparePdfTool() {
         );
     }
 
+    // Step 2: Comparison UI
     return (
-        <div className={cn(
-            "flex flex-col h-[calc(100vh-64px)]",
-            darkMode ? "dark" : ""
-        )}>
-            {/* Floating Toolbar */}
-            <div className={cn(
-                "fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-2 transition-all duration-300",
-                showToolbar ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2 pointer-events-none"
-            )}>
-                <div className="flex items-center gap-1">
-                    {/* Navigation */}
-                    <div className="flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-1 mr-2">
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                            disabled={currentPage === 1}
-                        >
-                            <ChevronLeft className="h-4 w-4" />
-                        </Button>
-                        <span className="text-sm font-medium px-2 min-w-20 text-center text-gray-700 dark:text-gray-300">
-                            {currentPage} / {numPages}
-                        </span>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => setCurrentPage(Math.min(numPages, currentPage + 1))}
-                            disabled={currentPage === numPages}
-                        >
-                            <ChevronRight className="h-4 w-4" />
-                        </Button>
-                    </div>
-
-                    {/* Comparison Mode */}
-                    <div className="flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-1 mr-2">
-                        {comparisonModeOptions.map((mode) => (
-                            <Button
-                                key={mode.id}
-                                variant={comparisonMode === mode.id ? "secondary" : "ghost"}
-                                size="sm"
-                                onClick={() => {
-                                    setComparisonMode(mode.id as ComparisonMode);
-                                    saveToHistory();
-                                }}
-                                className="h-8 px-2"
-                            >
-                                {mode.icon}
-                                <span className="text-xs">{mode.label}</span>
-                            </Button>
-                        ))}
-                    </div>
-
-                    {/* Zoom Controls */}
-                    <div className="flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => setZoom(Math.max(25, zoom - 25))}
-                        >
-                            <ZoomOut className="h-4 w-4" />
-                        </Button>
-                        <span className="text-sm font-medium px-2 min-w-[60px] text-center text-gray-700 dark:text-gray-300">{zoom}%</span>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => setZoom(Math.min(200, zoom + 25))}
-                        >
-                            <ZoomIn className="h-4 w-4" />
-                        </Button>
-                        <div className="w-px h-4 bg-gray-300 dark:bg-gray-600 mx-1" />
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={fitToPage}
-                            title="Fit to Page"
-                        >
-                            <Maximize className="h-4 w-4" />
-                        </Button>
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex items-center gap-1 ml-2">
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={undo}
-                            disabled={historyIndex <= 0}
-                            title="Undo"
-                        >
-                            <Undo className="h-4 w-4" />
-                        </Button>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={redo}
-                            disabled={historyIndex >= history.length - 1}
-                            title="Redo"
-                        >
-                            <Redo className="h-4 w-4" />
-                        </Button>
-                        <Button
-                            onClick={exportComparison}
-                            disabled={isProcessing}
-                            className="h-8 px-3 bg-blue-600 hover:bg-blue-700 text-white"
-                        >
-                            {isProcessing ? "Processing..." : <><Download className="h-4 w-4 mr-1" /> Export</>}
-                        </Button>
-                    </div>
-                </div>
-            </div>
-
-            {/* Properties Panel */}
-            <div className={cn(
-                "fixed right-4 top-20 z-40 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-4 w-80 transition-all duration-300",
-                showProperties ? "opacity-100 translate-x-0" : "opacity-0 translate-x-2 pointer-events-none"
-            )}>
-                <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-semibold text-gray-900 dark:text-white">Comparison Properties</h3>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6"
-                        onClick={() => setShowProperties(false)}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 320px', height: 'calc(100vh - 80px)', background: '#f3f4f6' }}>
+            {/* LEFT PANEL */}
+            <div style={{ display: 'flex', flexDirection: 'column', background: 'white', borderRight: '2px solid #d1d5db' }}>
+                <div style={{ height: 48, padding: '0 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
+                    <button onClick={reset} style={{ padding: 6, borderRadius: 4, cursor: 'pointer', border: 'none', background: 'transparent' }}>
+                        <X className="w-4 h-4 text-gray-500" />
+                    </button>
+                    <button
+                        onClick={() => setScrollSync(!scrollSync)}
+                        style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 20, cursor: 'pointer', border: 'none', fontSize: 13, fontWeight: 500, background: scrollSync ? '#dbeafe' : '#f3f4f6', color: scrollSync ? '#1d4ed8' : '#6b7280' }}
                     >
-                        <X className="h-4 w-4" />
-                    </Button>
+                        {scrollSync ? <Link2 className="w-4 h-4" /> : <Link2Off className="w-4 h-4" />}
+                        Scroll sync
+                    </button>
+                    <div style={{ width: 32 }} />
                 </div>
-
-                {/* Opacity Control */}
-                {comparisonMode === "overlay" && (
-                    <div className="mb-4">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Overlay Opacity: {opacity}%</label>
-                        <input
-                            type="range"
-                            min="0"
-                            max="100"
-                            step="5"
-                            value={opacity}
-                            onChange={(e) => {
-                                setOpacity(Number(e.target.value));
-                                saveToHistory();
-                            }}
-                            className="w-full"
-                        />
-                    </div>
-                )}
-
-                {/* Annotation Tools */}
-                <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Annotation Tools</label>
-                    <div className="grid grid-cols-4 gap-2">
-                        <Button
-                            variant={activeTool === 'select' ? 'secondary' : 'ghost'}
-                            size="sm"
-                            onClick={() => setActiveTool('select')}
-                            title="Select"
-                        >
-                            <Move className="h-4 w-4" />
-                        </Button>
-                        <Button
-                            variant={activeTool === 'rectangle' ? 'secondary' : 'ghost'}
-                            size="sm"
-                            onClick={() => addComparisonElement('rectangle')}
-                            title="Rectangle"
-                        >
-                            <SquareIcon className="h-4 w-4" />
-                        </Button>
-                        <Button
-                            variant={activeTool === 'circle' ? 'secondary' : 'ghost'}
-                            size="sm"
-                            onClick={() => addComparisonElement('circle')}
-                            title="Circle"
-                        >
-                            <Circle className="h-4 w-4" />
-                        </Button>
-                        <Button
-                            variant={activeTool === 'arrow' ? 'secondary' : 'ghost'}
-                            size="sm"
-                            onClick={() => addComparisonElement('arrow')}
-                            title="Arrow"
-                        >
-                            <ArrowRight className="h-4 w-4" />
-                        </Button>
-                        <Button
-                            variant={activeTool === 'text' ? 'secondary' : 'ghost'}
-                            size="sm"
-                            onClick={() => addComparisonElement('text')}
-                            title="Text"
-                        >
-                            <Type className="h-4 w-4" />
-                        </Button>
-                    </div>
-                </div>
-
-                {/* Color Picker */}
-                <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Color</label>
-                    <div className="flex items-center gap-2 flex-wrap">
-                        {colorPresets.map(c => (
-                            <button
-                                key={c}
-                                className={cn("w-6 h-6 rounded-full border-2 border-gray-300 dark:border-gray-600", color === c && "ring-2 ring-offset-2 ring-blue-500")}
-                                style={{ backgroundColor: c }}
-                                onClick={() => {
-                                    setColor(c);
-                                    updateSelectedElement({ color: c });
-                                }}
-                                title={c}
-                            />
-                        ))}
-                        <input
-                            type="color"
-                            value={color}
-                            onChange={(e) => {
-                                setColor(e.target.value);
-                                updateSelectedElement({ color: e.target.value });
-                            }}
-                            className="h-8 w-8 rounded border border-gray-300 dark:border-gray-500 cursor-pointer bg-transparent p-0"
-                            title="Custom Color"
-                        />
-                    </div>
-                </div>
-
-                {/* Stroke Width */}
-                <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Stroke Width: {strokeWidth}px</label>
-                    <input
-                        type="range"
-                        min="1"
-                        max="10"
-                        step="1"
-                        value={strokeWidth}
-                        onChange={(e) => {
-                            setStrokeWidth(Number(e.target.value));
-                            updateSelectedElement({ strokeWidth: Number(e.target.value) });
-                        }}
-                        className="w-full"
-                    />
-                </div>
-
-                {/* Font Options */}
-                {activeTool === 'text' && (
-                    <div className="mb-4">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Text Properties</label>
-                        <div className="grid grid-cols-2 gap-2">
-                            <div>
-                                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Font Family</label>
-                                <select
-                                    value={fontFamily}
-                                    onChange={(e) => {
-                                        setFontFamily(e.target.value);
-                                        updateSelectedElement({ fontFamily: e.target.value });
-                                    }}
-                                    className="w-full h-8 rounded border border-gray-300 dark:border-gray-500 px-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-xs"
-                                >
-                                    {fontOptions.map(font => (
-                                        <option key={font} value={font}>{font}</option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Font Size</label>
-                                <input
-                                    type="number"
-                                    min="8"
-                                    max="72"
-                                    value={fontSize}
-                                    onChange={(e) => {
-                                        setFontSize(Number(e.target.value));
-                                        updateSelectedElement({ fontSize: Number(e.target.value) });
-                                    }}
-                                    className="w-full h-8 rounded border border-gray-300 dark:border-gray-500 px-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-xs"
-                                />
-                            </div>
+                <div ref={leftScrollRef} onScroll={() => handleScroll('left')} style={{ flex: 1, overflow: 'auto', padding: 24, background: '#e5e7eb' }}>
+                    {isLoading ? (
+                        <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 80 }}>
+                            <div className="animate-spin rounded-full h-10 w-10 border-4 border-blue-500 border-t-transparent" />
                         </div>
-                    </div>
-                )}
-
-                {/* File Info */}
-                <div className="mb-4 p-3 bg-gray-100 dark:bg-gray-700 rounded-lg">
-                    <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                        <div>File 1: {file1?.name || "Not selected"}</div>
-                        <div>File 2: {file2?.name || "Not selected"}</div>
-                        <div>Mode: {comparisonModeOptions.find(m => m.id === comparisonMode)?.label}</div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Settings Panel */}
-            <div className="fixed bottom-4 left-4 z-40">
-                <div className="flex items-center gap-2 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-2">
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => setShowToolbar(!showToolbar)}
-                        title={showToolbar ? "Hide Toolbar" : "Show Toolbar"}
-                    >
-                        <Settings className="h-4 w-4" />
-                    </Button>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => setShowProperties(!showProperties)}
-                        title={showProperties ? "Hide Properties" : "Show Properties"}
-                    >
-                        <Sliders className="h-4 w-4" />
-                    </Button>
-                    <div className="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-1" />
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => setShowGrid(!showGrid)}
-                        title={showGrid ? "Hide Grid" : "Show Grid"}
-                    >
-                        <Grid3x3 className={cn("h-4 w-4", showGrid && "text-blue-600 dark:text-blue-400")} />
-                    </Button>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => setSnapToGrid(!snapToGrid)}
-                        title={snapToGrid ? "Disable Snap to Grid" : "Enable Snap to Grid"}
-                    >
-                        <Move className={cn("h-4 w-4", snapToGrid && "text-blue-600 dark:text-blue-400")} />
-                    </Button>
-                    <div className="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-1" />
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => setDarkMode(!darkMode)}
-                        title={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
-                    >
-                        {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-                    </Button>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => {
-                            if (viewMode === 'desktop') setViewMode('tablet');
-                            else if (viewMode === 'tablet') setViewMode('mobile');
-                            else setViewMode('desktop');
-                        }}
-                        title={`View Mode: ${viewMode}`}
-                    >
-                        {viewMode === 'desktop' && <Monitor className="h-4 w-4" />}
-                        {viewMode === 'tablet' && <Tablet className="h-4 w-4" />}
-                        {viewMode === 'mobile' && <Smartphone className="h-4 w-4" />}
-                    </Button>
-                </div>
-            </div>
-
-            {/* Main Canvas Area */}
-            <div
-                ref={scrollContainerRef}
-                className="flex-1 bg-gray-50 dark:bg-gray-900 overflow-auto p-8 relative"
-            >
-                <div className="flex flex-col items-center">
-                    {comparisonMode === "side-by-side" && (
-                        <div className="flex gap-8">
-                            <div className="flex flex-col items-center">
-                                <h3 className="text-lg font-semibold mb-2 text-gray-700 dark:text-gray-300">{file1?.name || "File 1"}</h3>
-                                {Array.from({ length: numPages }, (_, i) => (
-                                    <div
-                                        key={i}
-                                        className="relative mb-4 shadow-2xl transition-transform duration-200 ease-out"
-                                        style={{
-                                            width: "fit-content",
-                                            height: "fit-content",
-                                            transform: `scale(${zoom / 100})`
-                                        }}
-                                    >
-                                        <canvas
-                                            ref={el => { canvas1Refs.current[i] = el; }}
-                                            className="max-w-none block bg-white"
-                                        />
-
-                                        {/* Page Number */}
-                                        <div className="absolute bottom-4 right-4 bg-gray-800 bg-opacity-70 text-white px-2 py-1 rounded text-sm">
-                                            Page {i + 1}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-
-                            <div className="flex flex-col items-center">
-                                <h3 className="text-lg font-semibold mb-2 text-gray-700 dark:text-gray-300">{file2?.name || "File 2"}</h3>
-                                {Array.from({ length: numPages }, (_, i) => (
-                                    <div
-                                        key={i}
-                                        className="relative mb-4 shadow-2xl transition-transform duration-200 ease-out"
-                                        style={{
-                                            width: "fit-content",
-                                            height: "fit-content",
-                                            transform: `scale(${zoom / 100})`
-                                        }}
-                                    >
-                                        <canvas
-                                            ref={el => { canvas2Refs.current[i] = el; }}
-                                            className="max-w-none block bg-white"
-                                        />
-
-                                        {/* Page Number */}
-                                        <div className="absolute bottom-4 right-4 bg-gray-800 bg-opacity-70 text-white px-2 py-1 rounded text-sm">
-                                            Page {i + 1}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
-                    {comparisonMode === "overlay" && (
-                        <div className="relative">
-                            <h3 className="text-lg font-semibold mb-4 text-center text-gray-700 dark:text-gray-300">
-                                {file1?.name || "File 1"} vs {file2?.name || "File 2"}
-                            </h3>
-                            {Array.from({ length: numPages }, (_, i) => (
-                                <div
-                                    key={i}
-                                    className="relative mb-4 shadow-2xl transition-transform duration-200 ease-out"
-                                    style={{
-                                        width: "fit-content",
-                                        height: "fit-content",
-                                        transform: `scale(${zoom / 100})`
-                                    }}
-                                >
-                                    <canvas
-                                        ref={el => { canvas1Refs.current[i] = el; }}
-                                        className="max-w-none block bg-white"
-                                    />
-
-                                    {/* Overlay second PDF */}
-                                    <div
-                                        className="absolute inset-0"
-                                        style={{ opacity: opacity / 100 }}
-                                    >
-                                        <canvas
-                                            ref={el => { canvas2Refs.current[i] = el; }}
-                                            className="max-w-none block"
-                                        />
-                                    </div>
-
-                                    {/* Page Number */}
-                                    <div className="absolute bottom-4 right-4 bg-gray-800 bg-opacity-70 text-white px-2 py-1 rounded text-sm">
-                                        Page {i + 1}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-
-                    {comparisonMode === "diff" && (
-                        <div className="flex flex-col items-center">
-                            <h3 className="text-lg font-semibold mb-4 text-center text-gray-700 dark:text-gray-300">
-                                Difference: {file1?.name || "File 1"} vs {file2?.name || "File 2"}
-                            </h3>
-                            {isComputingDiff ? (
-                                <div className="flex items-center justify-center h-64">
-                                    <Loader2 className="h-8 w-8 animate-spin mr-2" />
-                                    <span className="text-lg">Computing differences...</span>
-                                </div>
-                            ) : (
-                                Array.from({ length: numPages }, (_, i) => (
-                                    <div
-                                        key={i}
-                                        className="relative mb-4 shadow-2xl transition-transform duration-200 ease-out"
-                                        style={{
-                                            width: "fit-content",
-                                            height: "fit-content",
-                                            transform: `scale(${zoom / 100})`
-                                        }}
-                                    >
-                                        {diffImage && i === 0 ? (
-                                            <img
-                                                src={diffImage}
-                                                alt="Difference"
-                                                className="max-w-none block bg-white"
-                                            />
-                                        ) : (
-                                            <canvas
-                                                ref={el => { diffCanvasRefs.current[i] = el; }}
-                                                className="max-w-none block bg-white"
-                                            />
-                                        )}
-
-                                        {/* Page Number */}
-                                        <div className="absolute bottom-4 right-4 bg-gray-800 bg-opacity-70 text-white px-2 py-1 rounded text-sm">
-                                            Page {i + 1}
-                                        </div>
-                                    </div>
-                                ))
-                            )}
-                        </div>
-                    )}
-
-                    {comparisonMode === "slide" && (
-                        <div className="flex flex-col items-center">
-                            <div className="flex items-center gap-4 mb-4">
-                                <Button
-                                    variant={showFile1Only ? "secondary" : "outline"}
-                                    size="sm"
-                                    onClick={() => {
-                                        setShowFile1Only(true);
-                                        setShowFile2Only(false);
-                                    }}
-                                >
-                                    {file1?.name || "File 1"}
-                                </Button>
-                                <Button
-                                    variant={showFile2Only ? "secondary" : "outline"}
-                                    size="sm"
-                                    onClick={() => {
-                                        setShowFile1Only(false);
-                                        setShowFile2Only(true);
-                                    }}
-                                >
-                                    {file2?.name || "File 2"}
-                                </Button>
-                                <Button
-                                    variant={!showFile1Only && !showFile2Only ? "secondary" : "outline"}
-                                    size="sm"
-                                    onClick={() => {
-                                        setShowFile1Only(false);
-                                        setShowFile2Only(false);
-                                    }}
-                                >
-                                    Both
-                                </Button>
-                            </div>
-
-                            {Array.from({ length: numPages }, (_, i) => (
-                                <div
-                                    key={i}
-                                    className="relative mb-4 shadow-2xl transition-transform duration-200 ease-out"
-                                    style={{
-                                        width: "fit-content",
-                                        height: "fit-content",
-                                        transform: `scale(${zoom / 100})`
-                                    }}
-                                >
-                                    {showFile1Only && (
-                                        <canvas
-                                            ref={el => { canvas1Refs.current[i] = el; }}
-                                            className="max-w-none block bg-white"
-                                        />
-                                    )}
-
-                                    {showFile2Only && (
-                                        <canvas
-                                            ref={el => { canvas2Refs.current[i] = el; }}
-                                            className="max-w-none block bg-white"
-                                        />
-                                    )}
-
-                                    {!showFile1Only && !showFile2Only && (
-                                        <div className="flex gap-4">
-                                            <canvas
-                                                ref={el => { canvas1Refs.current[i] = el; }}
-                                                className="max-w-none block bg-white"
-                                            />
-                                            <canvas
-                                                ref={el => { canvas2Refs.current[i] = el; }}
-                                                className="max-w-none block bg-white"
-                                            />
-                                        </div>
-                                    )}
-
-                                    {/* Page Number */}
-                                    <div className="absolute bottom-4 right-4 bg-gray-800 bg-opacity-70 text-white px-2 py-1 rounded text-sm">
-                                        Page {i + 1}
-                                    </div>
+                    ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+                            {Array.from({ length: numPages1 }).map((_, i) => (
+                                <div key={i} style={{ boxShadow: '0 10px 25px rgba(0,0,0,0.15)', background: 'white' }}>
+                                    <canvas ref={el => { canvas1Refs.current[i] = el; }} style={{ display: 'block' }} />
                                 </div>
                             ))}
                         </div>
                     )}
                 </div>
+                <div style={{ height: 40, padding: '0 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#f9fafb', borderTop: '1px solid #e5e7eb', fontSize: 12 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <select value={zoom} onChange={e => setZoom(Number(e.target.value))} style={{ padding: '4px 8px', border: '1px solid #d1d5db', borderRadius: 4, fontSize: 12 }}>
+                            {[25, 30, 40, 50, 60, 80, 100].map(z => <option key={z} value={z}>{z}%</option>)}
+                        </select>
+                        <button onClick={() => setZoom(Math.max(25, zoom - 10))} style={{ padding: 4, cursor: 'pointer', border: 'none', background: 'transparent' }}><ZoomOut className="w-4 h-4" /></button>
+                        <button onClick={() => setZoom(Math.min(100, zoom + 10))} style={{ padding: 4, cursor: 'pointer', border: 'none', background: 'transparent' }}><ZoomIn className="w-4 h-4" /></button>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#6b7280', maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <FileText className="w-3 h-3" />{file1?.name}
+                    </div>
+                </div>
             </div>
 
-            {/* Help Button */}
-            <div className="fixed bottom-4 right-4 z-40">
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-10 w-10 rounded-full bg-white dark:bg-gray-800 shadow-lg border border-gray-200 dark:border-gray-700"
-                    onClick={() => {
-                        toast.show({
-                            title: "Compare PDF Help",
-                            message: "Use different comparison modes to analyze differences between PDFs. Add annotations to highlight specific areas.",
-                            variant: "default",
-                            position: "top-right",
-                        });
-                    }}
-                    title="Help"
-                >
-                    <HelpCircle className="h-5 w-5" />
-                </Button>
+            {/* RIGHT PANEL */}
+            <div style={{ display: 'flex', flexDirection: 'column', background: 'white', borderRight: '2px solid #d1d5db' }}>
+                <div style={{ height: 48, padding: '0 16px', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
+                    <button onClick={reset} style={{ padding: 6, borderRadius: 4, cursor: 'pointer', border: 'none', background: 'transparent' }}>
+                        <X className="w-4 h-4 text-gray-500" />
+                    </button>
+                </div>
+                <div ref={rightScrollRef} onScroll={() => handleScroll('right')} style={{ flex: 1, overflow: 'auto', padding: 24, background: '#e5e7eb' }}>
+                    {isLoading ? (
+                        <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 80 }}>
+                            <div className="animate-spin rounded-full h-10 w-10 border-4 border-blue-500 border-t-transparent" />
+                        </div>
+                    ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+                            {Array.from({ length: numPages2 }).map((_, i) => (
+                                <div key={i} style={{ boxShadow: '0 10px 25px rgba(0,0,0,0.15)', background: 'white' }}>
+                                    <canvas ref={el => { canvas2Refs.current[i] = el; }} style={{ display: 'block' }} />
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+                <div style={{ height: 40, padding: '0 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#f9fafb', borderTop: '1px solid #e5e7eb', fontSize: 12 }}>
+                    <span style={{ color: '#6b7280' }}>{zoom}%</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#6b7280', maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <FileText className="w-3 h-3" />{file2?.name}
+                    </div>
+                </div>
+            </div>
+
+            {/* SIDEBAR */}
+            <div style={{ display: 'flex', flexDirection: 'column', background: 'white' }}>
+                <div style={{ padding: 16, borderBottom: '1px solid #e5e7eb' }}>
+                    <h2 style={{ fontSize: 18, fontWeight: 700, color: '#111827', margin: 0 }}>Compare PDF</h2>
+                </div>
+                <div style={{ padding: '12px 16px', borderBottom: '1px solid #e5e7eb' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 10, background: '#eff6ff', borderRadius: 8, color: '#1d4ed8' }}>
+                        <GitCompare className="w-5 h-5" />
+                        <span style={{ fontWeight: 500, fontSize: 14 }}>Semantic Text</span>
+                    </div>
+                </div>
+                <div style={{ padding: '12px 16px', background: '#eff6ff', borderBottom: '1px solid #e5e7eb', color: '#1e40af', fontSize: 13 }}>
+                    Compare text changes between two PDFs.
+                </div>
+                <div style={{ padding: '12px 16px', borderBottom: '1px solid #e5e7eb' }}>
+                    <div style={{ position: 'relative' }}>
+                        <Search style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', width: 16, height: 16, color: '#9ca3af' }} />
+                        <input type="text" placeholder="Search text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} style={{ width: '100%', padding: '8px 12px 8px 36px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 13, outline: 'none' }} />
+                    </div>
+                </div>
+                <div style={{ padding: '12px 16px', background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
+                    <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#111827' }}>Change report ({filtered.length})</h3>
+                </div>
+                <div style={{ flex: 1, overflow: 'auto' }}>
+                    {filtered.length === 0 ? (
+                        <div style={{ padding: '40px 20px', textAlign: 'center', color: '#6b7280' }}>
+                            <GitCompare style={{ width: 48, height: 48, margin: '0 auto 12px', color: '#d1d5db' }} />
+                            <p style={{ fontWeight: 500, margin: 0 }}>No differences found</p>
+                            <p style={{ fontSize: 13, marginTop: 4 }}>Documents appear identical</p>
+                        </div>
+                    ) : (
+                        filtered.map(c => (
+                            <div key={c.id} style={{ padding: '12px 16px', borderBottom: '1px solid #f3f4f6' }}>
+                                <div style={{ fontSize: 11, fontWeight: 500, color: '#6b7280', marginBottom: 8 }}>Page {c.page}</div>
+                                <div style={{ marginBottom: 10 }}>
+                                    <div style={{ fontSize: 11, fontWeight: 600, color: '#dc2626', marginBottom: 4 }}>Old</div>
+                                    <div style={{ fontSize: 12, padding: 8, background: '#fef2f2', borderLeft: '3px solid #ef4444', borderRadius: '0 4px 4px 0', color: '#991b1b', lineHeight: 1.4 }}>
+                                        {c.oldText.length > 150 ? c.oldText.slice(0, 150) + '...' : c.oldText}
+                                    </div>
+                                </div>
+                                <div>
+                                    <div style={{ fontSize: 11, fontWeight: 600, color: '#16a34a', marginBottom: 4 }}>New</div>
+                                    <div style={{ fontSize: 12, padding: 8, background: '#f0fdf4', borderLeft: '3px solid #22c55e', borderRadius: '0 4px 4px 0', color: '#166534', lineHeight: 1.4 }}>
+                                        {c.newText.length > 150 ? c.newText.slice(0, 150) + '...' : c.newText}
+                                    </div>
+                                </div>
+                            </div>
+                        ))
+                    )}
+                </div>
+                <div style={{ padding: 16, borderTop: '1px solid #e5e7eb' }}>
+                    <Button onClick={downloadReport} disabled={changes.length === 0} className="w-full bg-red-500 hover:bg-red-600 text-white font-semibold py-3">
+                        <Download className="w-5 h-5 mr-2" />
+                        Download report
+                    </Button>
+                </div>
             </div>
         </div>
     );

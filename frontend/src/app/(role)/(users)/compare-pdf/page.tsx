@@ -1,5 +1,4 @@
-import { ToolShell } from "@/components/layout/tool-shell";
-import { ComparePdfTool } from "@/components/tools/compare-pdf";
+import { ComparePdfClient } from "./client";
 
 export const metadata = {
     title: "Compare PDF - 18+ PDF",
@@ -7,12 +6,5 @@ export const metadata = {
 };
 
 export default function ComparePdfPage() {
-    return (
-        <ToolShell
-            title="Compare PDF"
-            description="Show a side-by-side document comparison and easily spot changes between different file versions."
-        >
-            <ComparePdfTool />
-        </ToolShell>
-    );
+    return <ComparePdfClient />;
 }
