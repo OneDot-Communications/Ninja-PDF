@@ -51,7 +51,7 @@ export function Header() {
             {/* Main Header Container */}
             <div className="w-full flex h-16 items-center justify-between px-6 relative max-w-[1536px] mx-auto">
                 <Link href="/" className="flex items-center">
-                    <img src="/pages/auth/18+logo.png" alt="18+ PDF" className="h-12 w-auto" />
+                    <img src="/pages/auth/18+christmas_logo.png" alt="18+ PDF" className="h-12 w-auto" />
                 </Link>
 
                 {/* Desktop Actions */}
