@@ -88,9 +88,24 @@ class UserAvatarUploadView(generics.UpdateAPIView):
     def get_object(self):
         return self.request.user
 
+    def patch(self, request, *args, **kwargs):
+        user = self.get_object()
+        
+        # Delete old avatar if exists
+        if user.avatar:
+            try:
+                user.avatar.delete(save=False)
+            except Exception as e:
+                # Log but don't fail on deletion error
+                print(f"Failed to delete old avatar: {e}")
+        
+        # Continue with normal update
+        return super().patch(request, *args, **kwargs)
+
     def delete(self, request, *args, **kwargs):
         user = self.get_object()
-        user.avatar.delete(save=False) # delete file from storage
+        if user.avatar:
+            user.avatar.delete(save=False) # delete file from storage
         user.avatar = None
         user.save()
         return Response(status=status.HTTP_204_NO_CONTENT)
