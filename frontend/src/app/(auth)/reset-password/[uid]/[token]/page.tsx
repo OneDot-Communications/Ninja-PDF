@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { useRouter, useParams } from "next/navigation";
 import { api } from "@/lib/services/api";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 
@@ -70,14 +71,36 @@ const ResetPasswordPage = () => {
     }
 
     return (
-        <div className="py-12">
-            <div className="mx-auto max-w-md px-4">
-                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="w-full">
-                    <div className="text-center mb-8">
-                        <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">Set New Password</h1>
-                        <p className="text-slate-500 dark:text-slate-300">Enter your new password below.</p>
-                    </div>
+        <div className="w-full">
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="w-full">
+                {/* Logo */}
+                <div className="mb-6 flex justify-center">
+                    <Image
+                        src="/pages/auth/18+logo.png"
+                        alt="Logo"
+                        width={120}
+                        height={60}
+                        className="object-contain"
+                    />
+                </div>
 
+                {/* Greeting */}
+                <div className="mb-8">
+                    <p className="text-[#000000] font-['Poppins',sans-serif] text-xl mb-2 text-center">
+                        <span className="font-normal">Reset your</span>
+                        <br />
+                        <span className="font-normal">password!</span>
+                    </p>
+                </div>
+
+                {/* Main heading */}
+                <h1 className="text-[rgba(0,0,0,0.71)] text-left font-['Poppins',sans-serif] text-[32px] font-medium mb-8">
+                    Set New Password
+                </h1>
+
+                <p className="text-slate-500 dark:text-slate-300 mb-6">Enter your new password below.</p>
+
+                <div>
                     {status === 'error' && (
                         <div className="mb-4 rounded bg-red-100 p-2 text-red-700 dark:bg-red-900 dark:text-red-200">{message}</div>
                     )}
@@ -113,10 +136,9 @@ const ResetPasswordPage = () => {
                             {status === 'loading' ? "Resetting..." : "Reset Password"}
                         </Button>
                     </form>
+                </div>
                 </motion.div>
             </div>
-        </div>
-    );
-};
-
+        );
+    };
 export default ResetPasswordPage;
