@@ -10,13 +10,14 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from '@/lib/context/AuthContext';
 import { FaUser } from 'react-icons/fa6';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export function Header() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [mounted, setMounted] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
-    const { user } = useAuth();
+    const { user, isLoading } = useAuth();
 
     useEffect(() => {
         setMounted(true);
@@ -55,7 +56,18 @@ export function Header() {
 
                 {/* Desktop Actions */}
                 <div className="hidden md:flex items-center gap-2">
-                    {!user && (
+                    {/* Show skeleton until mounted to prevent hydration mismatch */}
+                    {!mounted ? (
+                        <div className="flex items-center gap-2">
+                            <Skeleton className="h-10 w-16 rounded-lg" />
+                            <Skeleton className="h-10 w-20 rounded-lg" />
+                        </div>
+                    ) : isLoading && !user ? (
+                        <div className="flex items-center gap-2">
+                            <Skeleton className="h-10 w-16 rounded-lg" />
+                            <Skeleton className="h-10 w-20 rounded-lg" />
+                        </div>
+                    ) : !user ? (
                         <>
                             <Link href="/login">
                                 <div className="rounded-lg px-4 py-2 flex items-center justify-center h-10 cursor-pointer group">
@@ -72,8 +84,7 @@ export function Header() {
                                 </div>
                             </Link>
                         </>
-                    )}
-                    {user && (
+                    ) : (
                         <div className="flex items-center gap-3 mr-2">
                             <span className="text-sm font-medium text-slate-700 hidden lg:inline-block">
                                 Hello, {user.first_name || user.email?.split('@')[0] || 'User'}

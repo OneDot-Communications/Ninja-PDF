@@ -258,6 +258,27 @@ const ToolCard = ({ tool, index }: { tool: any; index: number }) => {
     );
 };
 
+// Skeleton loading card for tools
+const ToolCardSkeleton = () => (
+    <div className="w-[311.12px] h-[190.4px] flex-shrink-0">
+        <div className="bg-white rounded-2xl border border-slate-200 p-6 flex flex-col h-full relative overflow-hidden">
+            <div className="flex flex-col gap-0 relative z-10 flex-grow h-full justify-between">
+                <div className="flex flex-row items-center gap-4">
+                    <div className="w-12 h-12 rounded-lg bg-slate-100 animate-pulse flex-shrink-0" />
+                    <div className="h-6 w-32 bg-slate-100 rounded animate-pulse" />
+                </div>
+                <div className="space-y-2 mt-3">
+                    <div className="h-4 w-full bg-slate-100 rounded animate-pulse" />
+                    <div className="h-4 w-3/4 bg-slate-100 rounded animate-pulse" />
+                </div>
+            </div>
+            <div className="pt-3 border-t border-slate-50 flex items-center justify-end mt-auto">
+                <div className="h-3 w-8 bg-slate-100 rounded animate-pulse" />
+            </div>
+        </div>
+    </div>
+);
+
 // Feature Card with 3D tilt effect - optimized with CSS - Moved outside
 const FeatureCard = ({
     title, description, image, bgColor, borderColor, delay = 0
@@ -301,7 +322,7 @@ export function HomeView({
     primaryColor,
     highlightHeight
 }: HomeViewProps) {
-    const { tools } = useTools();
+    const { tools, loading: toolsLoading } = useTools();
     // Filter out internal/admin tools (Category 'Other') and then slice
     const dashboardTools = tools.filter(t => t.category !== "Other").slice(0, 30);
     const heroRef = useRef(null);
@@ -419,7 +440,7 @@ export function HomeView({
                                 </div>
                             </motion.div>
 
-                                {/* CTA Button - Straight */}
+                            {/* CTA Button - Straight */}
                             <motion.div
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
@@ -452,9 +473,16 @@ export function HomeView({
                             <section className="py-4">
                                 <div className="w-full">
                                     <div className="flex flex-wrap justify-center gap-4">
-                                        {dashboardTools.map((tool, index) => (
-                                            <ToolCard key={tool.title} tool={tool} index={index} />
-                                        ))}
+                                        {toolsLoading ? (
+                                            // Show skeleton cards while loading
+                                            Array.from({ length: 12 }).map((_, i) => (
+                                                <ToolCardSkeleton key={i} />
+                                            ))
+                                        ) : (
+                                            dashboardTools.map((tool, index) => (
+                                                <ToolCard key={tool.title} tool={tool} index={index} />
+                                            ))
+                                        )}
                                     </div>
                                 </div>
                             </section>
