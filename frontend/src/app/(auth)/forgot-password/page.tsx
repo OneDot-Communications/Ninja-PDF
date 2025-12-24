@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import { api } from "@/lib/services/api";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 const ForgotPasswordPage = () => {
     const [email, setEmail] = useState("");
@@ -61,30 +62,34 @@ const ForgotPasswordPage = () => {
             transition={{ duration: 0.4 }}
             className="w-full"
         >
-                {/* Logo */}
-                <Link href="/" className="block mb-6">
-                    <img 
-                        src="/pages/auth/18+logo.png" 
-                        alt="Ninja PDF" 
-                        className="h-[45px] w-[84px] object-cover"
-                    />
-                </Link>
+                {/* Sign up Link (Top Right) */}
+                <div className="text-right mb-6">
+                    <span className="text-[#000000] font-['Poppins',sans-serif] text-base">
+                        No Account ?{" "}
+                    </span>
+                    <Link href="/signup" className="text-[#000000] font-['Poppins',sans-serif] text-base font-semibold hover:underline">
+                        Sign up
+                    </Link>
+                </div>
 
-                {/* Top section with greeting and sign up link */}
-                <div className="flex justify-between items-start mb-8">
-                    <div>
-                        <p className="text-[20px] font-bold text-black/74 font-['Poppins'] leading-[30px]">
-                            Hey Bro,<br />Short memory!
-                        </p>
-                    </div>
-                    <div className="text-right">
-                        <p className="text-[16px] text-[#8D8D8D] font-['Poppins'] leading-[24px]">
-                            No Account ?<br />
-                            <Link href="/signup" className="text-[#8D8D8D] hover:text-[#226DB4] transition-colors">
-                                Sign up
-                            </Link>
-                        </p>
-                    </div>
+                {/* Logo */}
+                <div className="mb-6 flex justify-center">
+                    <Image
+                        src="/pages/auth/18+logo.png"
+                        alt="Logo"
+                        width={120}
+                        height={60}
+                        className="object-contain"
+                    />
+                </div>
+
+                {/* Greeting */}
+                <div className="mb-8">
+                    <p className="text-[#000000] font-['Poppins',sans-serif] text-xl mb-2 text-center">
+                        <span className="font-normal">Hey Bro,</span>
+                        <br />
+                        <span className="font-normal">Short memory!</span>
+                    </p>
                 </div>
 
                 {/* Main heading */}
