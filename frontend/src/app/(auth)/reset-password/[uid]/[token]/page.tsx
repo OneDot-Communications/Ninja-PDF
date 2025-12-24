@@ -139,6 +139,6 @@ const ResetPasswordPage = () => {
                 </div>
                 </motion.div>
             </div>
-        </div>
-    );
-};
+        );
+    };
+export default ResetPasswordPage;

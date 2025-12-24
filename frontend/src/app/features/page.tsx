@@ -46,11 +46,7 @@ export default function FeaturesPage() {
                         key={tool.href}
                         title={tool.title}
                         description={tool.description}
-                        icon={
-                          typeof tool.icon === 'string'
-                            ? <img src={tool.icon} alt={tool.title} className="h-8 w-8 object-contain" />
-                            : <tool.icon className="h-8 w-8" />
-                        }
+                        icon={<img src={tool.icon} alt={tool.title} className="h-8 w-8 object-contain" />}
                         href={tool.href}
                         isNew={tool.isNew}
                         category={tool.category}
