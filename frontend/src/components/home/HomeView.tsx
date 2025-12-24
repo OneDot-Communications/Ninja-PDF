@@ -165,12 +165,7 @@ const ToolCard = ({ tool, index }: { tool: any; index: number }) => {
                                     <img
                                         src={tool.icon}
                                         alt={tool.title}
-                                        className={`h-full w-full object-contain ${['PDF to Excel', 'Excel to PDF', 'Edit PDF', 'Rotate PDF'].includes(tool.title)
-                                            ? 'scale-[3]'
-                                            : ['Unlock PDF', 'Protect PDF', 'Scan to PDF', 'OCR PDF'].includes(tool.title)
-                                                ? 'scale-[2]'
-                                                : ''
-                                            }`}
+                                        className="h-full w-full object-contain"
                                     />
                                 ) : tool.icon ? (
                                     <tool.icon className="h-full w-full" style={{ color: tool.color || '#1e293b' }} />
