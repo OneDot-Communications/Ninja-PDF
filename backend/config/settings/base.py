@@ -152,11 +152,17 @@ REST_AUTH = {
     'JWT_AUTH_COOKIE': 'access-token',
     'JWT_AUTH_REFRESH_COOKIE': 'refresh-token',
     'JWT_AUTH_HTTPONLY': True,
+    'JWT_AUTH_SECURE': os.getenv('JWT_AUTH_SECURE', 'true').lower() == 'true',
+    'JWT_AUTH_SAMESITE': os.getenv('JWT_AUTH_SAMESITE', 'None'),
     'JWT_AUTH_COOKIE_DOMAIN': None,
     'SESSION_LOGIN': False,
     'LOGIN_SERIALIZER': 'apps.accounts.api.serializers.CustomLoginSerializer',
     'USER_DETAILS_SERIALIZER': 'apps.accounts.api.serializers.UserSerializer',
 }
+
+# Cookie config used by helpers
+JWT_COOKIE_SAMESITE = REST_AUTH.get('JWT_AUTH_SAMESITE', 'None')
+JWT_COOKIE_SECURE = REST_AUTH.get('JWT_AUTH_SECURE', True)
 
 ACCOUNT_USER_MODEL_USERNAME_FIELD = None
 ACCOUNT_LOGIN_METHODS = {'email'}
@@ -183,7 +189,8 @@ SOCIALACCOUNT_PROVIDERS = {
 SOCIALACCOUNT_LOGIN_ON_GET = True
 SOCIALACCOUNT_AUTO_SIGNUP = True
 
-CSRF_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_SAMESITE = os.getenv('CSRF_COOKIE_SAMESITE', 'None')
+CSRF_COOKIE_SECURE = os.getenv('CSRF_COOKIE_SECURE', 'true').lower() == 'true'
 CSRF_COOKIE_HTTPONLY = False
 CSRF_USE_SESSIONS = False
 

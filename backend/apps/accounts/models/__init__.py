@@ -11,6 +11,7 @@ from .security import (
 )
 from .api_key import APIKey
 from .twofactor_backup import TwoFactorBackupCode
+from .email_token import EmailVerificationToken
 
 __all__ = [
     'User', 
@@ -25,6 +26,7 @@ __all__ = [
     'SystemConfiguration',
     'APIKey',
     'TwoFactorBackupCode',
+    'EmailVerificationToken',
 ]
 
 
