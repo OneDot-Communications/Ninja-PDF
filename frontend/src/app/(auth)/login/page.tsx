@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner"; // Import sonner
 import { FaFacebook } from "react-icons/fa";
+import { Eye, EyeOff } from "lucide-react";
 
 const LoginPage = () => {
     // ... (hooks)
@@ -19,6 +20,7 @@ const LoginPage = () => {
     const { login, refreshUser, user } = useAuth();
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [requires2fa, setRequires2fa] = useState(false);
     const [otpToken, setOtpToken] = useState('');
@@ -156,15 +158,28 @@ const LoginPage = () => {
                                     Forgot password?
                                 </Link>
                             </div>
-                            <input
-                                type="password"
-                                id="password"
-                                required
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                className="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#01B0F1] focus-visible:ring-offset-2 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                                placeholder="••••••••"
-                            />
+                            <div className="relative">
+                                <input
+                                    type={showPassword ? "text" : "password"}
+                                    id="password"
+                                    required
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    className="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 pr-10 text-sm placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#01B0F1] focus-visible:ring-offset-2 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                    placeholder="••••••••"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                                >
+                                    {showPassword ? (
+                                        <EyeOff className="h-4 w-4" />
+                                    ) : (
+                                        <Eye className="h-4 w-4" />
+                                    )}
+                                </button>
+                            </div>
                         </div>
                         <Button className="w-full bg-[#E53935] hover:bg-[#D32F2F] text-white font-semibold h-10 rounded-md mt-2" type="submit">
                             {loading ? "Signing in..." : "Sign In"}

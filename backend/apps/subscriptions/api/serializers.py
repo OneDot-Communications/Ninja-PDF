@@ -47,7 +47,6 @@ class FeatureSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'category', 'permission_id']
 
 
-
 class UserFeatureOverrideSerializer(serializers.Serializer):
     id = serializers.IntegerField(read_only=True)
     user_id = serializers.IntegerField()

@@ -260,7 +260,7 @@ REST_FRAMEWORK = {
         'otp': '30/min',
         'dj_rest_auth': '500/min',
     }
-}
+} 
 
 # JWT Configuration
 SIMPLE_JWT = {
@@ -294,18 +294,21 @@ JWT_COOKIE_SAMESITE = REST_AUTH.get('JWT_AUTH_SAMESITE', 'Strict')
 # AllAuth Configuration
 # AllAuth Configuration (2025 Modern Standards)
 # AllAuth Configuration (2025 Modern Standards)
-# AllAuth Configuration (Modern Standard)
 ACCOUNT_USER_MODEL_USERNAME_FIELD = None
 ACCOUNT_LOGIN_METHODS = {'email'}
 ACCOUNT_SIGNUP_FIELDS = ['email*', 'password1*', 'password2*'] # Standard flow with confirmation
 ACCOUNT_EMAIL_VERIFICATION = 'mandatory'
+# ACCOUNT_SIGNUP_FIELDS replaces old REQUIRED fields logic in newer versions, 
+# but dj-rest-auth might still rely on older settings. keeping both for safety if compatible.
 
 # CSRF Settings for JWT Auth
 CSRF_COOKIE_SAMESITE = 'Lax'
 CSRF_COOKIE_HTTPONLY = False  # Critical: Frontend needs to read this cookie
 CSRF_USE_SESSIONS = False 
 
+# ACCOUNT_SIGNUP_FIELDS is not a standard setting for allauth/dj-rest-auth, removing to avoid confusion
 # Validation is handled by RegisterSerializer and settings above.
+ACCOUNT_EMAIL_VERIFICATION = 'mandatory' 
 ACCOUNT_CONFIRM_EMAIL_ON_GET = False # Secure: Requires POST to verify
 ACCOUNT_ADAPTER = 'apps.accounts.services.adapters.CustomAccountAdapter'
 OLD_PASSWORD_FIELD_ENABLED = True
@@ -342,13 +345,15 @@ SOCIALACCOUNT_AUTO_SIGNUP = True
 
 # CORS - Both localhost (development) and deployed URL (production)
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",  # Frontend dev URL
+    "http://localhost:3000",  # Frontend dev URL (standard)
     "http://127.0.0.1:3000",
+    # Additional dev server port (Next started on 3001 when 3000 was busy)
+    "http://localhost:3001",
+    "http://127.0.0.1:3001",
+    "http://192.168.0.8:3001",
     # Production URLs (add your deployed frontend URL here)
     "https://ninja-pdf.onrender.com",
     "https://ninjapdf.com",
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
     "https://18pluspdf.com",
     "https://www.18pluspdf.com",
 ]
@@ -360,6 +365,9 @@ ALLOWED_HOSTS = ["localhost", "127.0.0.1", "18pluspdf.com", "api.18pluspdf.com",
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
+    "http://localhost:3001",
+    "http://127.0.0.1:3001",
+    "http://192.168.0.8:3001",
     "https://18pluspdf.com",
     "https://www.18pluspdf.com",
 ]
@@ -393,16 +401,30 @@ LOGGING = {
 # -----------------------------------------------------------------------------
 # ASYNC & CACHE CONFIGURATION (REDIS)
 # -----------------------------------------------------------------------------
-# Use Redis for Caching
-CACHES = {
-    "default": {
-        "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": os.getenv("REDIS_URL", "redis://127.0.0.1:6379/1"),
-        "OPTIONS": {
-            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+# Use Redis for Caching in production, LocMemCache for local development
+REDIS_URL = os.getenv("REDIS_URL", "redis://127.0.0.1:6379/1")
+
+# Check if Redis is available, otherwise use local memory cache
+USE_REDIS = os.getenv("USE_REDIS", "False").lower() in ("true", "1", "yes")
+
+if USE_REDIS:
+    CACHES = {
+        "default": {
+            "BACKEND": "django_redis.cache.RedisCache",
+            "LOCATION": REDIS_URL,
+            "OPTIONS": {
+                "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            }
         }
     }
-}
+else:
+    # Use local memory cache for development (no Redis required)
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "unique-snowflake",
+        }
+    }
 
 # Celery Configuration
 CELERY_BROKER_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
