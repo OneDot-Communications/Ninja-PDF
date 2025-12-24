@@ -78,21 +78,24 @@ export function Header() {
                             <span className="text-sm font-medium text-slate-700 hidden lg:inline-block">
                                 Hello, {user.first_name || user.email?.split('@')[0] || 'User'}
                             </span>
-                            <Link href={
-                                user.role === 'SUPER_ADMIN' ? "/super-admin/dashboard" :
-                                    user.role === 'ADMIN' ? "/admin/dashboard" :
-                                        "/profile"
-                            }>
-                                <Avatar className="w-9 h-9 cursor-pointer ring-2 ring-slate-200 hover:ring-slate-300 transition-all">
-                                    <AvatarImage 
-                                        src={user.avatar || undefined} 
-                                        alt={user.first_name || "User"} 
+                            <a
+                                href={
+                                    user.role === 'SUPER_ADMIN' ? "/super-admin/dashboard" :
+                                        user.role === 'ADMIN' ? "/admin/dashboard" :
+                                            "/profile"
+                                }
+                                className="cursor-pointer"
+                            >
+                                <Avatar className="w-9 h-9 ring-2 ring-slate-200 hover:ring-slate-300 transition-all">
+                                    <AvatarImage
+                                        src={user.avatar || undefined}
+                                        alt={user.first_name || "User"}
                                     />
                                     <AvatarFallback className="bg-slate-100 text-slate-600 text-sm font-medium">
                                         {user.first_name?.[0] || 'U'}
                                     </AvatarFallback>
                                 </Avatar>
-                            </Link>
+                            </a>
                         </div>
                     )}
                     <div ref={menuRef} className="relative">
