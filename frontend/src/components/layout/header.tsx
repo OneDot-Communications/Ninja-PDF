@@ -10,13 +10,14 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from '@/lib/context/AuthContext';
 import { FaUser } from 'react-icons/fa6';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export function Header() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [mounted, setMounted] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
-    const { user } = useAuth();
+    const { user, isLoading } = useAuth();
 
     useEffect(() => {
         setMounted(true);
@@ -55,7 +56,18 @@ export function Header() {
 
                 {/* Desktop Actions */}
                 <div className="hidden md:flex items-center gap-2">
-                    {!user && (
+                    {/* Show skeleton until mounted to prevent hydration mismatch */}
+                    {!mounted ? (
+                        <div className="flex items-center gap-2">
+                            <Skeleton className="h-10 w-16 rounded-lg" />
+                            <Skeleton className="h-10 w-20 rounded-lg" />
+                        </div>
+                    ) : isLoading && !user ? (
+                        <div className="flex items-center gap-2">
+                            <Skeleton className="h-10 w-16 rounded-lg" />
+                            <Skeleton className="h-10 w-20 rounded-lg" />
+                        </div>
+                    ) : !user ? (
                         <>
                             <Link href="/login">
                                 <div className="rounded-lg px-4 py-2 flex items-center justify-center h-10 cursor-pointer group">
@@ -72,27 +84,25 @@ export function Header() {
                                 </div>
                             </Link>
                         </>
-                    )}
-                    {user && (
+                    ) : (
                         <div className="flex items-center gap-3 mr-2">
                             <span className="text-sm font-medium text-slate-700 hidden lg:inline-block">
                                 Hello, {user.first_name || user.email?.split('@')[0] || 'User'}
                             </span>
-                            <Link href={
-                                user.role === 'SUPER_ADMIN' ? "/super-admin/dashboard" :
-                                    user.role === 'ADMIN' ? "/admin/dashboard" :
-                                        "/profile"
-                            }>
-                                <Avatar className="w-9 h-9 cursor-pointer ring-2 ring-slate-200 hover:ring-slate-300 transition-all">
-                                    <AvatarImage 
-                                        src={user.avatar || undefined} 
-                                        alt={user.first_name || "User"} 
+                            <a
+                                href="/profile"
+                                className="cursor-pointer"
+                            >
+                                <Avatar className="w-9 h-9 ring-2 ring-slate-200 hover:ring-slate-300 transition-all">
+                                    <AvatarImage
+                                        src={user.avatar || undefined}
+                                        alt={user.first_name || "User"}
                                     />
                                     <AvatarFallback className="bg-slate-100 text-slate-600 text-sm font-medium">
                                         {user.first_name?.[0] || 'U'}
                                     </AvatarFallback>
                                 </Avatar>
-                            </Link>
+                            </a>
                         </div>
                     )}
                     <div ref={menuRef} className="relative">
@@ -274,9 +284,9 @@ export function Header() {
                                                         </span>
                                                     </div>
                                                 </div>
-                                                <Link href={user.role === 'ADMIN' || user.role === 'SUPER_ADMIN' ? "/admin/dashboard" : "/profile"} onClick={() => setIsMobileMenuOpen(false)}>
+                                                <Link href="/profile" onClick={() => setIsMobileMenuOpen(false)}>
                                                     <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700 hover:bg-blue-50">
-                                                        {user.role === 'ADMIN' || user.role === 'SUPER_ADMIN' ? "Dashboard" : "Profile"}
+                                                        Profile
                                                     </Button>
                                                 </Link>
                                             </div>
