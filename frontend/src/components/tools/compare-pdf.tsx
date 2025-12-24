@@ -244,19 +244,12 @@ export function ComparePdfTool({ onModeChange }: { onModeChange?: (mode: 'defaul
 
     // --- RENDER ---
 
+    // --- RENDER ---
+
     // Step 0 & 1: File Selection
     if (step === 0 || step === 1) {
         return (
             <div className="w-full">
-                <input
-                    type="file"
-                    ref={fileInputRef}
-                    className="hidden"
-                    accept=".pdf,application/pdf"
-                    multiple={step === 0} // Allow multiple only on first step
-                    onChange={handleNativeFileSelect}
-                />
-
                 {step === 0 ? (
                     // STEP 0: First File
                     <div
@@ -264,12 +257,22 @@ export function ComparePdfTool({ onModeChange }: { onModeChange?: (mode: 'defaul
                             "group relative flex flex-col items-center justify-center min-h-[250px] w-full rounded-xl border-2 border-dashed border-slate-200 bg-white/50 hover:bg-white/80 transition-all cursor-pointer",
                             isDragging && "border-blue-500 bg-blue-50 scale-[1.01]"
                         )}
-                        onDragOver={handleDragOver}
-                        onDragLeave={handleDragLeave}
-                        onDrop={handleDrop}
-                        onClick={triggerFileSelect}
+                    // Visual drag feedback only - actual drop handled by input
                     >
-                        <div className="flex flex-col items-center justify-center p-6 text-center">
+                        {/* ABSOLUTE OVERLAY INPUT - THE "MAGIC" FIX */}
+                        <input
+                            type="file"
+                            accept=".pdf,application/pdf"
+                            multiple={true}
+                            onChange={handleNativeFileSelect}
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-50"
+                            onDragEnter={() => setIsDragging(true)}
+                            onDragLeave={() => setIsDragging(false)}
+                            onDrop={() => setIsDragging(false)}
+                            title=""
+                        />
+
+                        <div className="flex flex-col items-center justify-center p-6 text-center pointer-events-none">
                             <div className="mb-4 p-4 bg-blue-50 text-blue-600 rounded-full group-hover:scale-110 transition-transform duration-300 shadow-sm">
                                 <GitCompare className="w-8 h-8" />
                             </div>
@@ -287,12 +290,21 @@ export function ComparePdfTool({ onModeChange }: { onModeChange?: (mode: 'defaul
                             "group relative flex flex-col items-center justify-center min-h-[250px] w-full rounded-xl border-2 border-dashed border-slate-200 bg-white/50 hover:bg-white/80 transition-all cursor-pointer",
                             isDragging && "border-blue-500 bg-blue-50 scale-[1.01]"
                         )}
-                        onDragOver={handleDragOver}
-                        onDragLeave={handleDragLeave}
-                        onDrop={handleDrop}
-                        onClick={triggerFileSelect}
                     >
-                        <div className="flex flex-col items-center justify-center p-6 text-center">
+                        {/* ABSOLUTE OVERLAY INPUT */}
+                        <input
+                            type="file"
+                            accept=".pdf,application/pdf"
+                            multiple={false}
+                            onChange={handleNativeFileSelect}
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-50"
+                            onDragEnter={() => setIsDragging(true)}
+                            onDragLeave={() => setIsDragging(false)}
+                            onDrop={() => setIsDragging(false)}
+                            title=""
+                        />
+
+                        <div className="flex flex-col items-center justify-center p-6 text-center pointer-events-none">
                             <div className="mb-4 p-4 bg-purple-50 text-purple-600 rounded-full group-hover:scale-110 transition-transform duration-300 shadow-sm">
                                 <UploadCloud className="w-8 h-8" />
                             </div>
