@@ -341,6 +341,7 @@ export const api = {
     return api.request("POST", "/api/files/", formData);
   },
   deleteFile: (id: number) => api.request("DELETE", `/api/files/${id}/`),
+  getFileUrl: (id: number) => api.request("GET", `/api/files/${id}/`),
   updateFilePassword: (id: number, password?: string) => {
     if (!password) return api.request("POST", `/api/files/${id}/remove_password/`);
     return api.request("POST", `/api/files/${id}/set_password/`, { password });

@@ -44,23 +44,34 @@ class StorageService:
     
     @classmethod
     def get_s3_client(cls):
-        """Lazily initialize and cache S3/R2 client."""
+        """Lazily initialize and cache S3/R2 client for DO Spaces or AWS S3."""
         if cls._s3_client is None and cls.get_backend_name() in ('s3', 'r2'):
             import boto3
             from botocore.config import Config
+            
+            endpoint_url = getattr(settings, 'AWS_S3_ENDPOINT_URL', None)
+            region_name = getattr(settings, 'AWS_S3_REGION_NAME', 'us-east-1')
+            bucket_name = getattr(settings, 'AWS_STORAGE_BUCKET_NAME', None)
+            
+            logger.info(f"Storage:INIT backend={cls.get_backend_name()} endpoint={endpoint_url} region={region_name} bucket={bucket_name}")
+            
+            if not bucket_name:
+                logger.error("Storage:INIT:FAILED AWS_STORAGE_BUCKET_NAME is not configured")
+                return None
             
             cls._s3_client = boto3.client(
                 's3',
                 aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
                 aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
-                endpoint_url=getattr(settings, 'AWS_S3_ENDPOINT_URL', None),
-                region_name=getattr(settings, 'AWS_S3_REGION_NAME', 'us-east-1'),
+                endpoint_url=endpoint_url,
+                region_name=region_name,
                 config=Config(
                     signature_version='s3v4',
                     retries={'max_attempts': 3, 'mode': 'adaptive'}
                 )
             )
-            cls._bucket_name = settings.AWS_STORAGE_BUCKET_NAME
+            cls._bucket_name = bucket_name
+            logger.info(f"Storage:INIT:SUCCESS S3 client initialized")
         return cls._s3_client
     
     @classmethod
@@ -246,6 +257,11 @@ class StorageService:
     def get_signed_url(cls, path: str, expiration: int = 3600, operation: str = 'get_object') -> str:
         """
         Generate signed URL with custom expiration.
+        Works with DigitalOcean Spaces, AWS S3, Cloudflare R2.
+        
+        NOTE: Signed URLs MUST use the original S3 endpoint, not CDN.
+        The signature is calculated against the original URL - replacing 
+        the domain with CDN would invalidate the signature.
         
         Args:
             path: Storage path
@@ -258,10 +274,15 @@ class StorageService:
         backend = cls.get_backend_name()
         
         if backend not in ('s3', 'r2'):
+            logger.debug(f"Storage:SIGNED_URL using local storage for path={path}")
             return default_storage.url(path)
         
         try:
             client = cls.get_s3_client()
+            if client is None:
+                logger.error(f"Storage:SIGNED_URL:FAILED S3 client not initialized, returning default URL")
+                return default_storage.url(path)
+            
             url = client.generate_presigned_url(
                 operation,
                 Params={
@@ -271,25 +292,22 @@ class StorageService:
                 ExpiresIn=expiration
             )
             
-            # If CDN domain is configured, replace the endpoint with CDN
-            cdn_domain = getattr(settings, 'AWS_S3_CUSTOM_DOMAIN', None)
-            if cdn_domain and operation == 'get_object':
-                endpoint_url = getattr(settings, 'AWS_S3_ENDPOINT_URL', '')
-                bucket_name = settings.AWS_STORAGE_BUCKET_NAME
-                
-                # Replace endpoint+bucket with CDN domain
-                # DO Spaces endpoint: https://sgp1.digitaloceanspaces.com/bucket/path
-                # CDN format: https://bucket.sgp1.cdn.digitaloceanspaces.com/path
-                if endpoint_url and bucket_name:
-                    # Remove protocol for comparison
-                    old_base = f"{endpoint_url}/{bucket_name}"
-                    new_base = f"https://{cdn_domain}"
-                    url = url.replace(old_base, new_base)
+            logger.debug(f"Storage:SIGNED_URL generated for path={path} expires_in={expiration}s url={url[:100]}...")
+            
+            # NOTE: Do NOT replace the endpoint with CDN for signed URLs!
+            # The signature is tied to the original URL. Changing the domain
+            # would cause "SignatureDoesNotMatch" errors.
+            # CDN can only be used for public (unsigned) file access.
             
             return url
         except Exception as e:
-            logger.error(f"Storage:SIGNED_URL:FAILED path={path} error={e}")
-            return default_storage.url(path)
+            logger.error(f"Storage:SIGNED_URL:FAILED path={path} error={e}", exc_info=True)
+            # Fall back to default storage URL
+            try:
+                return default_storage.url(path)
+            except Exception as fallback_error:
+                logger.error(f"Storage:SIGNED_URL:FALLBACK_FAILED path={path} error={fallback_error}")
+                return ''
     
     @classmethod
     def get_upload_url(cls, path: str, content_type: str = 'application/octet-stream', expiration: int = 3600, max_size: int = 100 * 1024 * 1024) -> dict:
