@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from apps.files.models.user_file import UserFile
+from core.storage import StorageService
 
 class UserFileSerializer(serializers.ModelSerializer):
     url = serializers.SerializerMethodField()
@@ -20,7 +21,8 @@ class UserFileSerializer(serializers.ModelSerializer):
 
     def get_url(self, obj):
         if obj.file:
-            return obj.file.url
+            # Use StorageService for proper signed URLs (works with DO Spaces CDN)
+            return StorageService.get_signed_url(obj.file.name, expiration=3600)
         return None
 
     def get_is_protected(self, obj):
