@@ -241,7 +241,7 @@ export const tools = [
     {
         title: "Redact PDF",
         description: "Redact text and graphics to permanently remove sensitive information.",
-        icon: FaUserSecret,
+        icon: "/home/redact.png",
         href: "/redact-pdf",
         category: "PDF Security",
         isNew: true,
@@ -250,7 +250,7 @@ export const tools = [
     {
         title: "Crop PDF",
         description: "Crop margins of PDF documents or select specific areas.",
-        icon: FaCrop,
+        icon: "/home/crop.png",
         href: "/crop-pdf",
         category: "Edit PDF",
         isNew: true,
@@ -259,7 +259,7 @@ export const tools = [
     {
         title: "HTML to PDF",
         description: "Convert webpages in HTML to PDF.",
-        icon: FaCode,
+        icon: "/home/html-pdf.png",
         href: "/html-to-pdf",
         category: "Convert to PDF",
         color: toolColors.convert,
@@ -267,7 +267,7 @@ export const tools = [
     {
         title: "Create Workflow",
         description: "Create custom workflows with your favorite tools, automate tasks, and reuse them anytime.",
-        icon: FaCogs,
+        icon: "/home/workflow.png",
         href: "/create-workflow",
         category: "Workflows",
         color: toolColors.workflow,
@@ -275,7 +275,7 @@ export const tools = [
     {
         title: "Metadata Cleaner",
         description: "Remove hidden metadata and personal information from your PDF files.",
-        icon: FaEraser,
+        icon: "/home/metadata.png",
         href: "/metadata-cleaner",
         category: "PDF Security",
         isNew: true,
@@ -284,7 +284,7 @@ export const tools = [
     {
         title: "Extract Images",
         description: "Extract all images from a PDF document.",
-        icon: FaFileImage,
+        icon: "/home/extract-image.png",
         href: "/extract-images",
         category: "Convert from PDF",
         color: toolColors.image,

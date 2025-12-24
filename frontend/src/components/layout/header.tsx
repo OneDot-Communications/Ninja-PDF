@@ -9,6 +9,7 @@ import { FaFilePdf, FaRobot, FaSignature, FaUserGroup, FaDesktop, FaMobile, FaGi
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from '@/lib/context/AuthContext';
 import { FaUser } from 'react-icons/fa6';
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export function Header() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -82,9 +83,15 @@ export function Header() {
                                     user.role === 'ADMIN' ? "/admin/dashboard" :
                                         "/profile"
                             }>
-                                <button className="flex items-center justify-center w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 transition-colors border border-slate-200">
-                                    <FaUser className="w-4 h-4 text-slate-600" />
-                                </button>
+                                <Avatar className="w-9 h-9 cursor-pointer ring-2 ring-slate-200 hover:ring-slate-300 transition-all">
+                                    <AvatarImage 
+                                        src={user.avatar || undefined} 
+                                        alt={user.first_name || "User"} 
+                                    />
+                                    <AvatarFallback className="bg-slate-100 text-slate-600 text-sm font-medium">
+                                        {user.first_name?.[0] || 'U'}
+                                    </AvatarFallback>
+                                </Avatar>
                             </Link>
                         </div>
                     )}
