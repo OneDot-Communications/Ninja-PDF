@@ -35,14 +35,8 @@ export default function Home() {
           });
         }
       } catch (error) {
-        console.log("Failed to fetch settings, using empty");
-        setSettings({
-          heroTitle: "",
-          heroSubtitle: "",
-          platformName: "18+ PDF",
-          primaryColor: "#01B0F1",
-          highlightHeight: 1.05
-        });
+        console.log("Failed to fetch settings, showing skeleton");
+        setSettings(null);
       }
       setLoading(false);
     };
@@ -56,6 +50,10 @@ export default function Home() {
 
   if (!settings) {
     return <HeroSkeleton />; // fallback
+  }
+
+  if (loading || !settings) {
+    return <HeroSkeleton />;
   }
 
   return (
