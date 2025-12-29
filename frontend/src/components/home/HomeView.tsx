@@ -9,6 +9,7 @@ import {
 import Link from "next/link";
 import { Button } from "../ui/button"; // Adjusted import path
 import { GlowCard } from "@/components/home/spotlight-card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { motion, useScroll, useTransform, useInView, useSpring } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useRef, useState } from "react";
@@ -305,6 +306,26 @@ const FeatureCard = ({
     </ScrollReveal>
 );
 
+// Skeleton loading component for hero section
+const HeroSkeleton = () => (
+    <div className="min-h-screen flex flex-col items-center justify-center px-4 bg-gradient-to-br from-blue-50 to-indigo-100">
+        <div className="text-center space-y-4">
+            {/* Hero title skeleton */}
+            <Skeleton className="h-16 w-96 mx-auto" />
+            <Skeleton className="h-16 w-64 mx-auto" />
+            
+            {/* Hero subtitle skeleton */}
+            <div className="flex flex-wrap gap-2 items-center justify-center mt-2">
+                <Skeleton className="h-12 w-48" />
+                <Skeleton className="h-12 w-32" />
+            </div>
+            
+            {/* CTA button skeleton */}
+            <Skeleton className="h-12 w-40 mx-auto mt-3" />
+        </div>
+    </div>
+);
+
 interface HomeViewProps {
     heroTitle?: string;
     heroSubtitle?: string;
@@ -316,8 +337,8 @@ interface HomeViewProps {
 }
 
 export function HomeView({
-    heroTitle = "All your PDF headache in one place.",
-    heroSubtitle = "Simple, super, and totally free!",
+    heroTitle,
+    heroSubtitle,
     platformName = "18+ PDF",
     primaryColor,
     highlightHeight
@@ -418,6 +439,7 @@ export function HomeView({
 
 
                             {/* Subheadline with mixed colors */}
+                            {heroSubtitle && (
                             <motion.div
                                 className="flex flex-wrap gap-2 items-center justify-center relative mt-2"
                                 initial={{ opacity: 0, y: 30 }}
@@ -425,11 +447,11 @@ export function HomeView({
                                 transition={{ duration: 0.8, delay: 0.4 }}
                             >
                                 <h2 className="text-slate-900 text-center font-caveat text-3xl md:text-[3rem] font-bold leading-none">
-                                    {heroSubtitle.split('totally free!')[0] || "Simple, super, and"}
+                                    {heroSubtitle.split('totally free!')[0]}
                                 </h2>
                                 <div className="relative inline-block">
                                     <h2 className="text-[#EAB308] text-center font-caveat text-3xl md:text-[3rem] font-bold leading-none">
-                                        {heroSubtitle.includes('totally free!') ? 'totally free!' : 'totally free!'}
+                                        {heroSubtitle.includes('totally free!') ? 'totally free!' : ''}
                                     </h2>
                                     {/* Decorative underline for "totally free!" - bolder */}
                                     <div className="absolute left-0 right-0 -bottom-1 h-2">
@@ -439,6 +461,7 @@ export function HomeView({
                                     </div>
                                 </div>
                             </motion.div>
+                            )}
 
                             {/* CTA Button - Straight */}
                             <motion.div
@@ -628,3 +651,5 @@ export function HomeView({
         </div>
     );
 }
+
+export { HeroSkeleton };

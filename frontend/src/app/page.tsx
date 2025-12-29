@@ -2,17 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/services/api";
-import { HomeView } from "@/components/home/HomeView";
+import { HomeView, HeroSkeleton } from "@/components/home/HomeView";
 
 // Force re-compile to fix hydration mismatch
 export default function Home() {
-  const [settings, setSettings] = useState({
-    heroTitle: "All your PDF headache in one place.",
-    heroSubtitle: "Simple, super, and totally free!",
-    platformName: "18+ PDF",
-    primaryColor: "#01B0F1",
-    highlightHeight: 1.05
-  });
+  const [settings, setSettings] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     // Attempt to fetch public settings.
@@ -24,20 +19,44 @@ export default function Home() {
         const response = await api.getPublicSettings();
         if (response && typeof response === 'object') {
           setSettings({
-            heroTitle: response.hero_title || "All your PDF headache in one place.",
-            heroSubtitle: response.hero_subtitle || "Simple, super, and totally free!",
+            heroTitle: response.hero_title || "",
+            heroSubtitle: response.hero_subtitle || "",
             platformName: response.platform_name || "18+ PDF",
             primaryColor: response.primary_color || "#01B0F1",
             highlightHeight: response.highlight_height || 1.05
           });
+        } else {
+          setSettings({
+            heroTitle: "",
+            heroSubtitle: "",
+            platformName: "18+ PDF",
+            primaryColor: "#01B0F1",
+            highlightHeight: 1.05
+          });
         }
       } catch (error) {
-        console.log("Using default settings (public view)");
+        console.log("Failed to fetch settings, using empty");
+        setSettings({
+          heroTitle: "",
+          heroSubtitle: "",
+          platformName: "18+ PDF",
+          primaryColor: "#01B0F1",
+          highlightHeight: 1.05
+        });
       }
+      setLoading(false);
     };
 
     fetchSettings();
   }, []);
+
+  if (loading) {
+    return <HeroSkeleton />;
+  }
+
+  if (!settings) {
+    return <HeroSkeleton />; // fallback
+  }
 
   return (
     <HomeView
