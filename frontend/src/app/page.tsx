@@ -2,11 +2,17 @@
 
 import { useEffect, useState } from "react";
 import { api } from "@/lib/services/api";
-import { HomeView, HeroSkeleton } from "@/components/home/HomeView";
+import { HomeView } from "@/components/home/HomeView";
 
 // Force re-compile to fix hydration mismatch
 export default function Home() {
-  const [settings, setSettings] = useState(null);
+  const [settings, setSettings] = useState({
+    heroTitle: "",
+    heroSubtitle: "",
+    platformName: "",
+    primaryColor: "#01B0F1",
+    highlightHeight: 1.05
+  });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -21,40 +27,20 @@ export default function Home() {
           setSettings({
             heroTitle: response.hero_title || "",
             heroSubtitle: response.hero_subtitle || "",
-            platformName: response.platform_name || "18+ PDF",
+            platformName: response.platform_name || "",
             primaryColor: response.primary_color || "#01B0F1",
             highlightHeight: response.highlight_height || 1.05
           });
-        } else {
-          setSettings({
-            heroTitle: "",
-            heroSubtitle: "",
-            platformName: "18+ PDF",
-            primaryColor: "#01B0F1",
-            highlightHeight: 1.05
-          });
         }
       } catch (error) {
-        console.log("Failed to fetch settings, showing skeleton");
-        setSettings(null);
+        console.log("Using default settings (public view)");
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     fetchSettings();
   }, []);
-
-  if (loading) {
-    return <HeroSkeleton />;
-  }
-
-  if (!settings) {
-    return <HeroSkeleton />; // fallback
-  }
-
-  if (loading || !settings) {
-    return <HeroSkeleton />;
-  }
 
   return (
     <HomeView
@@ -63,6 +49,7 @@ export default function Home() {
       platformName={settings.platformName}
       primaryColor={settings.primaryColor}
       highlightHeight={settings.highlightHeight}
+      loading={loading}
     />
   );
 }
