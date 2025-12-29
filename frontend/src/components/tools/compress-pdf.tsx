@@ -36,6 +36,9 @@ export function CompressPdfTool() {
                 variant: "success",
                 position: "top-right",
             });
+
+            // Clear the file after successful compression to return to upload page
+            setFile(null);
         } catch (error: any) {
             console.error("Error compressing PDF:", error);
 

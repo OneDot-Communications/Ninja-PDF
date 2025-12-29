@@ -47,6 +47,9 @@ export function RepairPdfTool() {
             setStatus("success");
             addLog("Success: File processed and downloaded.");
 
+            // Clear the file after successful repair to return to upload page
+            setFile(null);
+
         } catch (error: any) {
             console.error("Error repairing PDF:", error);
 

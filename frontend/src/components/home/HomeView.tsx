@@ -3,8 +3,7 @@
 import { Header } from "../layout/header"; // Adjusted import path
 import {
     ArrowRight, Check, Star, Zap, Shield, Users, User, Heart, Globe, Layout, FileText, Settings,
-    Play, Download, ChevronRight, ArrowDown, MessageCircle, Github, Twitter, Linkedin,
-    Youtube, Instagram, Facebook
+    ChevronRight, Twitter, Linkedin
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "../ui/button"; // Adjusted import path
@@ -281,19 +280,22 @@ const ToolCardSkeleton = () => (
 
 // Skeleton for hero section
 const HeroSkeleton = () => (
-    <div className="flex flex-col items-center justify-center min-h-[60vh] px-4">
-        {/* Hero Title Skeleton */}
-        <div className="text-center mb-4">
-            <div className="h-16 md:h-24 w-96 md:w-[600px] bg-slate-200 rounded-lg animate-pulse mx-auto mb-2"></div>
-            <div className="h-12 md:h-16 w-80 md:w-[500px] bg-slate-200 rounded-lg animate-pulse mx-auto"></div>
+    <div className="flex flex-col gap-3 items-center justify-start relative max-w-5xl mx-auto px-4" role="status" aria-label="Loading content">
+        {/* Hero Title Skeleton - matches the two-line layout */}
+        <div className="flex flex-col items-center justify-start relative w-full">
+            <div className="h-16 md:h-20 w-full max-w-[500px] bg-slate-200 rounded-lg animate-pulse mb-2" aria-hidden="true"></div>
+            <div className="h-16 md:h-20 w-full max-w-[300px] bg-slate-200 rounded-lg animate-pulse" aria-hidden="true"></div>
         </div>
-        {/* Hero Subtitle Skeleton */}
-        <div className="flex flex-wrap gap-2 items-center justify-center mt-2">
-            <div className="h-10 md:h-12 w-40 md:w-48 bg-slate-200 rounded-lg animate-pulse"></div>
-            <div className="h-10 md:h-12 w-32 md:w-40 bg-slate-200 rounded-lg animate-pulse"></div>
+
+        {/* Hero Subtitle Skeleton - matches the two-part layout */}
+        <div className="flex flex-wrap gap-2 items-center justify-center relative mt-2">
+            <div className="h-10 md:h-12 w-40 md:w-48 bg-slate-200 rounded-lg animate-pulse" aria-hidden="true"></div>
+            <div className="h-10 md:h-12 w-32 md:w-40 bg-slate-200 rounded-lg animate-pulse" aria-hidden="true"></div>
         </div>
+
         {/* CTA Button Skeleton */}
-        <div className="h-12 w-32 bg-slate-200 rounded-lg animate-pulse mt-6"></div>
+        <div className="h-12 w-32 bg-slate-200 rounded-lg animate-pulse mt-3" aria-hidden="true"></div>
+        <span className="sr-only">Loading content...</span>
     </div>
 );
 
@@ -536,7 +538,7 @@ export function HomeView({
                 {/* Enterprise section removed per request */}
 
                 {/* Unified Bottom Section */}
-                <section className="py-24 bg-white overflow-hidden">
+                <section className="py-12 bg-white overflow-hidden">
                     <div className="container px-4 mx-auto text-center relative">
                         <ScaleOnScroll>
                             <div className="max-w-4xl mx-auto text-center">
@@ -544,7 +546,7 @@ export function HomeView({
                                 <p className="text-2xl md:text-3xl font-light text-slate-600 leading-relaxed mb-4">
                                     Grow your business, boss style
                                 </p>
-                                <h3 className="text-4xl md:text-5xl font-bold font-caveat text-slate-800 leading-none mb-12">
+                                <h3 className="text-4xl md:text-5xl font-bold font-caveat text-slate-800 leading-none mb-6">
                                     <span>Join the crowd of </span>
                                     <span className="relative inline-block">
                                         <span className="text-[#01B0F1]">happy</span>
@@ -581,7 +583,7 @@ export function HomeView({
                 </section>
 
                 {/* Footer - Clean White Design */}
-                <footer className="bg-white border-t border-slate-100 pt-20 pb-12">
+                <footer className="bg-[#EFF7FF] border-t border-slate-100 pt-20 pb-12">
                     <div className="container px-4 mx-auto">
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
                             {/* Brand Column */}
