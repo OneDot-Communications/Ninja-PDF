@@ -7,10 +7,13 @@ export const metadata = {
 };
 
 export default function RedactPdfPage() {
+    // Use editor variant for full-width layout when file is loaded
+    // The component handles its own title/header for the initial file upload state
     return (
         <ToolShell
             title="Redact PDF"
             description="Redact text and graphics to permanently remove sensitive information from a PDF."
+            variant="editor"
         >
             <RedactPdfTool />
         </ToolShell>

@@ -6,7 +6,7 @@ import sys
 sys.path.append('/home/suzume/NINJa/Ninja-PDF/backend')
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
 django.setup()
-
+ 
 from apps.accounts.models import User
 from allauth.account.models import EmailAddress
 
