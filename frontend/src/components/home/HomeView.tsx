@@ -471,7 +471,7 @@ export function HomeView({
                                 className="mt-3"
                             >
                                 <Button className="bg-red-500 hover:bg-red-600 text-white font-bold px-8 py-3 rounded-lg text-base md:text-lg shadow-lg">
-                                    Start now its free!
+                                    "Start now,its free!"
                                 </Button>
                             </motion.div>
                         </div>
@@ -576,8 +576,8 @@ export function HomeView({
                     </div>
                 </section>
 
-                {/* Footer - Clean White Design */}
-                <footer className="bg-white border-t border-slate-100 pt-20 pb-12">
+                {/* Footer - Clean Blue Design */}
+                <footer className="bg-[#F2F8FF] border-t border-slate-100 pt-20 pb-12">
                     <div className="container px-4 mx-auto">
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
                             {/* Brand Column */}
@@ -642,7 +642,7 @@ export function HomeView({
                                 © {new Date().getFullYear()} 18+ PDF. All rights reserved.
                             </div>
                             <div className="text-slate-500 text-sm font-medium">
-                                Made with Lust by  <span className="text-[#FF0000] font-bold">CHN Technologies</span>
+                                made with profound 💘<span className="text-[#FF0000] font-bold">CHN Technologies</span>
                             </div>
                         </div>
                     </div>

@@ -20,7 +20,7 @@ export default function ResetPasswordPage() {
             <div className="mb-[52px]">
                 <Link href="/">
                     <img
-                        src="/pages/auth/18+logo.png"
+                        src="/pages/auth/18+christmas_logo.png"
                         alt="Logo"
                         className="w-[84px] h-[45px] object-cover cursor-pointer"
                     />
