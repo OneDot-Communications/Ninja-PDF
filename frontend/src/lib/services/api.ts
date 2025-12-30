@@ -678,4 +678,10 @@ export const api = {
   setFeatureOverride: (userId: number, featureId: number, isEnabled: boolean) =>
     api.request("POST", "/api/billing/feature-overrides/", { user: userId, feature: featureId, is_enabled: isEnabled }),
   getHistory: () => api.request("GET", "/api/core/history/"),
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // FEEDBACK
+  // ─────────────────────────────────────────────────────────────────────────────
+  submitFeedback: (data: { name: string, feedback_type: string, description: string }) =>
+    api.publicRequest("POST", "/api/core/feedback/", data),
 };

@@ -8,7 +8,7 @@ import {
     PenTool, CreditCard,
     ChevronDown, ChevronRight,
     LayoutTemplate, Settings,
-    Receipt, Trash2, Gift, Folder
+    Receipt, Trash2, Gift, Folder, MessageSquare
 } from "lucide-react";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -105,6 +105,12 @@ export function Sidebar() {
                     icon={Folder}
                     label="My Files"
                     active={isActive("/files")}
+                />
+                <SidebarItem
+                    href="/profile/feedback"
+                    icon={MessageSquare}
+                    label="Feedback"
+                    active={isActive("/profile/feedback")}
                 />
                 <SidebarItem
                     href="/profile/security"
