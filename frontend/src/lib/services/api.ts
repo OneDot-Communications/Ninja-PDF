@@ -682,6 +682,6 @@ export const api = {
   // ─────────────────────────────────────────────────────────────────────────────
   // FEEDBACK
   // ─────────────────────────────────────────────────────────────────────────────
-  submitFeedback: (data: { name: string, feedback_type: string, description: string }) =>
+  submitFeedback: (data: { name: string, email: string, feedback_type: string, description: string }) =>
     api.publicRequest("POST", "/api/core/feedback/", data),
 };

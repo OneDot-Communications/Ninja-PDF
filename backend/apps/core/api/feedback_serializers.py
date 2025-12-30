@@ -17,6 +17,11 @@ class FeedbackSerializer(serializers.Serializer):
         help_text="Name of the person providing feedback"
     )
     
+    email = serializers.EmailField(
+        required=True,
+        help_text="Email address of the person providing feedback"
+    )
+    
     feedback_type = serializers.ChoiceField(
         choices=FEEDBACK_TYPE_CHOICES,
         required=True,
@@ -33,6 +38,12 @@ class FeedbackSerializer(serializers.Serializer):
         if not value.strip():
             raise serializers.ValidationError("Name cannot be empty")
         return value.strip()
+    
+    def validate_email(self, value):
+        """Validate email is not empty after stripping whitespace"""
+        if not value.strip():
+            raise serializers.ValidationError("Email cannot be empty")
+        return value.strip().lower()
     
     def validate_description(self, value):
         """Validate description is not empty and has minimum length"""

@@ -51,16 +51,17 @@ def submit_feedback(request):
         # Extract validated data
         validated_data = serializer.validated_data
         name = validated_data['name']
+        email = validated_data['email']
         feedback_type = validated_data['feedback_type']
         description = validated_data['description']
         
         # Save to Google Sheets
         try:
             sheets_service = get_sheets_service()
-            result = sheets_service.append_feedback(name, feedback_type, description)
+            result = sheets_service.append_feedback(name, email, feedback_type, description)
             
             if result['success']:
-                logger.info(f"Feedback submitted successfully by {name}")
+                logger.info(f"Feedback submitted successfully by {name} ({email})")
                 return Response({
                     'success': True,
                     'message': 'Thank you for your feedback! We appreciate your input.',

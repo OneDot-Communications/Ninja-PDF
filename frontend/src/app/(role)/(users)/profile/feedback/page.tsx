@@ -14,6 +14,7 @@ import { api } from "@/lib/services/api";
 export default function FeedbackPage() {
     const [loading, setLoading] = useState(false);
     const [name, setName] = useState("");
+    const [email, setEmail] = useState("");
     const [feedbackType, setFeedbackType] = useState("");
     const [description, setDescription] = useState("");
 
@@ -22,6 +23,18 @@ export default function FeedbackPage() {
 
         if (!name.trim()) {
             toast.error("Please enter your name");
+            return;
+        }
+
+        if (!email.trim()) {
+            toast.error("Please enter your email");
+            return;
+        }
+
+        // Basic email validation
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            toast.error("Please enter a valid email address");
             return;
         }
 
@@ -40,6 +53,7 @@ export default function FeedbackPage() {
             // Call backend API to submit feedback
             const response = await api.submitFeedback({
                 name,
+                email,
                 feedback_type: feedbackType,
                 description
             });
@@ -49,6 +63,7 @@ export default function FeedbackPage() {
 
                 // Reset form
                 setName("");
+                setEmail("");
                 setFeedbackType("");
                 setDescription("");
             } else {
@@ -84,7 +99,7 @@ export default function FeedbackPage() {
                         {/* Name Field */}
                         <div className="space-y-2">
                             <Label htmlFor="name" className="text-[#232323] text-base font-normal">
-                                Name
+                                Name <span className="text-red-500">*</span>
                             </Label>
                             <Input
                                 id="name"
@@ -92,6 +107,23 @@ export default function FeedbackPage() {
                                 placeholder="Enter your name"
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
+                                required
+                                className="h-[50px] rounded-[15px] border-[#dfeaf2] bg-white text-[#718ebf] text-[15px] pl-4 pr-4 focus:border-[#3371eb] focus:ring-[#3371eb]"
+                            />
+                        </div>
+
+                        {/* Email Field */}
+                        <div className="space-y-2">
+                            <Label htmlFor="email" className="text-[#232323] text-base font-normal">
+                                Email <span className="text-red-500">*</span>
+                            </Label>
+                            <Input
+                                id="email"
+                                type="email"
+                                placeholder="Enter your email address"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                required
                                 className="h-[50px] rounded-[15px] border-[#dfeaf2] bg-white text-[#718ebf] text-[15px] pl-4 pr-4 focus:border-[#3371eb] focus:ring-[#3371eb]"
                             />
                         </div>
@@ -99,9 +131,9 @@ export default function FeedbackPage() {
                         {/* Feedback Type Dropdown */}
                         <div className="space-y-2">
                             <Label htmlFor="feedback-type" className="text-[#232323] text-base font-normal">
-                                Feedback Type
+                                Feedback Type <span className="text-red-500">*</span>
                             </Label>
-                            <Select value={feedbackType} onValueChange={setFeedbackType}>
+                            <Select value={feedbackType} onValueChange={setFeedbackType} required>
                                 <SelectTrigger
                                     id="feedback-type"
                                     className="h-[50px] rounded-[15px] border-[#dfeaf2] bg-white text-[#718ebf] text-[15px] pl-4 pr-4 focus:border-[#3371eb] focus:ring-[#3371eb]"
@@ -119,13 +151,14 @@ export default function FeedbackPage() {
                         {/* Description Textarea */}
                         <div className="space-y-2">
                             <Label htmlFor="description" className="text-[#232323] text-base font-normal">
-                                Description
+                                Description <span className="text-red-500">*</span>
                             </Label>
                             <Textarea
                                 id="description"
                                 placeholder="Tell us more about your feedback..."
                                 value={description}
                                 onChange={(e) => setDescription(e.target.value)}
+                                required
                                 className="min-h-[150px] rounded-[15px] border-[#dfeaf2] bg-white text-[#718ebf] text-[15px] p-4 focus:border-[#3371eb] focus:ring-[#3371eb] resize-none"
                                 rows={6}
                             />
