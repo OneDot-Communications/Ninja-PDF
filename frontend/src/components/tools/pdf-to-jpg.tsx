@@ -43,6 +43,10 @@ export function PdfToJpgTool() {
                 variant: "success",
                 position: "top-right",
             });
+
+            // Clear the file after successful conversion to return to upload page
+            setFile(null);
+            setNumPages(0);
         } catch (error) {
             console.error("Error converting PDF to Image:", error);
             toast.show({

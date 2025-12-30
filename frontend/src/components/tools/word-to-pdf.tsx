@@ -60,6 +60,10 @@ export function WordToPdfTool() {
                 position: "bottom-right"
             });
 
+            // Clear the file after successful conversion to return to upload page
+            setFile(null);
+            setHtmlContent(null);
+
         } catch (error: any) {
             console.error("Error converting to PDF:", error);
 

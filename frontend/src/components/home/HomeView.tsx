@@ -3,8 +3,7 @@
 import { Header } from "../layout/header"; // Adjusted import path
 import {
     ArrowRight, Check, Star, Zap, Shield, Users, User, Heart, Globe, Layout, FileText, Settings,
-    Play, Download, ChevronRight, ArrowDown, MessageCircle, Github, Twitter, Linkedin,
-    Youtube, Instagram, Facebook
+    ChevronRight, Twitter, Linkedin
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "../ui/button"; // Adjusted import path
@@ -279,6 +278,27 @@ const ToolCardSkeleton = () => (
     </div>
 );
 
+// Skeleton for hero section
+const HeroSkeleton = () => (
+    <div className="flex flex-col gap-3 items-center justify-start relative max-w-5xl mx-auto px-4" role="status" aria-label="Loading content">
+        {/* Hero Title Skeleton - matches the two-line layout */}
+        <div className="flex flex-col items-center justify-start relative w-full">
+            <div className="h-16 md:h-20 w-full max-w-[500px] bg-slate-200 rounded-lg animate-pulse mb-2" aria-hidden="true"></div>
+            <div className="h-16 md:h-20 w-full max-w-[300px] bg-slate-200 rounded-lg animate-pulse" aria-hidden="true"></div>
+        </div>
+
+        {/* Hero Subtitle Skeleton - matches the two-part layout */}
+        <div className="flex flex-wrap gap-2 items-center justify-center relative mt-2">
+            <div className="h-10 md:h-12 w-40 md:w-48 bg-slate-200 rounded-lg animate-pulse" aria-hidden="true"></div>
+            <div className="h-10 md:h-12 w-32 md:w-40 bg-slate-200 rounded-lg animate-pulse" aria-hidden="true"></div>
+        </div>
+
+        {/* CTA Button Skeleton */}
+        <div className="h-12 w-32 bg-slate-200 rounded-lg animate-pulse mt-3" aria-hidden="true"></div>
+        <span className="sr-only">Loading content...</span>
+    </div>
+);
+
 // Feature Card with 3D tilt effect - optimized with CSS - Moved outside
 const FeatureCard = ({
     title, description, image, bgColor, borderColor, delay = 0
@@ -312,6 +332,7 @@ interface HomeViewProps {
     previewMode?: boolean; // optional flag for preview mode
     primaryColor?: string; // hero highlight color
     highlightHeight?: number; // height in em for the paint highlight
+    loading?: boolean; // show skeleton while loading branding
     // Add other customizable props here
 }
 
@@ -319,8 +340,10 @@ export function HomeView({
     heroTitle = "All your PDF headache in one place.",
     heroSubtitle = "Simple, super, and totally free!",
     platformName = "18+ PDF",
-    primaryColor,
-    highlightHeight
+    primaryColor = "#01B0F1",
+    highlightHeight = 1.05,
+    loading = false,
+    previewMode = false
 }: HomeViewProps) {
     const { tools, loading: toolsLoading } = useTools();
     // Filter out internal/admin tools (Category 'Other') and then slice
@@ -354,104 +377,110 @@ export function HomeView({
                         className="container px-4 mx-auto relative z-10"
                         style={{ y: heroY, opacity: heroOpacity, willChange: "transform, opacity" }}
                     >
-                        {/* Rotated Badge with Arrow - Positioned independent of text content */}
-                        <motion.div
-                            className="absolute top-20 right-28 xl:right-34 2xl:right-44 z-20"
-                            initial={{ opacity: 0, scale: 0.8, rotate: 15 }}
-                            animate={{ opacity: 1, scale: 1, rotate: 5 }}
-                            transition={{ delay: 0.5, type: "spring" }}
-                        >
-                        </motion.div>
+                        {loading ? (
+                            <HeroSkeleton />
+                        ) : (
+                            <>
+                                {/* Rotated Badge with Arrow - Positioned independent of text content */}
+                                <motion.div
+                                    className="absolute top-20 right-28 xl:right-34 2xl:right-44 z-20"
+                                    initial={{ opacity: 0, scale: 0.8, rotate: 15 }}
+                                    animate={{ opacity: 1, scale: 1, rotate: 5 }}
+                                    transition={{ delay: 0.5, type: "spring" }}
+                                >
+                                </motion.div>
 
-                        <div className="flex flex-col gap-3 items-center justify-start relative max-w-5xl mx-auto">
-                            {/* Main Headline with "one place." decoration */}
-                            <motion.div
-                                className="flex flex-col items-center justify-start relative w-full"
-                                initial={{ opacity: 0, y: 40 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ duration: 0.8, delay: 0.2 }}
-                            >
-                                {/* Split hero title to put "one place" on second line with paint-style highlight */}
-                                <h1 className="text-slate-900 text-center font-caveat text-5xl md:text-[5rem] leading-[0.95] font-bold">
-                                    {(() => {
-                                        const regex = /(one place\.?)/i;
-                                        const m = heroTitle.match(regex);
-                                        if (!heroTitle) return null;
+                                <div className="flex flex-col gap-3 items-center justify-start relative max-w-5xl mx-auto">
+                                    {/* Main Headline with "one place." decoration */}
+                                    <motion.div
+                                        className="flex flex-col items-center justify-start relative w-full"
+                                        initial={{ opacity: 0, y: 40 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ duration: 0.8, delay: 0.2 }}
+                                    >
+                                        {/* Split hero title to put "one place" on second line with paint-style highlight */}
+                                        <h1 className="text-slate-900 text-center font-caveat text-5xl md:text-[5rem] leading-[0.95] font-bold">
+                                            {(() => {
+                                                const regex = /(one place\.?)/i;
+                                                const m = heroTitle.match(regex);
+                                                if (!heroTitle) return null;
 
-                                        if (m) {
-                                            const highlight = m[0];
-                                            const before = heroTitle.replace(regex, '').trim();
-                                            return (
-                                                <>
-                                                    <span>{before}</span>
-                                                    <br />
-                                                    <span className="relative inline-block">
-                                                        {/* Paint-like rounded rect behind the text */}
-                                                        <motion.svg
-                                                            className="absolute left-0 right-0 top-1/2 -translate-y-1/2 -z-10 w-full"
-                                                            viewBox="0 0 100 20"
-                                                            preserveAspectRatio="none"
-                                                            initial={{ scaleX: 0 }}
-                                                            whileInView={{ scaleX: 1 }}
-                                                            transition={{ duration: 0.6, ease: 'easeOut' }}
-                                                            viewport={{ once: true }}
-                                                            style={{ transformOrigin: 'left', height: `${effectiveHighlightHeight}em` }}
-                                                        >
-                                                            {/* Paint-like stroke path to create rounded, slightly irregular edges */}
-                                                            <path d="M2 10 C12 4 26 2 40 3 C54 4 68 6 82 5 C90 4 95 2 100 3 L100 17 C95 18 90 19 82 18 C68 17 54 15 40 16 C26 17 12 19 2 13 Z" fill={highlightFill} />
-                                                            {/* Soft shadow below for depth */}
-                                                            <path d="M2 11 C12 5 26 3 40 4 C54 5 68 7 82 6 C90 5 95 3 100 4 L100 18 C95 19 90 20 82 19 C68 18 54 16 40 17 C26 18 12 20 2 14 Z" fill={highlightShadow} opacity="0.12" />
-                                                        </motion.svg>
+                                                if (m) {
+                                                    const highlight = m[0];
+                                                    const before = heroTitle.replace(regex, '').trim();
+                                                    return (
+                                                        <>
+                                                            <span>{before}</span>
+                                                            <br />
+                                                            <span className="relative inline-block">
+                                                                {/* Paint-like rounded rect behind the text */}
+                                                                <motion.svg
+                                                                    className="absolute left-0 right-0 top-1/2 -translate-y-1/2 -z-10 w-full"
+                                                                    viewBox="0 0 100 20"
+                                                                    preserveAspectRatio="none"
+                                                                    initial={{ scaleX: 0 }}
+                                                                    whileInView={{ scaleX: 1 }}
+                                                                    transition={{ duration: 0.6, ease: 'easeOut' }}
+                                                                    viewport={{ once: true }}
+                                                                    style={{ transformOrigin: 'left', height: `${effectiveHighlightHeight}em` }}
+                                                                >
+                                                                    {/* Paint-like stroke path to create rounded, slightly irregular edges */}
+                                                                    <path d="M2 10 C12 4 26 2 40 3 C54 4 68 6 82 5 C90 4 95 2 100 3 L100 17 C95 18 90 19 82 18 C68 17 54 15 40 16 C26 17 12 19 2 13 Z" fill={highlightFill} />
+                                                                    {/* Soft shadow below for depth */}
+                                                                    <path d="M2 11 C12 5 26 3 40 4 C54 5 68 7 82 6 C90 5 95 3 100 4 L100 18 C95 19 90 20 82 19 C68 18 54 16 40 17 C26 18 12 20 2 14 Z" fill={highlightShadow} opacity="0.12" />
+                                                                </motion.svg>
 
-                                                        <span className="relative z-10 text-slate-900">{highlight}</span>
-                                                    </span>
-                                                </>
-                                            );
-                                        }
+                                                                <span className="relative z-10 text-slate-900">{highlight}</span>
+                                                            </span>
+                                                        </>
+                                                    );
+                                                }
 
-                                        // fallback - render full title normally
-                                        return <span>{heroTitle}</span>;
-                                    })()}
-                                </h1>
-                            </motion.div>
+                                                // fallback - render full title normally
+                                                return <span>{heroTitle}</span>;
+                                            })()}
+                                        </h1>
+                                    </motion.div>
 
 
 
-                            {/* Subheadline with mixed colors */}
-                            <motion.div
-                                className="flex flex-wrap gap-2 items-center justify-center relative mt-2"
-                                initial={{ opacity: 0, y: 30 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ duration: 0.8, delay: 0.4 }}
-                            >
-                                <h2 className="text-slate-900 text-center font-caveat text-3xl md:text-[3rem] font-bold leading-none">
-                                    {heroSubtitle.split('totally free!')[0] || "Simple, super, and"}
-                                </h2>
-                                <div className="relative inline-block">
-                                    <h2 className="text-[#EAB308] text-center font-caveat text-3xl md:text-[3rem] font-bold leading-none">
-                                        {heroSubtitle.includes('totally free!') ? 'totally free!' : 'totally free!'}
-                                    </h2>
-                                    {/* Decorative underline for "totally free!" - bolder */}
-                                    <div className="absolute left-0 right-0 -bottom-1 h-2">
-                                        <svg width="100%" height="8" viewBox="0 0 200 8" fill="none" preserveAspectRatio="none">
-                                            <path d="M2 4C50 2 100 6 150 3C170 2 180 5 198 4" stroke="#EAB308" strokeWidth="4" strokeLinecap="round" />
-                                        </svg>
-                                    </div>
+                                    {/* Subheadline with mixed colors */}
+                                    <motion.div
+                                        className="flex flex-wrap gap-2 items-center justify-center relative mt-2"
+                                        initial={{ opacity: 0, y: 30 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ duration: 0.8, delay: 0.4 }}
+                                    >
+                                        <h2 className="text-slate-900 text-center font-caveat text-3xl md:text-[3rem] font-bold leading-none">
+                                            {heroSubtitle.split('totally free!')[0] || "Simple, super, and"}
+                                        </h2>
+                                        <div className="relative inline-block">
+                                            <h2 className="text-[#EAB308] text-center font-caveat text-3xl md:text-[3rem] font-bold leading-none">
+                                                {heroSubtitle.includes('totally free!') ? 'totally free!' : 'totally free!'}
+                                            </h2>
+                                            {/* Decorative underline for "totally free!" - bolder */}
+                                            <div className="absolute left-0 right-0 -bottom-1 h-2">
+                                                <svg width="100%" height="8" viewBox="0 0 200 8" fill="none" preserveAspectRatio="none">
+                                                    <path d="M2 4C50 2 100 6 150 3C170 2 180 5 198 4" stroke="#EAB308" strokeWidth="4" strokeLinecap="round" />
+                                                </svg>
+                                            </div>
+                                        </div>
+                                    </motion.div>
+
+                                    {/* CTA Button - Straight */}
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 20 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ duration: 0.8, delay: 0.6 }}
+                                        className="mt-3"
+                                    >
+                                        <Button className="bg-red-500 hover:bg-red-600 text-white font-bold px-8 py-3 rounded-lg text-base md:text-lg shadow-lg">
+                                            Start now its free!
+                                        </Button>
+                                    </motion.div>
                                 </div>
-                            </motion.div>
-
-                            {/* CTA Button - Straight */}
-                            <motion.div
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ duration: 0.8, delay: 0.6 }}
-                                className="mt-3"
-                            >
-                                <Button className="bg-red-500 hover:bg-red-600 text-white font-bold px-8 py-3 rounded-lg text-base md:text-lg shadow-lg">
-                                    Start now its free!
-                                </Button>
-                            </motion.div>
-                        </div>
+                            </>
+                        )}
                     </motion.div>
                 </section>
 
@@ -509,7 +538,7 @@ export function HomeView({
                 {/* Enterprise section removed per request */}
 
                 {/* Unified Bottom Section */}
-                <section className="py-24 bg-white overflow-hidden">
+                <section className="py-12 bg-white overflow-hidden">
                     <div className="container px-4 mx-auto text-center relative">
                         <ScaleOnScroll>
                             <div className="max-w-4xl mx-auto text-center">
@@ -517,7 +546,7 @@ export function HomeView({
                                 <p className="text-2xl md:text-3xl font-light text-slate-600 leading-relaxed mb-4">
                                     Grow your business, boss style
                                 </p>
-                                <h3 className="text-4xl md:text-5xl font-bold font-caveat text-slate-800 leading-none mb-12">
+                                <h3 className="text-4xl md:text-5xl font-bold font-caveat text-slate-800 leading-none mb-6">
                                     <span>Join the crowd of </span>
                                     <span className="relative inline-block">
                                         <span className="text-[#01B0F1]">happy</span>
@@ -554,7 +583,7 @@ export function HomeView({
                 </section>
 
                 {/* Footer - Clean White Design */}
-                <footer className="bg-white border-t border-slate-100 pt-20 pb-12">
+                <footer className="bg-[#EFF7FF] border-t border-slate-100 pt-20 pb-12">
                     <div className="container px-4 mx-auto">
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
                             {/* Brand Column */}
