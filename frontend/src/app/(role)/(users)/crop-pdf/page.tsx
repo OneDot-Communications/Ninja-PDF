@@ -11,6 +11,7 @@ export default function CropPdfPage() {
         <ToolShell
             title="Crop PDF"
             description="Crop margins of PDF documents or select specific areas."
+            variant="editor"
         >
             <CropPdfTool />
         </ToolShell>

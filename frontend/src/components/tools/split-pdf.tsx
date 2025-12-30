@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { saveAs } from "file-saver";
-import { FileUpload } from "../ui/file-upload";
+import FileUploadHero from "../ui/file-upload-hero"; // Hero uploader (big CTA, full-page drag overlay)
 import { Button } from "../ui/button";
 import { ArrowRight, CheckCircle2, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -121,12 +121,12 @@ export function SplitPdfTool() {
 
     if (!file) {
         return (
-            <div className="mx-auto max-w-2xl">
-                <FileUpload
+            <div className="min-h-[calc(100vh-120px)] flex items-center justify-center">
+                <FileUploadHero
+                    title="Split PDF"
                     onFilesSelected={handleFileSelected}
                     maxFiles={1}
                     accept={{ "application/pdf": [".pdf"] }}
-                    description="Drop a PDF file here to split it"
                 />
             </div>
         );

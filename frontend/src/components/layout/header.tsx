@@ -54,6 +54,26 @@ export function Header() {
                     <img src="/pages/auth/18+christmas_logo.png" alt="18+ PDF" className="h-12 w-auto" />
                 </Link>
 
+                {/* Navigation Menu - Desktop */}
+                <div className="hidden md:flex items-center gap-6 mx-8">
+                    <Link href="/tools/merge-pdf" className="text-[#111418] font-bold text-sm hover:text-blue-600 transition-colors">
+                        Merge PDF
+                    </Link>
+                    <Link href="/tools/split-pdf" className="text-[#617289] font-medium text-sm hover:text-blue-600 transition-colors">
+                        Split PDF
+                    </Link>
+                    <Link href="/tools/compress-pdf" className="text-[#617289] font-medium text-sm hover:text-blue-600 transition-colors">
+                        Compress PDF
+                    </Link>
+                    <Link href="/tools" className="text-[#617289] font-medium text-sm hover:text-blue-600 transition-colors">
+                        Convert PDF
+                    </Link>
+                    <div className="flex items-center gap-1 text-[#617289] cursor-pointer hover:text-blue-600 transition-colors">
+                        <span className="font-medium text-sm">All Tools</span>
+                        <span className="text-lg">▼</span>
+                    </div>
+                </div>
+
                 {/* Desktop Actions */}
                 <div className="hidden md:flex items-center gap-2">
                     {/* Show skeleton until mounted to prevent hydration mismatch */}

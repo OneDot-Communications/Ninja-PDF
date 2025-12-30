@@ -557,7 +557,7 @@ class MergePDFView(PDFToolAPIView):
     
     def post(self, request):
         # Usage Check
-        allowed, error_response = check_usage_limit(request.user, 'MERGE_PDF')
+        allowed, error_response = check_usage_limit(request, 'MERGE_PDF')
         if not allowed:
             return error_response
 

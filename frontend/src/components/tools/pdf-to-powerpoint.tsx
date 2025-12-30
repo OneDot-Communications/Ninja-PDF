@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { FileUpload } from "../ui/file-upload";
+import FileUploadHero from "../ui/file-upload-hero"; // Hero uploader (big CTA, full-page drag overlay)
 import { Button } from "../ui/button";
 import {
   ArrowRight,
@@ -62,11 +62,11 @@ export function PdfToPowerPointTool() {
   if (files.length === 0) {
     return (
       <div className="mx-auto max-w-2xl">
-        <FileUpload
-          onFilesSelected={handleFilesSelected}
-          maxFiles={1}
-          accept={{ "application/pdf": [".pdf"] }}
-          description="Drop PDF file here to convert to PowerPoint"
+        <FileUploadHero
+            title="PDF to PowerPoint"
+            onFilesSelected={handleFileSelected}
+            maxFiles={1}
+            accept={{ "application/pdf": [".pdf"] }}
         />
       </div>
     );

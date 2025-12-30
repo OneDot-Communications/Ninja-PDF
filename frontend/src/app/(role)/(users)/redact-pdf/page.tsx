@@ -11,6 +11,7 @@ export default function RedactPdfPage() {
         <ToolShell
             title="Redact PDF"
             description="Redact text and graphics to permanently remove sensitive information from a PDF."
+            variant="editor"
         >
             <RedactPdfTool />
         </ToolShell>

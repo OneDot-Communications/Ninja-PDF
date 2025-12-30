@@ -11,6 +11,7 @@ export default function SignPdfPage() {
         <ToolShell
             title="Sign PDF"
             description="Sign yourself or request electronic signatures from others."
+            variant="editor"
         >
             <SignPdfTool />
         </ToolShell>

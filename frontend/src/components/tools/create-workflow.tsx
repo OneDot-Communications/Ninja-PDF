@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Button } from "../ui/button";
 import { Plus, ArrowRight, Play, Trash2, RefreshCw, Settings } from "lucide-react";
-import { FileUpload } from "../ui/file-upload";
+import FileUploadHero from "../ui/file-upload-hero"; // Hero uploader (big CTA, full-page drag overlay)
 import { PDFDocument, rgb, degrees, StandardFonts, Grayscale } from "pdf-lib";
 import { saveAs } from "file-saver";
 
@@ -136,12 +136,12 @@ export function CreateWorkflowTool() {
 
     if (!file) {
         return (
-             <div className="mx-auto max-w-2xl">
-                <FileUpload
+            <div className="min-h-[calc(100vh-120px)] flex items-center justify-center">
+                <FileUploadHero
+                    title="Create Workflow"
                     onFilesSelected={handleFileSelected}
                     maxFiles={1}
                     accept={{ "application/pdf": [".pdf"] }}
-                    description="Drop a PDF file here to start a workflow"
                 />
             </div>
         );

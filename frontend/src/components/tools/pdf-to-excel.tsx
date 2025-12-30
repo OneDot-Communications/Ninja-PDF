@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { FileUpload } from "../ui/file-upload";
+import FileUploadHero from "../ui/file-upload-hero"; // Hero uploader (big CTA, full-page drag overlay)
 import { Button } from "../ui/button";
 import { ArrowRight, FileSpreadsheet, Loader2, RefreshCw, Settings, Table } from "lucide-react";
 import { Switch } from "../ui/switch";
@@ -50,12 +50,12 @@ export function PdfToExcelTool() {
 
     if (files.length === 0) {
         return (
-            <div className="mx-auto max-w-2xl">
-                <FileUpload
-                    onFilesSelected={handleFilesSelected}
+            <div className="min-h-[calc(100vh-120px)] flex items-center justify-center">
+                <FileUploadHero
+                    title="PDF to Excel"
+                    onFilesSelected={handleFileSelected}
                     maxFiles={1}
                     accept={{ "application/pdf": [".pdf"] }}
-                    description="Drop PDF file here to convert to Excel"
                 />
             </div>
         );

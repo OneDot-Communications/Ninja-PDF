@@ -11,6 +11,7 @@ export default function PdfToPdfAPage() {
         <ToolShell
             title="PDF to PDF/A"
             description="Transform your PDF to PDF/A, the ISO-standardized version of PDF for long-term archiving."
+            variant="editor"
         >
             <PdfToPdfATool />
         </ToolShell>

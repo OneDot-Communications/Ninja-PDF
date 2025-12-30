@@ -11,6 +11,7 @@ export default function ProtectPdfPage() {
         <ToolShell
             title="Protect PDF"
             description="Protect PDF files with a password. Encrypt PDF documents to prevent unauthorized access."
+            variant="editor"
         >
             <ProtectPdfTool />
         </ToolShell>

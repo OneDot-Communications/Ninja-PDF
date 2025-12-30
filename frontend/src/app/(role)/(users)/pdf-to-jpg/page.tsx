@@ -11,6 +11,7 @@ export default function PdfToJpgPage() {
         <ToolShell
             title="PDF to JPG"
             description="Convert each PDF page into a JPG or extract all images contained in a PDF."
+            variant="editor"
         >
             <PdfToJpgTool />
         </ToolShell>

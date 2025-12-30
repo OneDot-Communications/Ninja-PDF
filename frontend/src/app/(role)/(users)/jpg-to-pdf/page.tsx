@@ -11,6 +11,7 @@ export default function JpgToPdfPage() {
         <ToolShell
             title="JPG to PDF"
             description="Convert JPG images to PDF in seconds. Easily adjust orientation and margins."
+            variant="editor"
         >
             <JpgToPdfTool />
         </ToolShell>

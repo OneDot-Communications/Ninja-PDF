@@ -174,18 +174,40 @@ async function unlockPdf(file: File, options: { password?: string }): Promise<St
 
 async function mergePdf(files: File[], options: { ranges: string[], flatten: boolean }): Promise<StrategyResult> {
     const mergedPdf = await PDFDocument.create();
+    const skippedFiles: string[] = [];
 
     for (let i = 0; i < files.length; i++) {
-        const arrayBuffer = await files[i].arrayBuffer();
-        const pdfDoc = await PDFDocument.load(arrayBuffer);
-        const totalPages = pdfDoc.getPageCount();
-        const rangeStr = options.ranges[i] || 'all';
-        const pageIndices = parsePageRange(rangeStr, totalPages);
+        try {
+            const arrayBuffer = await files[i].arrayBuffer();
+            const pdfDoc = await PDFDocument.load(arrayBuffer, { ignoreEncryption: true });
+            const totalPages = pdfDoc.getPageCount();
+            const rangeStr = options.ranges[i] || 'all';
+            const pageIndices = parsePageRange(rangeStr, totalPages);
 
-        for (const pageIndex of pageIndices) {
-            const [copiedPage] = await mergedPdf.copyPages(pdfDoc, [pageIndex]);
-            mergedPdf.addPage(copiedPage);
+            for (const pageIndex of pageIndices) {
+                const [copiedPage] = await mergedPdf.copyPages(pdfDoc, [pageIndex]);
+                mergedPdf.addPage(copiedPage);
+            }
+        } catch (error: any) {
+            if (error.message && error.message.includes('encrypted')) {
+                skippedFiles.push(files[i].name);
+                console.warn(`Skipping encrypted PDF: ${files[i].name}`);
+            } else {
+                throw error;
+            }
         }
+    }
+
+    if (mergedPdf.getPageCount() === 0) {
+        if (skippedFiles.length > 0) {
+            throw new Error(`All PDFs are encrypted and cannot be processed. Please unlock them first using the Unlock PDF tool. Skipped files: ${skippedFiles.join(', ')}`);
+        } else {
+            throw new Error('No valid PDF pages found to merge');
+        }
+    }
+
+    if (skippedFiles.length > 0) {
+        console.warn(`Merged PDF but skipped encrypted files: ${skippedFiles.join(', ')}`);
     }
 
     const pdfBytes = await mergedPdf.save();
