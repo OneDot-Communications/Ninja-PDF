@@ -385,6 +385,7 @@ export const api = {
     return api.request("POST", "/api/files/", formData);
   },
   deleteFile: (id: number) => api.request("DELETE", `/api/files/${id}/`),
+  getFileUrl: (id: number) => api.request("GET", `/api/files/${id}/`),
   updateFilePassword: (id: number, password?: string) => {
     if (!password) return api.request("POST", `/api/files/${id}/remove_password/`);
     return api.request("POST", `/api/files/${id}/set_password/`, { password });
@@ -529,7 +530,29 @@ export const api = {
   // ─────────────────────────────────────────────────────────────────────────────
   // CORE / SYSTEM ENDPOINTS
   // ─────────────────────────────────────────────────────────────────────────────
-  getPublicSettings: () => api.publicRequest("GET", "/api/core/settings/public/"),
+  getPublicSettings: (() => {
+    // Module-level cache for public settings
+    let cache: any = null;
+    let promise: Promise<any> | null = null;
+
+    return async () => {
+      if (cache) return cache;
+      if (promise) return promise;
+
+      promise = api.publicRequest("GET", "/api/core/settings/public/")
+        .then(data => {
+          cache = data;
+          promise = null;
+          return data;
+        })
+        .catch(err => {
+          promise = null;
+          throw err;
+        });
+
+      return promise;
+    };
+  })(),
   getAdminBranding: () => api.request("GET", "/api/core/settings/branding/"),
   updateAdminBranding: (data: FormData) => api.request("PATCH", "/api/core/settings/branding/", data),
   getContentVersions: () => api.request("GET", "/api/core/content-versions/"),
@@ -636,7 +659,29 @@ export const api = {
   rejectRequest: (id: number, note: string) => api.request("POST", `/api/core/admin-requests/${id}/reject/`, { note }),
 
   // --- Features ---
-  getFeatures: () => api.publicRequest("GET", "/api/billing/features/"),
+  getFeatures: (() => {
+    // Module-level cache for features
+    let cache: any = null;
+    let promise: Promise<any> | null = null;
+
+    return async () => {
+      if (cache) return cache;
+      if (promise) return promise;
+
+      promise = api.publicRequest("GET", "/api/billing/features/")
+        .then(data => {
+          cache = data;
+          promise = null;
+          return data;
+        })
+        .catch(err => {
+          promise = null;
+          throw err;
+        });
+
+      return promise;
+    };
+  })(),
   createFeature: (data: any) => {
     // If data contains an 'icon' file, use uploadFile/FormData
     if (data.icon && data.icon instanceof File) {

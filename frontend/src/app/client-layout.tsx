@@ -1,8 +1,9 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useEffect } from "react";
 import Toaster, { ToasterRef } from "@/components/ui/toast";
 import { AuthProvider } from '@/lib/context/AuthContext';
+import { api } from '@/lib/services/api';
 import { CookieBanner } from "@/components/common/cookie-banner";
 import { FeedbackButton } from "@/components/common/feedback-button";
 
@@ -14,6 +15,13 @@ export const toast = {
 
 export function ClientLayout({ children }: { children: React.ReactNode }) {
   const toasterRef = useRef<ToasterRef>(null);
+
+  // Pre-fetch public data immediately on mount for faster page load
+  useEffect(() => {
+    // Trigger these fetches early - results will be cached
+    api.getPublicSettings().catch(() => { });
+    api.getFeatures().catch(() => { });
+  }, []);
 
   // Set the global toast function
   toast.show = (data) => toasterRef.current?.show(data);

@@ -68,6 +68,7 @@ class VerifyOTPSerializer(serializers.Serializer):
 class UserSerializer(serializers.ModelSerializer):
     storage_used = serializers.SerializerMethodField()
     storage_limit = serializers.SerializerMethodField()
+    avatar = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -88,10 +89,16 @@ class UserSerializer(serializers.ModelSerializer):
         )
         read_only_fields = ('email', 'role', 'subscription_tier', 'date_joined')
 
+    def get_avatar(self, obj):
+        """Return the full URL for the avatar if it exists."""
+        if obj.avatar:
+            return obj.avatar.url
+        return None
+
     def get_storage_used(self, obj):
-        if hasattr(obj, 'subscription'):
-            return obj.subscription.storage_used
-        return 0
+        from core.services.quota_service import QuotaService
+        used, _ = QuotaService.get_storage_quota(obj)
+        return used
 
     def get_storage_limit(self, obj):
         from core.services.quota_service import QuotaService

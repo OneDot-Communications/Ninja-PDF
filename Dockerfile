@@ -7,21 +7,15 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# Install system dependencies
+# Install system dependencies REQUIRED for pycairo/xhtml2pdf
 RUN apt-get update && apt-get install -y \
     build-essential \
     pkg-config \
-    python3-dev \
-    libgirepository1.0-dev \
     libcairo2-dev \
     libpango1.0-dev \
-    libpoppler-cpp-dev \
-    ghostscript \
-    clamav-daemon \
-    fonts-noto \
-    fonts-noto-cjk \
-    fonts-noto-color-emoji \
-    fonts-indic \
+    libjpeg-dev \
+    libopenjp2-7-dev \
+    libffi-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy only backend requirements

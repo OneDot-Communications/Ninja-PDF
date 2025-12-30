@@ -9,16 +9,15 @@ import { FaFilePdf, FaRobot, FaSignature, FaUserGroup, FaDesktop, FaMobile, FaGi
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from '@/lib/context/AuthContext';
 import { FaUser } from 'react-icons/fa6';
-import { toast } from "sonner";
-import { useRouter } from "next/navigation";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export function Header() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [mounted, setMounted] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
-    const { user, logout } = useAuth();
-    const router = useRouter();
+    const { user, isLoading } = useAuth();
 
     useEffect(() => {
         setMounted(true);
@@ -63,13 +62,23 @@ export function Header() {
             {/* Main Header Container */}
             <div className="w-full flex h-16 items-center justify-between px-6 relative max-w-[1536px] mx-auto">
                 <Link href="/" className="flex items-center">
-                    <img src="/logo.svg" alt="18+ PDF" className="h-12 w-auto" />
-                    <span className="text-slate-800 font-bold font-caveat text-3xl">PDF</span>
+                    <img src="/pages/auth/18+logo.png" alt="18+ PDF" className="h-12 w-auto" />
                 </Link>
 
                 {/* Desktop Actions */}
                 <div className="hidden md:flex items-center gap-2">
-                    {!user && (
+                    {/* Show skeleton until mounted to prevent hydration mismatch */}
+                    {!mounted ? (
+                        <div className="flex items-center gap-2">
+                            <Skeleton className="h-10 w-16 rounded-lg" />
+                            <Skeleton className="h-10 w-20 rounded-lg" />
+                        </div>
+                    ) : isLoading && !user ? (
+                        <div className="flex items-center gap-2">
+                            <Skeleton className="h-10 w-16 rounded-lg" />
+                            <Skeleton className="h-10 w-20 rounded-lg" />
+                        </div>
+                    ) : !user ? (
                         <>
                             <Link href="/login">
                                 <div className="rounded-lg px-4 py-2 flex items-center justify-center h-10 cursor-pointer group">
@@ -79,35 +88,32 @@ export function Header() {
                                 </div>
                             </Link>
                             <Link href="/signup">
-                                <div className="bg-slate-500 rounded-lg px-4 py-2 flex items-center justify-center h-10 overflow-hidden shadow-[0px_2px_4px_-2px_rgba(0,0,0,0.1),0px_4px_6px_-1px_rgba(0,0,0,0.1)] cursor-pointer hover:bg-slate-600 transition-colors">
+                                <div className="bg-[#FF5252] rounded-lg px-4 py-2 flex items-center justify-center h-10 overflow-hidden shadow-[0px_6px_20px_-8px_rgba(255,82,82,0.25)] cursor-pointer hover:bg-[#ff3b3b] transition-colors focus:outline-none focus:ring-2 focus:ring-[#FF5252]/30">
                                     <span className="text-white text-center font-medium leading-none">
                                         Sign Up
                                     </span>
                                 </div>
                             </Link>
                         </>
-                    )}
-                    {user && (
+                    ) : (
                         <div className="flex items-center gap-3 mr-2">
                             <span className="text-sm font-medium text-slate-700 hidden lg:inline-block">
                                 Hello, {user.first_name || user.email?.split('@')[0] || 'User'}
                             </span>
-                            <Link href={
-                                user.role === 'SUPER_ADMIN' ? "/super-admin/dashboard" :
-                                    user.role === 'ADMIN' ? "/admin/dashboard" :
-                                        "/profile"
-                            }>
-                                <button className="flex items-center justify-center w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 transition-colors border border-slate-200" title="Profile">
-                                    <FaUser className="w-4 h-4 text-slate-600" />
-                                </button>
-                            </Link>
-                            <button
-                                onClick={handleLogout}
-                                className="flex items-center justify-center w-9 h-9 rounded-full bg-slate-100 hover:bg-red-50 hover:border-red-200 transition-colors border border-slate-200 group"
-                                title="Logout"
+                            <a
+                                href="/profile"
+                                className="cursor-pointer"
                             >
-                                <FaRightFromBracket className="w-4 h-4 text-slate-600 group-hover:text-red-500" />
-                            </button>
+                                <Avatar className="w-9 h-9 ring-2 ring-slate-200 hover:ring-slate-300 transition-all">
+                                    <AvatarImage
+                                        src={user.avatar || undefined}
+                                        alt={user.first_name || "User"}
+                                    />
+                                    <AvatarFallback className="bg-slate-100 text-slate-600 text-sm font-medium">
+                                        {user.first_name?.[0] || 'U'}
+                                    </AvatarFallback>
+                                </Avatar>
+                            </a>
                         </div>
                     )}
                     <div ref={menuRef} className="relative">
@@ -269,41 +275,31 @@ export function Header() {
                                                     </Button>
                                                 </Link>
                                                 <Link href="/signup" onClick={() => setIsMobileMenuOpen(false)}>
-                                                    <Button className="w-full justify-center h-12 bg-[#01B0F1] hover:bg-[#0091d4] text-white">
+                                                    <Button className="w-full justify-center h-12 bg-[#FF5252] hover:bg-[#ff3b3b] text-white focus:outline-none focus:ring-2 focus:ring-[#FF5252]/30">
                                                         Sign Up
                                                     </Button>
                                                 </Link>
                                             </>
                                         ) : (
-                                            <div className="col-span-2 space-y-3">
-                                                <div className="flex items-center justify-between bg-slate-50 p-3 rounded-lg">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="w-10 h-10 rounded-full bg-[#01B0F1]/10 flex items-center justify-center text-[#01B0F1]">
-                                                            <FaUser className="w-5 h-5" />
-                                                        </div>
-                                                        <div className="flex flex-col">
-                                                            <span className="text-sm font-bold text-slate-900">
-                                                                {user.first_name || 'User'}
-                                                            </span>
-                                                            <span className="text-xs text-slate-500 truncate max-w-[120px]">
-                                                                {user.email}
-                                                            </span>
-                                                        </div>
+                                            <div className="col-span-2 flex items-center justify-between bg-slate-50 p-3 rounded-lg">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-10 h-10 rounded-full bg-[#01B0F1]/10 flex items-center justify-center text-[#01B0F1]">
+                                                        <FaUser className="w-5 h-5" />
                                                     </div>
-                                                    <Link href={user.role === 'ADMIN' || user.role === 'SUPER_ADMIN' ? "/admin/dashboard" : "/profile"} onClick={() => setIsMobileMenuOpen(false)}>
-                                                        <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700 hover:bg-blue-50">
-                                                            {user.role === 'ADMIN' || user.role === 'SUPER_ADMIN' ? "Dashboard" : "Profile"}
-                                                        </Button>
-                                                    </Link>
+                                                    <div className="flex flex-col">
+                                                        <span className="text-sm font-bold text-slate-900">
+                                                            {user.first_name || 'User'}
+                                                        </span>
+                                                        <span className="text-xs text-slate-500 truncate max-w-[120px]">
+                                                            {user.email}
+                                                        </span>
+                                                    </div>
                                                 </div>
-                                                <Button
-                                                    variant="outline"
-                                                    onClick={handleLogout}
-                                                    className="w-full justify-center h-10 text-red-600 border-red-200 hover:bg-red-50"
-                                                >
-                                                    <FaRightFromBracket className="w-4 h-4 mr-2" />
-                                                    Logout
-                                                </Button>
+                                                <Link href="/profile" onClick={() => setIsMobileMenuOpen(false)}>
+                                                    <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700 hover:bg-blue-50">
+                                                        Profile
+                                                    </Button>
+                                                </Link>
                                             </div>
                                         )}
                                     </div>

@@ -40,26 +40,68 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// localStorage keys for instant render
+const USER_CACHE_KEY = 'ninja_pdf_user';
+const SUB_CACHE_KEY = 'ninja_pdf_subscription';
+
+// Helper to safely access localStorage (SSR-safe)
+function getFromCache<T>(key: string): T | null {
+    if (typeof window === 'undefined') return null;
+    try {
+        const cached = localStorage.getItem(key);
+        return cached ? JSON.parse(cached) : null;
+    } catch {
+        return null;
+    }
+}
+
+function setCache(key: string, value: any) {
+    if (typeof window === 'undefined') return;
+    try {
+        if (value) {
+            localStorage.setItem(key, JSON.stringify(value));
+        } else {
+            localStorage.removeItem(key);
+        }
+    } catch { /* ignore */ }
+}
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-    const [user, setUser] = useState<User | null>(null);
-    const [subscription, setSubscription] = useState<Subscription | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
+    // Initialize from cache for instant render - shows user immediately
+    const [user, setUser] = useState<User | null>(() => getFromCache<User>(USER_CACHE_KEY));
+    const [subscription, setSubscription] = useState<Subscription | null>(() => getFromCache<Subscription>(SUB_CACHE_KEY));
+    const [isLoading, setIsLoading] = useState(!getFromCache<User>(USER_CACHE_KEY)); // Only loading if no cache
 
     const refreshUser = async () => {
         try {
-            const userData = await api.getUser();
-            setUser(userData);
+            // Parallelize user and subscription fetch for faster load
+            const [userResult, subResult] = await Promise.allSettled([
+                api.getUser(),
+                api.getSubscription()
+            ]);
 
-            // Allow failing silently if no sub
-            try {
-                const subData = await api.getSubscription();
-                setSubscription(subData);
-            } catch (e) {
+            if (userResult.status === 'fulfilled') {
+                setUser(userResult.value);
+                setCache(USER_CACHE_KEY, userResult.value);
+            } else {
+                setUser(null);
+                setCache(USER_CACHE_KEY, null);
+                throw userResult.reason;
+            }
+
+            // Allow subscription to fail silently
+            if (subResult.status === 'fulfilled') {
+                setSubscription(subResult.value);
+                setCache(SUB_CACHE_KEY, subResult.value);
+            } else {
                 setSubscription(null);
+                setCache(SUB_CACHE_KEY, null);
             }
         } catch (error) {
             setUser(null);
             setSubscription(null);
+            setCache(USER_CACHE_KEY, null);
+            setCache(SUB_CACHE_KEY, null);
         } finally {
             setIsLoading(false);
         }
@@ -92,6 +134,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             await api.logout();
             setUser(null);
             setSubscription(null);
+            setCache(USER_CACHE_KEY, null);
+            setCache(SUB_CACHE_KEY, null);
         } finally {
             setIsLoading(false);
         }

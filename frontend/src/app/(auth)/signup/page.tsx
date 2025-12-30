@@ -12,6 +12,8 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { api } from "@/lib/services/api";
+import { Eye, EyeOff } from "lucide-react";
+import Image from "next/image";
 
 const SignupContent = () => {
     const router = useRouter();
@@ -24,6 +26,9 @@ const SignupContent = () => {
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
     const [referralCode, setReferralCode] = useState<string | null>(null);
+    const [rememberMe, setRememberMe] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -99,110 +104,186 @@ const SignupContent = () => {
     }
 
     return (
-        <div className="py-12">
-            <div className="mx-auto max-w-md px-4">
-                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="w-full">
-                    <div className="text-center mb-8">
-                        <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">Create Your Account</h1>
-                        <p className="text-slate-500 dark:text-slate-300">Start your free account.</p>
-                        {referralCode && (
-                            <div className="mt-4 p-2 bg-green-50 text-green-700 text-sm rounded border border-green-200 inline-block px-4">
-                                🎉 Referral code applied successfully!
+        <div className="w-full">
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="w-full">
+                {/* Sign Up Link (Top Right) */}
+                <div className="text-right mb-6">
+                    <span className="text-[#000000] font-['Poppins',sans-serif] text-base">
+                        Have an Account ?{" "}
+                    </span>
+                    <Link href="/login" className="text-[#000000] font-['Poppins',sans-serif] text-base font-semibold hover:underline">
+                        Sign in
+                    </Link>
+                </div>
+
+                {/* Logo */}
+                <div className="mb-6 flex justify-center">
+                    <Image
+                        src="/pages/auth/18+logo.png"
+                        alt="Logo"
+                        width={120}
+                        height={60}
+                        className="object-contain"
+                    />
+                </div>
+
+                {/* Greeting */}
+                <div className="mb-8">
+                    <p className="text-[#000000] font-['Poppins',sans-serif] text-xl mb-2 text-center">
+                        <span className="font-normal">Hey Tourist,</span>
+                        <br />
+                        <span className="font-normal">Come on!</span>
+                    </p>
+                </div>
+
+                {/* Sign up title */}
+                <h1 className="text-[32px] leading-[48px] font-medium text-[rgba(0,0,0,0.71)] font-['Poppins',sans-serif] mb-8">
+                    Sign up
+                </h1>
+
+                {referralCode && (
+                    <div className="mb-4 p-2 bg-green-50 text-green-700 text-sm rounded border border-green-200">
+                        🎉 Referral code applied!
+                    </div>
+                )}
+
+                {error && (
+                    <div className="mb-4 rounded-lg bg-red-50 p-3 text-red-700 text-sm">{error}</div>
+                )}
+
+                <form onSubmit={handleSubmit} className="space-y-6">
+                    {/* Username / Email Row */}
+                    <div className="space-y-4">
+                        <div>
+                            <label className="block text-[16px] leading-[24px] text-[#000000] font-['Poppins',sans-serif] mb-2">
+                                Enter your username or email address
+                            </label>
+                            <div className="relative">
+                                <input
+                                    type="text"
+                                    required
+                                    value={firstName}
+                                    onChange={(e) => setFirstName(e.target.value)}
+                                    placeholder="Username or email address"
+                                    className="w-full h-[49px] bg-white border border-[#01b0f1] rounded-[9px] px-4 text-[14px] text-gray-800 placeholder:text-[#808080] placeholder:font-light placeholder:font-['Poppins',sans-serif] focus:outline-none focus:ring-2 focus:ring-[#01b0f1]/30 transition-all"
+                                />
                             </div>
-                        )}
-                    </div>
-                    <div className="mb-6">
-                        <div className="w-full">
-                            <GoogleLoginButton />
                         </div>
                     </div>
 
-                    <div className="relative mb-6">
-                        <div className="absolute inset-0 flex items-center">
-                            <span className="w-full border-t border-slate-200" />
-                        </div>
-                        <div className="relative flex justify-center text-xs uppercase">
-                            <span className="bg-white px-2 text-slate-400">Or sign up with email</span>
-                        </div>
-                    </div>
-
-                    {error && (
-                        <div className="mb-4 rounded bg-red-100 p-2 text-red-700 dark:bg-red-900 dark:text-red-200">{error}</div>
-                    )}
-
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="first_name">First name</Label>
+                    {/* Last Name */}
+                    <div>
+                        <label className="block text-[16px] leading-[24px] text-[#000000] font-['Poppins',sans-serif] mb-2">
+                            Enter your Last Name
+                        </label>
+                        <div className="relative">
                             <input
-                                id="first_name"
-                                type="text"
-                                required
-                                value={firstName}
-                                onChange={(e) => setFirstName(e.target.value)}
-                                placeholder="John"
-                                className="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#01B0F1] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="last_name">Last name</Label>
-                            <input
-                                id="last_name"
                                 type="text"
                                 required
                                 value={lastName}
                                 onChange={(e) => setLastName(e.target.value)}
-                                placeholder="Doe"
-                                className="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#01B0F1] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                placeholder="Last Name"
+                                className="w-full h-[49px] bg-white border border-[#01b0f1] rounded-[9px] px-4 text-[14px] text-gray-800 placeholder:text-[#808080] placeholder:font-light placeholder:font-['Poppins',sans-serif] focus:outline-none focus:ring-2 focus:ring-[#01b0f1]/30 transition-all"
                             />
                         </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="email">Email</Label>
+                    </div>
+
+                    {/* Email */}
+                    <div>
+                        <label className="block text-[16px] leading-[24px] text-[#000000] font-['Poppins',sans-serif] mb-2">
+                            Enter your Email
+                        </label>
+                        <div className="relative">
                             <input
-                                id="email"
                                 type="email"
                                 required
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
-                                placeholder="boss@example.com"
-                                className="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#01B0F1] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                placeholder="Email Address"
+                                className="w-full h-[49px] bg-white border border-[#01b0f1] rounded-[9px] px-4 text-[14px] text-gray-800 placeholder:text-[#808080] placeholder:font-light placeholder:font-['Poppins',sans-serif] focus:outline-none focus:ring-2 focus:ring-[#01b0f1]/30 transition-all"
                             />
                         </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="password">Password</Label>
+                    </div>
+
+                    {/* Password */}
+                    <div>
+                        <label className="block text-[16px] leading-[24px] text-[#000000] font-['Poppins',sans-serif] mb-2">
+                            Enter your Password
+                        </label>
+                        <div className="relative">
                             <input
-                                id="password"
-                                type="password"
+                                type={showPassword ? "text" : "password"}
                                 required
                                 minLength={8}
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                placeholder="••••••••"
-                                className="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#01B0F1] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                placeholder="Password"
+                                className="w-full h-[49px] bg-white border border-[#01b0f1] rounded-[9px] px-4 pr-12 text-[14px] text-gray-800 placeholder:text-[#808080] placeholder:font-light placeholder:font-['Poppins',sans-serif] focus:outline-none focus:ring-2 focus:ring-[#01b0f1]/30 transition-all"
                             />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="absolute right-4 top-1/2 -translate-y-1/2 text-[#8E8E8E] hover:text-gray-600 transition-colors"
+                            >
+                                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                            </button>
                         </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="confirmPassword">Confirm Password</Label>
+                    </div>
+
+                    {/* Confirm Password */}
+                    <div>
+                        <label className="block text-[16px] leading-[24px] text-[#000000] font-['Poppins',sans-serif] mb-2">
+                            Confirm your Password
+                        </label>
+                        <div className="relative">
                             <input
-                                id="confirmPassword"
-                                type="password"
+                                type={showConfirmPassword ? "text" : "password"}
                                 required
                                 minLength={8}
                                 value={confirmPassword}
                                 onChange={(e) => setConfirmPassword(e.target.value)}
-                                placeholder="••••••••"
-                                className="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#01B0F1] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                placeholder="Password"
+                                className="w-full h-[49px] bg-white border border-[#01b0f1] rounded-[9px] px-4 pr-12 text-[14px] text-gray-800 placeholder:text-[#808080] placeholder:font-light placeholder:font-['Poppins',sans-serif] focus:outline-none focus:ring-2 focus:ring-[#01b0f1]/30 transition-all"
                             />
+                            <button
+                                type="button"
+                                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                className="absolute right-4 top-1/2 -translate-y-1/2 text-[#8E8E8E] hover:text-gray-600 transition-colors"
+                            >
+                                {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                            </button>
                         </div>
-                        <Button className="w-full bg-[#E53935] hover:bg-[#D32F2F] text-white font-semibold h-10 rounded-md mt-2" type="submit">
-                            {loading ? "Signing up..." : "Sign Up"}
-                        </Button>
-                    </form>
-                    <div className="text-center text-sm text-slate-600 mt-4">
-                        Already have an account?{' '}
-                        <Link href="/login" className="text-red-500 hover:underline font-semibold">Log in</Link>
                     </div>
-                </motion.div>
-            </div>
+
+                    {/* Remember Me Checkbox */}
+                    <div className="flex items-center gap-2">
+                        <input
+                            type="checkbox"
+                            id="remember"
+                            checked={rememberMe}
+                            onChange={(e) => setRememberMe(e.target.checked)}
+                            className="w-[17px] h-[17px] border border-[#CFD9E0] rounded cursor-pointer accent-[#01b0f1]"
+                        />
+                        <label htmlFor="remember" className="text-[13px] leading-[39px] text-[#718096] font-['Poppins',sans-serif] cursor-pointer">
+                            Remember me
+                        </label>
+                    </div>
+
+                    {/* Sign Up Button */}
+                    <button
+                        type="submit"
+                        disabled={loading}
+                        className="w-full h-[50px] bg-[#226db4] hover:bg-[#1a5a9a] text-white rounded-[10px] font-medium text-[16px] font-['Poppins',sans-serif] transition-all shadow-[0px_4px_19px_rgba(119,147,65,0.3)] disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        {loading ? "Signing up..." : "Sign up"}
+                    </button>
+                </form>
+
+                {/* Google Sign Up Button */}
+                <div className="mt-4">
+                    <GoogleLoginButton />
+                </div>
+            </motion.div>
         </div>
     );
 };

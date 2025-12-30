@@ -66,6 +66,7 @@ ALLOWED_HOSTS = [
     "ninja-pdf.onrender.com",
     "localhost",
     "127.0.0.1",
+    "https://octopus-app-4mzsp.ondigitalocean.app",
 ]
 
 
@@ -208,6 +209,10 @@ STATICFILES_DIRS = [
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / "media"
 
+# Base URLs for API and Frontend
+BASE_URL = os.getenv('BASE_URL', 'http://localhost:8000')
+FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:3000')
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
@@ -217,18 +222,15 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # EMAIL CONFIGURATION (Zepto Mail - Production Ready)
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
-# EMAIL CONFIGURATION (Zepto Mail - Production Ready)
+# EMAIL CONFIGURATION (Zepto Mail - API)
 # -----------------------------------------------------------------------------
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'noreply@18pluspdf.com')
-# FORCE SMTP BACKEND (No console fallback anymore)
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+# Use Custom Zepto API Backend
+EMAIL_BACKEND = 'core.email_backend.ZeptoEmailBackend'
 
 # Zepto Mail Configuration
-EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.zeptomail.com') # Strict Zepto Default
-EMAIL_PORT = int(os.getenv('EMAIL_PORT', 587))
-EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True') == 'True'
-EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
-EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
+ZEPTO_API_URL = "https://api.zeptomail.in/v1.1/email"
+ZEPTO_API_KEY = os.getenv('ZEPTO_API_KEY')
 
 
 # -----------------------------------------------------------------------------
@@ -278,8 +280,9 @@ REST_AUTH = {
     'JWT_AUTH_COOKIE': 'access-token',
     'JWT_AUTH_REFRESH_COOKIE': 'refresh-token',
     'JWT_AUTH_HTTPONLY': True,  # Prevent JS access
-    # Recommend SameSite=Strict in production for CSRF protection on cookies
-    'JWT_AUTH_SAMESITE': os.getenv('JWT_AUTH_SAMESITE', 'Lax'),
+    'JWT_AUTH_SECURE': os.getenv('JWT_AUTH_SECURE', 'true').lower() == 'true',  # Secure cookies (HTTPS only)
+    # SameSite=None required for cross-origin requests (must use Secure=True)
+    'JWT_AUTH_SAMESITE': os.getenv('JWT_AUTH_SAMESITE', 'None'),
     # For local development don't hardcode a cookie domain so it's host-specific.
     # This avoids issues when frontend runs on `localhost` while backend is `127.0.0.1`.
     'JWT_AUTH_COOKIE_DOMAIN': None,
@@ -289,7 +292,8 @@ REST_AUTH = {
 }
 
 # Cookie config used by helpers
-JWT_COOKIE_SAMESITE = REST_AUTH.get('JWT_AUTH_SAMESITE', 'Strict')
+JWT_COOKIE_SAMESITE = REST_AUTH.get('JWT_AUTH_SAMESITE', 'None')
+JWT_COOKIE_SECURE = REST_AUTH.get('JWT_AUTH_SECURE', True)
 
 # AllAuth Configuration
 # AllAuth Configuration (2025 Modern Standards)
@@ -302,7 +306,8 @@ ACCOUNT_EMAIL_VERIFICATION = 'mandatory'
 # but dj-rest-auth might still rely on older settings. keeping both for safety if compatible.
 
 # CSRF Settings for JWT Auth
-CSRF_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_SAMESITE = os.getenv('CSRF_COOKIE_SAMESITE', 'None')
+CSRF_COOKIE_SECURE = os.getenv('CSRF_COOKIE_SECURE', 'true').lower() == 'true'
 CSRF_COOKIE_HTTPONLY = False  # Critical: Frontend needs to read this cookie
 CSRF_USE_SESSIONS = False 
 
@@ -353,13 +358,14 @@ CORS_ALLOWED_ORIGINS = [
     "http://192.168.0.8:3001",
     # Production URLs (add your deployed frontend URL here)
     "https://ninja-pdf.onrender.com",
+    "https://octopus-app-4mzsp.ondigitalocean.app",
     "https://ninjapdf.com",
     "https://18pluspdf.com",
     "https://www.18pluspdf.com",
 ]
 CORS_ALLOW_CREDENTIALS = True
 
-ALLOWED_HOSTS = ["localhost", "127.0.0.1", "18pluspdf.com", "api.18pluspdf.com", ".onrender.com"]
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", "18pluspdf.com", "api.18pluspdf.com", ".onrender.com", ".ondigitalocean.app"]
 
 # CSRF trusted origins for local dev (frontend running on port 3000)
 CSRF_TRUSTED_ORIGINS = [

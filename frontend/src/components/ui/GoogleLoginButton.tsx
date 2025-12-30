@@ -25,7 +25,7 @@ const GoogleLoginButton = () => {
     return (
         <button
             onClick={handleGoogleLogin}
-            className="w-full flex items-center justify-center gap-2 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700 hover:bg-slate-50 h-10"
+            className="bg-[rgba(150,139,254,0.21)] rounded-[9px] w-full h-[45.68px] flex items-center justify-center gap-3 text-[rgba(0,0,0,0.81)] font-['Poppins',sans-serif] text-base font-normal hover:bg-[rgba(150,139,254,0.3)] transition-colors"
         >
             <svg
                 className="h-4 w-4"
