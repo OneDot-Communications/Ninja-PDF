@@ -11,13 +11,16 @@ import { useAuth } from '@/lib/context/AuthContext';
 import { FaUser } from 'react-icons/fa6';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 export function Header() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [mounted, setMounted] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
-    const { user, isLoading } = useAuth();
+    const { user, isLoading, logout } = useAuth();
+    const router = useRouter();
 
     useEffect(() => {
         setMounted(true);
