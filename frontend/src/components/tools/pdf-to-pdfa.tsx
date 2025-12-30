@@ -36,6 +36,9 @@ export function PdfToPdfATool() {
                 variant: "success",
                 position: "top-right",
             });
+
+            // Clear the file after successful conversion to return to upload page
+            setFile(null);
         } catch (error) {
             console.error("Error converting to PDF/A:", error);
             toast.show({

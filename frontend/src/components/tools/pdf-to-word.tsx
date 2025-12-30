@@ -33,6 +33,9 @@ export function PdfToWordTool() {
                 variant: "success",
                 position: "top-right",
             });
+
+            // Clear the file after successful conversion to return to upload page
+            setFile(null);
         } catch (error) {
             console.error("Error converting PDF to Word:", error);
             toast.show({

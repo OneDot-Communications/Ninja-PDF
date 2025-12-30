@@ -97,15 +97,11 @@ export function ToolShell({ title, description, children, variant = "default" }:
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.6, ease: "easeOut" }}
                         >
-                            <motion.div
-                                animate={{ y: [0, -8, 0] }}
-                                transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-                                className="relative z-10"
-                            >
+                            <div className="relative z-10">
                                 <div>
                                     {children}
                                 </div>
-                            </motion.div>
+                            </div>
                         </motion.div>
                     </div>
 
