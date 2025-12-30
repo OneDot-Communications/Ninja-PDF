@@ -617,9 +617,10 @@ export const api = {
 
       promise = api.request("GET", "/api/billing/features/")
         .then(data => {
-          cache = data;
+          const features = data.data || data;
+          cache = features;
           promise = null;
-          return data;
+          return features;
         })
         .catch(err => {
           promise = null;
