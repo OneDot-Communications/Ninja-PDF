@@ -1299,11 +1299,11 @@ export function EditPdfTool() {
                     </div>
                     <h1 className="text-2xl font-bold text-center mb-2 text-gray-900 dark:text-white">PDF Editor</h1>
                     <p className="text-center text-gray-600 dark:text-gray-400 mb-6">Upload a PDF to start editing</p>
-                    <FileUpload
+                    <FileUploadHero
+                        title=""
                         onFilesSelected={handleFileSelected}
                         maxFiles={1}
                         accept={{ "application/pdf": [".pdf"] }}
-                        description="Drop a PDF file here or click to browse"
                     />
                     <div className="mt-6 text-center">
                         <p className="text-sm text-gray-500 dark:text-gray-400">

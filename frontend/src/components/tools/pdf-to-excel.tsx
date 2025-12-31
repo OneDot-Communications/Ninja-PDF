@@ -53,7 +53,7 @@ export function PdfToExcelTool() {
             <div className="min-h-[calc(100vh-120px)] flex items-center justify-center">
                 <FileUploadHero
                     title="PDF to Excel"
-                    onFilesSelected={handleFileSelected}
+                    onFilesSelected={handleFilesSelected}
                     maxFiles={1}
                     accept={{ "application/pdf": [".pdf"] }}
                 />

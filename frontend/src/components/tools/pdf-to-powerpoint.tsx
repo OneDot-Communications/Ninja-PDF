@@ -64,7 +64,7 @@ export function PdfToPowerPointTool() {
       <div className="mx-auto max-w-2xl">
         <FileUploadHero
             title="PDF to PowerPoint"
-            onFilesSelected={handleFileSelected}
+            onFilesSelected={handleFilesSelected}
             maxFiles={1}
             accept={{ "application/pdf": [".pdf"] }}
         />

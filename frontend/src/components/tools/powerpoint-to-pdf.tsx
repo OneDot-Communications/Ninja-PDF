@@ -70,11 +70,11 @@ export function PowerPointToPdfTool() {
     if (files.length === 0) {
         return (
             <div className="mx-auto max-w-2xl">
-                <FileUpload
+                <FileUploadHero
+                    title="PowerPoint to PDF"
                     onFilesSelected={handleFilesSelected}
                     maxFiles={1}
                     accept={{ "application/vnd.openxmlformats-officedocument.presentationml.presentation": [".pptx"], "application/vnd.ms-powerpoint": [".ppt"] }}
-                    description="Drop PowerPoint file here to convert to PDF"
                 />
             </div>
         );
