@@ -129,7 +129,17 @@ export const pdfApi = {
             throw new Error(error.message || "Failed to convert PDF to Word");
         }
     },
-    pdfToExcel: createStandardConverter(api.pdfToExcel, "pdf-to-excel", ".xlsx"),
+    pdfToExcel: async (file: File, options?: { mergeSheets?: boolean; outputFormat?: 'xlsx' | 'csv' }): Promise<ProcessingResult> => {
+        const outputExt = options?.outputFormat === 'csv' ? '.csv' : '.xlsx';
+        return withFallback(
+            () => api.pdfToExcel(file, options),
+            async () => {
+                const processor = await getClientProcessor();
+                return processor.execute("pdf-to-excel", [file], options);
+            },
+            file.name.replace(/\.[^/.]+$/, "") + outputExt
+        );
+    },
     pdfToPowerpoint: createStandardConverter(api.pdfToPowerpoint, "pdf-to-powerpoint", ".pptx"),
 
     pdfToJpg: async (file: File, options?: any): Promise<ProcessingResult> => {
