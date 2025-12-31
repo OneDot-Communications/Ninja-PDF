@@ -42,6 +42,13 @@ class Feedback(models.Model):
         help_text="Detailed description of the feedback"
     )
     
+    proof_link = models.URLField(
+        max_length=500,
+        blank=True,
+        null=True,
+        help_text="Optional link to cloud drive attachment (Google Drive, Dropbox, etc.)"
+    )
+    
     # Metadata
     created_at = models.DateTimeField(
         auto_now_add=True,

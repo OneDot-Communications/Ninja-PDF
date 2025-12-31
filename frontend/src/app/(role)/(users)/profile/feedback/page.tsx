@@ -17,6 +17,7 @@ export default function FeedbackPage() {
     const [email, setEmail] = useState("");
     const [feedbackType, setFeedbackType] = useState("");
     const [description, setDescription] = useState("");
+    const [proofLink, setProofLink] = useState("");
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -55,7 +56,8 @@ export default function FeedbackPage() {
                 name,
                 email,
                 feedback_type: feedbackType,
-                description
+                description,
+                proof_link: proofLink
             });
 
             if (response.success) {
@@ -66,6 +68,7 @@ export default function FeedbackPage() {
                 setEmail("");
                 setFeedbackType("");
                 setDescription("");
+                setProofLink("");
             } else {
                 toast.error(response.message || "Failed to submit feedback. Please try again.");
             }
@@ -164,6 +167,24 @@ export default function FeedbackPage() {
                             />
                             <p className="text-xs text-[#718ebf]">
                                 Please provide as much detail as possible to help us understand your feedback.
+                            </p>
+                        </div>
+
+                        {/* Proof Link Field */}
+                        <div className="space-y-2">
+                            <Label htmlFor="proof-link" className="text-[#232323] text-base font-normal">
+                                Proof Link (Optional)
+                            </Label>
+                            <Input
+                                id="proof-link"
+                                type="url"
+                                placeholder="https://drive.google.com/..."
+                                value={proofLink}
+                                onChange={(e) => setProofLink(e.target.value)}
+                                className="h-[50px] rounded-[15px] border-[#dfeaf2] bg-white text-[#718ebf] text-[15px] pl-4 pr-4 focus:border-[#3371eb] focus:ring-[#3371eb]"
+                            />
+                            <p className="text-xs text-[#718ebf]">
+                                Attach a link to your cloud drive (Google Drive, Dropbox, etc.) for screenshots or additional files.
                             </p>
                         </div>
 

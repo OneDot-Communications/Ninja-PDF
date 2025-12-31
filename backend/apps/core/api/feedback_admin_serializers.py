@@ -23,6 +23,7 @@ class FeedbackAdminListSerializer(serializers.ModelSerializer):
             'email',
             'feedback_type',
             'description',
+            'proof_link',
             'created_at',
             'ip_address',
             'user_agent',

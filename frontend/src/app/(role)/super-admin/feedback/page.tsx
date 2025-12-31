@@ -21,6 +21,7 @@ interface Feedback {
     email: string;
     feedback_type: string;
     description: string;
+    proof_link?: string;
     created_at: string;
     is_resolved: boolean;
     resolved_at: string | null;
@@ -210,6 +211,20 @@ export default function AdminFeedbackPage() {
                             <CardContent>
                                 <div className="space-y-2">
                                     <p className="text-sm whitespace-pre-wrap">{feedback.description}</p>
+
+                                    {feedback.proof_link && (
+                                        <div className="mt-3 p-3 bg-blue-50 rounded-lg">
+                                            <p className="text-xs font-semibold text-blue-800 mb-1">Proof Link:</p>
+                                            <a
+                                                href={feedback.proof_link}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="text-sm text-blue-600 hover:text-blue-800 underline break-all"
+                                            >
+                                                {feedback.proof_link}
+                                            </a>
+                                        </div>
+                                    )}
 
                                     {feedback.is_resolved && feedback.resolved_by_username && (
                                         <div className="mt-4 p-3 bg-green-50 rounded-lg text-sm">

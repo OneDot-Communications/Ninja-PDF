@@ -30,7 +30,15 @@ class FeedbackSerializer(serializers.Serializer):
     
     description = serializers.CharField(
         required=True,
+        allow_blank=False,
         help_text="Detailed description of the feedback"
+    )
+    
+    proof_link = serializers.URLField(
+        required=False,
+        allow_blank=True,
+        max_length=500,
+        help_text="Optional link to cloud drive attachment"
     )
     
     def validate_name(self, value):

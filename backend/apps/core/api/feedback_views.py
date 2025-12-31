@@ -68,6 +68,7 @@ def submit_feedback(request):
         email = validated_data['email']
         feedback_type = validated_data['feedback_type']
         description = validated_data['description']
+        proof_link = validated_data.get('proof_link', '')  # Optional field
         
         # Get user information if authenticated
         user = request.user if request.user.is_authenticated else None
@@ -91,6 +92,7 @@ def submit_feedback(request):
             email=email,  # Will be user's account email if logged in
             feedback_type=feedback_type,
             description=description,
+            proof_link=proof_link,  # Save proof link
             ip_address=ip_address,
             user_agent=user_agent
         )
@@ -101,7 +103,7 @@ def submit_feedback(request):
         # Also try to save to Google Sheets (optional)
         try:
             sheets_service = get_sheets_service()
-            sheets_result = sheets_service.append_feedback(name, email, feedback_type, description)
+            sheets_result = sheets_service.append_feedback(name, email, feedback_type, description, proof_link)
             
             if sheets_result['success']:
                 logger.info(f"Feedback #{feedback.id} also saved to Google Sheets")

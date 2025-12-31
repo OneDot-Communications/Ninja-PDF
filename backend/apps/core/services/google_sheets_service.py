@@ -58,7 +58,7 @@ class GoogleSheetsService:
         # If no credentials found, return None (will handle gracefully)
         return None
     
-    def append_feedback(self, name: str, email: str, feedback_type: str, description: str) -> Dict[str, Any]:
+    def append_feedback(self, name: str, email: str, feedback_type: str, description: str, proof_link: str = '') -> Dict[str, Any]:
         """
         Append feedback data to Google Sheet.
         
@@ -67,6 +67,7 @@ class GoogleSheetsService:
             email: Email address of the person providing feedback
             feedback_type: Type of feedback (bug, functionality, ui)
             description: Detailed description of the feedback
+            proof_link: Optional link to cloud drive attachment
             
         Returns:
             Dict containing success status and message
@@ -76,7 +77,7 @@ class GoogleSheetsService:
             
             # If no credentials, return success but log the data
             if not self.credentials:
-                print(f"[FEEDBACK - No Google Sheets credentials] {name} ({email}) | {feedback_type} | {description} | {timestamp}")
+                print(f"[FEEDBACK - No Google Sheets credentials] {name} ({email}) | {feedback_type} | {description} | {proof_link} | {timestamp}")
                 return {
                     'success': True,
                     'message': 'Feedback recorded (Google Sheets not configured)',
@@ -85,6 +86,7 @@ class GoogleSheetsService:
                         'email': email,
                         'feedback_type': feedback_type,
                         'description': description,
+                        'proof_link': proof_link,
                         'timestamp': timestamp
                     }
                 }
@@ -92,14 +94,14 @@ class GoogleSheetsService:
             # Build the Google Sheets service
             service = build('sheets', 'v4', credentials=self.credentials)
             
-            # Prepare the data to append (Name, Email, Feedback Type, Description, Timestamp)
-            values = [[name, email, feedback_type, description, timestamp]]
+            # Prepare the data to append (Name, Email, Feedback Type, Description, Proof Link, Timestamp)
+            values = [[name, email, feedback_type, description, proof_link or '', timestamp]]
             body = {'values': values}
             
             # Append to the sheet
             result = service.spreadsheets().values().append(
                 spreadsheetId=self.spreadsheet_id,
-                range='Sheet1!A:E',  # Appends to columns A-E
+                range='Sheet1!A:F',  # Appends to columns A-F (added proof_link)
                 valueInputOption='USER_ENTERED',
                 insertDataOption='INSERT_ROWS',
                 body=body
@@ -115,6 +117,7 @@ class GoogleSheetsService:
                     'email': email,
                     'feedback_type': feedback_type,
                     'description': description,
+                    'proof_link': proof_link,
                     'timestamp': timestamp
                 },
                 'updates': result.get('updates')
