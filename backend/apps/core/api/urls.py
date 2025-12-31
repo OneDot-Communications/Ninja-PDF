@@ -15,6 +15,12 @@ from apps.core.api.legal_views import (
     UserConsentView,
     CheckConsentView,
 )
+from apps.core.api.feedback_views import (
+    submit_feedback,
+    list_all_feedbacks,
+    resolve_feedback,
+    delete_feedback,
+)
 
 router = DefaultRouter()
 router.register(r'categories', ContentCategoryViewSet, basename='content-categories')
@@ -34,4 +40,12 @@ urlpatterns = [
     # User Consent Management
     path('my-consents/', UserConsentView.as_view(), name='user-consents'),
     path('check-consent/', CheckConsentView.as_view(), name='check-consent'),
+    
+    # Feedback Submission (Public)
+    path('feedback/', submit_feedback, name='submit-feedback'),
+    
+    # Admin Feedback Management
+    path('feedback/admin/', list_all_feedbacks, name='admin-list-feedbacks'),
+    path('feedback/admin/<int:feedback_id>/resolve/', resolve_feedback, name='admin-resolve-feedback'),
+    path('feedback/admin/<int:feedback_id>/', delete_feedback, name='admin-delete-feedback'),
 ]

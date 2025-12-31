@@ -695,4 +695,26 @@ export const api = {
   setFeatureOverride: (userId: number, featureId: number, isEnabled: boolean) =>
     api.request("POST", "/api/billing/feature-overrides/", { user: userId, feature: featureId, is_enabled: isEnabled }),
   getHistory: () => api.request("GET", "/api/core/history/"),
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // FEEDBACK
+  // ─────────────────────────────────────────────────────────────────────────────
+  submitFeedback: (data: { name: string, email: string, feedback_type: string, description: string, proof_link?: string }) =>
+    api.request("POST", "/api/core/feedback/", data),
+
+  // Admin Feedback Management
+  getAdminFeedbacks: (status?: 'all' | 'pending' | 'resolved', page?: number, pageSize?: number) => {
+    const params = new URLSearchParams();
+    if (status) params.append('status', status);
+    if (page) params.append('page', page.toString());
+    if (pageSize) params.append('page_size', pageSize.toString());
+    return api.request("GET", `/api/core/feedback/admin/?${params.toString()}`);
+  },
+
+  resolveFeedback: (feedbackId: number, adminNotes?: string) =>
+    api.request("PATCH", `/api/core/feedback/admin/${feedbackId}/resolve/`,
+      adminNotes ? { admin_notes: adminNotes } : {}),
+
+  deleteFeedback: (feedbackId: number) =>
+    api.request("DELETE", `/api/core/feedback/admin/${feedbackId}/`),
 };

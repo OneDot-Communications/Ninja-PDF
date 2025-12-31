@@ -11,6 +11,7 @@ from apps.core.models.content import (
     SupportTicket,
     TicketMessage,
 )
+from apps.core.models.feedback import Feedback
 
 __all__ = [
     'LegalDocument',
@@ -23,4 +24,5 @@ __all__ = [
     'AnnouncementDismissal',
     'SupportTicket',
     'TicketMessage',
+    'Feedback',
 ]
