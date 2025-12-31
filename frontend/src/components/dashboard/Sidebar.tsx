@@ -235,6 +235,12 @@ export function Sidebar() {
                             label="User Management"
                             active={isActive("/admin/users")}
                         />
+                        <SidebarItem
+                            href="/admin/feedback"
+                            icon={MessageSquare}
+                            label="Feedback Management"
+                            active={isActive("/admin/feedback")}
+                        />
                     </>
                 )}
 

@@ -76,6 +76,7 @@ export function SharedSidebar({ className, type }: SharedSidebarProps) {
         { href: "/super-admin/storage", label: "Storage Config", icon: Database },
         { href: "/super-admin/sso", label: "SSO / SAML", icon: Key },
         { href: "/super-admin/audit", label: "Audit Logs", icon: ScrollText },
+        { href: "/super-admin/feedback", label: "Feedback", icon: MessageSquare },
         { href: "/super-admin/content", label: "CMS / Content", icon: FileText },
         { href: "/super-admin/settings", label: "System Settings", icon: Settings },
     ];
