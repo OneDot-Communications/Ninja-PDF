@@ -119,9 +119,9 @@ const SignupContent = () => {
                 {/* Logo */}
                 <div className="mb-6 flex justify-center">
                     <Image
-                            src="/pages/auth/18+logo.png"
-                            alt="Logo"
-                            width={120}
+                        src="/pages/auth/18+logo.png"
+                        alt="Logo"
+                        width={120}
                         height={60}
                         className="object-contain"
                     />
@@ -280,9 +280,10 @@ const SignupContent = () => {
                 </form>
 
                 {/* Google Sign Up Button */}
-                <div className="mt-4">
+                {/* Google Sign Up Button */}
+                {/* <div className="mt-4">
                     <GoogleLoginButton />
-                </div>
+                </div> */}
             </motion.div>
         </div>
     );
