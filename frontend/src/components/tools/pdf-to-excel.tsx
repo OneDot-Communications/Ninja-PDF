@@ -82,7 +82,6 @@ export function PdfToExcelTool() {
             <div className="min-h-[calc(100vh-120px)] flex items-center justify-center">
                 <FileUploadHero
                     title="PDF to Excel"
-                    description="Convert PDF tables to editable Excel spreadsheets"
                     onFilesSelected={handleFilesSelected}
                     maxFiles={1}
                     accept={{ "application/pdf": [".pdf"] }}
