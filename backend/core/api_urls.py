@@ -14,4 +14,7 @@ urlpatterns = [
      path('settings/branding/', views.AdminBrandingView.as_view(), name='admin-branding'),
      path('tasks/<str:task_id>/', views.TaskStatusView.as_view(), name='task-status'),
      path('', include(router.urls)),
+     
+     # Include content management and feedback endpoints
+     path('', include('apps.core.api.urls')),
 ]
