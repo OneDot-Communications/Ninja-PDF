@@ -413,7 +413,7 @@ export function PdfToJpgTool() {
                                     input.accept = ".pdf";
                                     input.onchange = (e) => {
                                         const files = Array.from((e.target as HTMLInputElement).files || []);
-                                        handleFilesSelected(files);
+                                        handleFileSelected(files);
                                     };
                                     input.click();
                                 }}
