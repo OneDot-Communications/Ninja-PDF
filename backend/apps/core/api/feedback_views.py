@@ -69,23 +69,34 @@ def submit_feedback(request):
         feedback_type = validated_data['feedback_type']
         description = validated_data['description']
         
-        # Get additional metadata
+        # Get user information if authenticated
         user = request.user if request.user.is_authenticated else None
+        
+        # If user is logged in, override email with their account email
+        # This ensures we have their official registered email
+        if user:
+            email = user.email
+            # Optionally, also use their account name if they didn't provide one
+            if not name.strip() or name == 'Anonymous':
+                name = user.get_full_name() or user.username
+        
+        # Get additional metadata
         ip_address = get_client_ip(request)
         user_agent = request.META.get('HTTP_USER_AGENT', '')
         
         # Save to database
         feedback = Feedback.objects.create(
-            user=user,
+            user=user,  # This will be the User object if logged in, None if not
             name=name,
-            email=email,
+            email=email,  # Will be user's account email if logged in
             feedback_type=feedback_type,
             description=description,
             ip_address=ip_address,
             user_agent=user_agent
         )
         
-        logger.info(f"Feedback #{feedback.id} saved to database by {name} ({email})")
+        logger.info(f"Feedback #{feedback.id} saved to database by {name} ({email}){' [User ID: ' + str(user.id) + ']' if user else ' [Anonymous]'}")
+
         
         # Also try to save to Google Sheets (optional)
         try:
