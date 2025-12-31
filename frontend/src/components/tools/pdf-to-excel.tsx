@@ -1,51 +1,80 @@
 "use client";
 
 import { useState } from "react";
-import FileUploadHero from "../ui/file-upload-hero"; // Hero uploader (big CTA, full-page drag overlay)
+import FileUploadHero from "../ui/file-upload-hero";
 import { Button } from "../ui/button";
-import { ArrowRight, FileSpreadsheet, Loader2, RefreshCw, Settings, Table } from "lucide-react";
-import { Switch } from "../ui/switch";
+import { 
+    FileSpreadsheet, 
+    Loader2, 
+    ZoomIn, 
+    ZoomOut,
+    Download,
+    FileText,
+    TableProperties,
+    Table
+} from "lucide-react";
 import { Label } from "../ui/label";
-import { Slider } from "../ui/slider";
 import { saveAs } from "file-saver";
 import { pdfApi } from "@/lib/services/pdf-api";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 export function PdfToExcelTool() {
     const [files, setFiles] = useState<File[]>([]);
     const [isProcessing, setIsProcessing] = useState(false);
-    const [progress, setProgress] = useState(0);
-    const [status, setStatus] = useState("");
-
+    const [previews, setPreviews] = useState<Array<{ pageNumber: number; image: string; width: number; height: number }>>([]);
+    const [pageCount, setPageCount] = useState(0);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [zoom, setZoom] = useState(100);
+    
     // Options
-    const [mergePages, setMergePages] = useState(false);
-    const [rowTolerance, setRowTolerance] = useState(5); // Y-axis tolerance in pixels
+    const [outputFormat, setOutputFormat] = useState<'xlsx' | 'csv'>('xlsx');
+    const [sheetOrganization, setSheetOrganization] = useState<'merge' | 'separate'>('merge');
 
-    const handleFilesSelected = (newFiles: File[]) => {
-        setFiles((prev) => [...prev, ...newFiles]);
-        setProgress(0);
+    const handleFilesSelected = async (newFiles: File[]) => {
+        setFiles(newFiles);
+        setCurrentPage(1);
+        if (newFiles.length > 0) {
+            loadPreview(newFiles[0]);
+        }
+    };
+
+    const loadPreview = async (file: File) => {
+        try {
+            const result = await pdfApi.getPagePreviews(file);
+            if (result.previews && result.previews.length > 0) {
+                setPreviews(result.previews);
+                setPageCount(result.totalPages);
+            }
+        } catch (error) {
+            console.error("Failed to load preview", error);
+            toast.error("Failed to load PDF preview");
+        }
     };
 
     const convert = async () => {
         if (files.length === 0) return;
         setIsProcessing(true);
-        setProgress(0);
-        setStatus("Starting conversion...");
-
+        
         try {
-            // Backend-first with client-side fallback
-            const result = await pdfApi.pdfToExcel(files[0]);
+            const result = await pdfApi.pdfToExcel(files[0], {
+                mergeSheets: sheetOrganization === 'merge',
+                outputFormat: outputFormat
+            });
 
-            setStatus("Saving Excel file...");
             saveAs(result.blob, result.fileName);
-            setStatus("Completed!");
+            toast.success("File converted successfully!");
 
         } catch (error) {
             console.error("Conversion Error:", error);
-            setStatus("Error occurred during conversion.");
-            alert("Failed to convert PDF to Excel.");
+            toast.error("Failed to convert PDF to Excel.");
         } finally {
             setIsProcessing(false);
         }
+    };
+
+    const getCurrentPreview = () => {
+        return previews.find(p => p.pageNumber === currentPage);
     };
 
     if (files.length === 0) {
@@ -62,88 +91,233 @@ export function PdfToExcelTool() {
     }
 
     return (
-        <div className="space-y-8">
-            <div className="flex items-center justify-between rounded-xl border bg-card p-6 shadow-sm">
-                <div className="flex items-center gap-4">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-brand-green/10 text-brand-green">
-                        <FileSpreadsheet className="h-6 w-6" />
+        <div className="flex h-[calc(100vh-100px)] bg-[#f6f7f8]">
+            {/* Left Sidebar - Thumbnails */}
+            <div className="w-24 bg-white border-r border-gray-200 flex flex-col items-center py-4 gap-4 overflow-y-auto">
+                {previews.map((preview, i) => (
+                    <div 
+                        key={i}
+                        className={cn(
+                            "w-14 h-20 rounded-lg border flex items-center justify-center cursor-pointer transition-all overflow-hidden relative",
+                            currentPage === preview.pageNumber 
+                                ? "border-blue-500 bg-blue-50 ring-2 ring-blue-200" 
+                                : "border-gray-200 bg-white hover:bg-gray-50"
+                        )}
+                        onClick={() => setCurrentPage(preview.pageNumber)}
+                    >
+                        {preview.image ? (
+                            <img 
+                                src={preview.image.startsWith('data:') ? preview.image : `data:image/png;base64,${preview.image}`}
+                                alt={`Page ${preview.pageNumber}`}
+                                className="w-full h-full object-contain"
+                            />
+                        ) : (
+                            <FileText className={cn("h-6 w-6", currentPage === preview.pageNumber ? "text-blue-500" : "text-gray-400")} />
+                        )}
+                        <span className="absolute bottom-0 left-0 right-0 text-center text-[10px] font-medium bg-white/80 text-gray-700">
+                            {preview.pageNumber}
+                        </span>
                     </div>
-                    <div>
-                        <h2 className="text-lg font-semibold">{files[0].name}</h2>
-                        <p className="text-sm text-muted-foreground">
-                            {(files[0].size / 1024 / 1024).toFixed(2)} MB
-                        </p>
-                    </div>
-                </div>
-                <Button variant="ghost" size="icon" onClick={() => setFiles([])}>
-                    <RefreshCw className="h-5 w-5" />
-                </Button>
+                ))}
             </div>
 
-            <div className="grid gap-6 md:grid-cols-2">
-                <div className="space-y-6 rounded-xl border bg-card p-6 shadow-sm">
-                    <div className="flex items-center gap-2 border-b pb-4">
-                        <Settings className="h-5 w-5 text-muted-foreground" />
-                        <h3 className="font-semibold">Conversion Settings</h3>
-                    </div>
-
-                    <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                            <div className="space-y-0.5">
-                                <Label className="text-base">Merge Pages</Label>
-                                <p className="text-xs text-muted-foreground">Combine all pages into one sheet</p>
-                            </div>
-                            <Switch checked={mergePages} onCheckedChange={setMergePages} />
-                        </div>
-
-                        <div className="space-y-2">
-                            <div className="flex justify-between">
-                                <Label>Row Alignment Tolerance</Label>
-                                <span className="text-xs text-muted-foreground">{rowTolerance}px</span>
-                            </div>
-                            <Slider
-                                value={[rowTolerance]}
-                                onValueChange={(v: number[]) => setRowTolerance(v[0])}
-                                max={20}
-                                step={1}
-                            />
-                            <p className="text-xs text-muted-foreground">
-                                Higher values group slightly misaligned text into the same row.
-                            </p>
+            {/* Main Content - Preview */}
+            <div className="flex-1 flex flex-col relative">
+                {/* Top Toolbar */}
+                <div className="h-14 bg-white/90 backdrop-blur-sm border-b border-gray-200 flex items-center justify-between px-6 absolute top-4 left-1/2 -translate-x-1/2 rounded-lg shadow-sm z-10 w-auto gap-4">
+                    <div className="flex items-center gap-4">
+                        <span className="text-sm font-bold text-slate-700">Page {currentPage} of {pageCount || 1}</span>
+                        <div className="h-4 w-px bg-gray-300" />
+                        <div className="flex items-center gap-2">
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setZoom(z => Math.max(50, z - 10))}>
+                                <ZoomOut className="h-4 w-4 text-slate-500" />
+                            </Button>
+                            <span className="text-sm font-medium text-slate-600 w-12 text-center">{zoom}%</span>
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setZoom(z => Math.min(200, z + 10))}>
+                                <ZoomIn className="h-4 w-4 text-slate-500" />
+                            </Button>
                         </div>
                     </div>
                 </div>
 
-                <div className="flex flex-col items-center justify-center space-y-6 rounded-xl border bg-muted/20 p-6">
-                    {isProcessing ? (
-                        <div className="w-full max-w-md space-y-4 text-center">
-                            <Loader2 className="mx-auto h-10 w-10 animate-spin text-primary" />
-                            <p className="text-lg font-medium">{status}</p>
-                            <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
-                                <div
-                                    className="h-full bg-primary transition-all duration-300"
-                                    style={{ width: `${progress}%` }}
-                                />
+                {/* Preview Area */}
+                <div className="flex-1 overflow-auto p-8 flex justify-center bg-[#f1f5f9]">
+                    <div 
+                        className="bg-white shadow-lg rounded-sm relative transition-transform duration-200 origin-top"
+                        style={{ 
+                            width: `${800 * (zoom / 100)}px`, 
+                            height: `${1131 * (zoom / 100)}px`,
+                            minHeight: '1131px'
+                        }}
+                    >
+                        {getCurrentPreview() ? (
+                            <img 
+                                src={getCurrentPreview()!.image.startsWith('data:') 
+                                    ? getCurrentPreview()!.image 
+                                    : `data:image/png;base64,${getCurrentPreview()!.image}`
+                                } 
+                                alt={`Page {currentPage}`}
+                                className="w-full h-full object-contain"
+                            />
+                        ) : (
+                            <div className="w-full h-full flex items-center justify-center text-gray-400">
+                                <Loader2 className="h-8 w-8 animate-spin" />
                             </div>
-                        </div>
-                    ) : (
-                        <div className="text-center space-y-4">
-                            <div className="p-4 rounded-full bg-primary/10 w-fit mx-auto">
-                                <Table className="h-8 w-8 text-primary" />
-                            </div>
-                            <h3 className="text-xl font-semibold">Ready to Convert</h3>
-                            <p className="text-muted-foreground max-w-xs mx-auto">
-                                We'll extract text and tables from your PDF and create a formatted Excel spreadsheet.
-                            </p>
-                            <Button
-                                size="lg"
-                                onClick={convert}
-                                className="h-14 min-w-[200px] text-lg shadow-lg transition-all hover:scale-105"
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            {/* Right Sidebar - Settings */}
+            <div className="w-[320px] bg-white border-l border-gray-200 flex flex-col">
+                <div className="p-6 border-b border-gray-100">
+                    <h2 className="text-lg font-bold text-slate-900">Export Settings</h2>
+                    <p className="text-sm text-slate-500 mt-1">Configure how you want your data served.</p>
+                </div>
+
+                <div className="flex-1 overflow-y-auto p-6 space-y-8">
+                    {/* Output Format */}
+                    <div className="space-y-3">
+                        <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Output Format</Label>
+                        <div className="bg-slate-50 p-1 rounded-xl flex">
+                            <button
+                                onClick={() => setOutputFormat('xlsx')}
+                                className={cn(
+                                    "flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-bold transition-all",
+                                    outputFormat === 'xlsx' 
+                                        ? "bg-white text-blue-600 shadow-sm" 
+                                        : "text-slate-500 hover:text-slate-700"
+                                )}
                             >
-                                Convert to Excel <ArrowRight className="ml-2 h-5 w-5" />
-                            </Button>
+                                <TableProperties className="h-5 w-5" />
+                                .XLSX (Excel)
+                            </button>
+                            <button
+                                onClick={() => setOutputFormat('csv')}
+                                className={cn(
+                                    "flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-bold transition-all",
+                                    outputFormat === 'csv' 
+                                        ? "bg-white text-blue-600 shadow-sm" 
+                                        : "text-slate-500 hover:text-slate-700"
+                                )}
+                            >
+                                <FileSpreadsheet className="h-5 w-5" />
+                                .CSV
+                            </button>
                         </div>
-                    )}
+                    </div>
+
+                    {/* Sheet Organization */}
+                    <div className="space-y-3">
+                        <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Sheet Organization</Label>
+                        <div className="space-y-3">
+                            <div 
+                                onClick={() => setSheetOrganization('merge')}
+                                className={cn(
+                                    "relative p-4 rounded-xl border-2 cursor-pointer transition-all",
+                                    sheetOrganization === 'merge'
+                                        ? "border-blue-500 bg-blue-50/30"
+                                        : "border-slate-200 hover:border-slate-300"
+                                )}
+                            >
+                                <div className="flex items-start gap-3">
+                                    <div className={cn(
+                                        "mt-1 w-5 h-5 rounded-full border flex items-center justify-center",
+                                        sheetOrganization === 'merge' ? "border-blue-500" : "border-slate-300"
+                                    )}>
+                                        {sheetOrganization === 'merge' && <div className="w-2.5 h-2.5 rounded-full bg-blue-500" />}
+                                    </div>
+                                    <div>
+                                        <div className="font-bold text-sm text-slate-900">Merge tables into one sheet</div>
+                                        <div className="text-xs text-slate-500 mt-1 leading-relaxed">
+                                            Combine extracted data from all pages into a single continuous worksheet.
+                                        </div>
+                                    </div>
+                                </div>
+                                {sheetOrganization === 'merge' && (
+                                    <div className="absolute top-2 right-2 bg-blue-100 text-blue-600 text-[10px] font-bold px-2 py-0.5 rounded">
+                                        RECOMMENDED
+                                    </div>
+                                )}
+                            </div>
+
+                            <div 
+                                onClick={() => setSheetOrganization('separate')}
+                                className={cn(
+                                    "p-4 rounded-xl border-2 cursor-pointer transition-all",
+                                    sheetOrganization === 'separate'
+                                        ? "border-blue-500 bg-blue-50/30"
+                                        : "border-slate-200 hover:border-slate-300"
+                                )}
+                            >
+                                <div className="flex items-start gap-3">
+                                    <div className={cn(
+                                        "mt-1 w-5 h-5 rounded-full border flex items-center justify-center",
+                                        sheetOrganization === 'separate' ? "border-blue-500" : "border-slate-300"
+                                    )}>
+                                        {sheetOrganization === 'separate' && <div className="w-2.5 h-2.5 rounded-full bg-blue-500" />}
+                                    </div>
+                                    <div>
+                                        <div className="font-bold text-sm text-slate-900">Create separate sheets</div>
+                                        <div className="text-xs text-slate-500 mt-1 leading-relaxed">
+                                            Keep page structure intact. One tab per PDF page.
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Preview Data */}
+                    <div className="space-y-3">
+                        <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Preview Data</Label>
+                        <div className="bg-slate-50 rounded-lg border border-slate-200 p-4">
+                            <div className="flex items-center gap-2 text-slate-500 mb-3">
+                                <Table className="h-4 w-4" />
+                                <span className="text-xs">Extracting all tables from PDF</span>
+                            </div>
+                            <div className="space-y-2 opacity-60">
+                                <div className="flex gap-2">
+                                    {[1, 2, 3, 4].map(i => (
+                                        <div key={i} className="h-2 bg-slate-300 rounded flex-1" />
+                                    ))}
+                                </div>
+                                <div className="flex gap-2">
+                                    {[1, 2, 3, 4].map(i => (
+                                        <div key={i} className="h-2 bg-slate-200 rounded flex-1" />
+                                    ))}
+                                </div>
+                                <div className="flex gap-2">
+                                    {[1, 2, 3, 4].map(i => (
+                                        <div key={i} className="h-2 bg-slate-200 rounded flex-1" />
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="p-6 border-t border-gray-100 bg-white">
+                    <Button 
+                        className="w-full h-14 text-lg font-bold bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-600/20 rounded-xl"
+                        onClick={convert}
+                        disabled={isProcessing}
+                    >
+                        {isProcessing ? (
+                            <>
+                                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                                Converting...
+                            </>
+                        ) : (
+                            <>
+                                Download Excel File
+                                <Download className="ml-2 h-5 w-5" />
+                            </>
+                        )}
+                    </Button>
+                    <p className="text-center text-xs text-slate-400 mt-3">
+                        Crunching the numbers, hang tight...
+                    </p>
                 </div>
             </div>
         </div>
