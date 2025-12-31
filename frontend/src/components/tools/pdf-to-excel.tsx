@@ -169,155 +169,157 @@ export function PdfToExcelTool() {
             </div>
 
             {/* Right Sidebar - Settings */}
-            <div className="w-[320px] bg-white border-l border-gray-200 flex flex-col">
-                <div className="p-6 border-b border-gray-100">
-                    <h2 className="text-lg font-bold text-slate-900">Export Settings</h2>
-                    <p className="text-sm text-slate-500 mt-1">Configure how you want your data served.</p>
-                </div>
-
-                <div className="flex-1 overflow-y-auto p-6 space-y-8">
-                    {/* Output Format */}
-                    <div className="space-y-3">
-                        <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Output Format</Label>
-                        <div className="bg-slate-50 p-1 rounded-xl flex">
-                            <button
-                                onClick={() => setOutputFormat('xlsx')}
-                                className={cn(
-                                    "flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-bold transition-all",
-                                    outputFormat === 'xlsx' 
-                                        ? "bg-white text-blue-600 shadow-sm" 
-                                        : "text-slate-500 hover:text-slate-700"
-                                )}
-                            >
-                                <TableProperties className="h-5 w-5" />
-                                .XLSX (Excel)
-                            </button>
-                            <button
-                                onClick={() => setOutputFormat('csv')}
-                                className={cn(
-                                    "flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-bold transition-all",
-                                    outputFormat === 'csv' 
-                                        ? "bg-white text-blue-600 shadow-sm" 
-                                        : "text-slate-500 hover:text-slate-700"
-                                )}
-                            >
-                                <FileSpreadsheet className="h-5 w-5" />
-                                .CSV
-                            </button>
-                        </div>
+            <div className="hidden lg:block lg:w-[424px] lg:fixed lg:right-4 lg:top-24 lg:h-[calc(100vh-120px)] lg:z-10">
+                <div className="bg-white rounded-3xl border border-[#e2e8f0] shadow-xl h-full flex flex-col">
+                    <div className="p-6 border-b border-gray-100">
+                        <h2 className="text-[#111418] text-lg font-bold">Export Settings</h2>
+                        <p className="text-[#617289] text-sm mt-1">Configure how you want your data served.</p>
                     </div>
 
-                    {/* Sheet Organization */}
-                    <div className="space-y-3">
-                        <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Sheet Organization</Label>
+                    <div className="flex-1 overflow-y-auto p-6 space-y-8">
+                        {/* Output Format */}
                         <div className="space-y-3">
-                            <div 
-                                onClick={() => setSheetOrganization('merge')}
-                                className={cn(
-                                    "relative p-4 rounded-xl border-2 cursor-pointer transition-all",
-                                    sheetOrganization === 'merge'
-                                        ? "border-blue-500 bg-blue-50/30"
-                                        : "border-slate-200 hover:border-slate-300"
-                                )}
-                            >
-                                <div className="flex items-start gap-3">
-                                    <div className={cn(
-                                        "mt-1 w-5 h-5 rounded-full border flex items-center justify-center",
-                                        sheetOrganization === 'merge' ? "border-blue-500" : "border-slate-300"
-                                    )}>
-                                        {sheetOrganization === 'merge' && <div className="w-2.5 h-2.5 rounded-full bg-blue-500" />}
+                            <Label className="text-[#617289] text-xs font-bold uppercase tracking-wider">Output Format</Label>
+                            <div className="bg-[#f6f7f8] p-1 rounded-xl flex">
+                                <button
+                                    onClick={() => setOutputFormat('xlsx')}
+                                    className={cn(
+                                        "flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-bold transition-all",
+                                        outputFormat === 'xlsx' 
+                                            ? "bg-white text-[#136dec] shadow-sm" 
+                                            : "text-[#617289] hover:text-[#136dec]"
+                                    )}
+                                >
+                                    <TableProperties className="h-5 w-5" />
+                                    .XLSX (Excel)
+                                </button>
+                                <button
+                                    onClick={() => setOutputFormat('csv')}
+                                    className={cn(
+                                        "flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-bold transition-all",
+                                        outputFormat === 'csv' 
+                                            ? "bg-white text-[#136dec] shadow-sm" 
+                                            : "text-[#617289] hover:text-[#136dec]"
+                                    )}
+                                >
+                                    <FileSpreadsheet className="h-5 w-5" />
+                                    .CSV
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Sheet Organization */}
+                        <div className="space-y-3">
+                            <Label className="text-[#617289] text-xs font-bold uppercase tracking-wider">Sheet Organization</Label>
+                            <div className="space-y-3">
+                                <div 
+                                    onClick={() => setSheetOrganization('merge')}
+                                    className={cn(
+                                        "relative p-4 rounded-xl border-2 cursor-pointer transition-all",
+                                        sheetOrganization === 'merge'
+                                            ? "border-[#136dec] bg-[rgba(19,109,236,0.03)]"
+                                            : "border-[#e2e8f0] hover:border-[#cbd5e1]"
+                                    )}
+                                >
+                                    <div className="flex items-start gap-3">
+                                        <div className={cn(
+                                            "mt-1 w-5 h-5 rounded-full border flex items-center justify-center",
+                                            sheetOrganization === 'merge' ? "border-[#136dec]" : "border-[#cbd5e1]"
+                                        )}>
+                                            {sheetOrganization === 'merge' && <div className="w-2.5 h-2.5 rounded-full bg-[#136dec]" />}
+                                        </div>
+                                        <div>
+                                            <div className="font-bold text-sm text-[#111418]">Merge tables into one sheet</div>
+                                            <div className="text-xs text-[#617289] mt-1 leading-relaxed">
+                                                Combine extracted data from all pages into a single continuous worksheet.
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <div className="font-bold text-sm text-slate-900">Merge tables into one sheet</div>
-                                        <div className="text-xs text-slate-500 mt-1 leading-relaxed">
-                                            Combine extracted data from all pages into a single continuous worksheet.
+                                    {sheetOrganization === 'merge' && (
+                                        <div className="absolute top-2 right-2 bg-[#136dec] text-white text-[10px] font-bold px-2 py-0.5 rounded">
+                                            RECOMMENDED
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div 
+                                    onClick={() => setSheetOrganization('separate')}
+                                    className={cn(
+                                        "p-4 rounded-xl border-2 cursor-pointer transition-all",
+                                        sheetOrganization === 'separate'
+                                            ? "border-[#136dec] bg-[rgba(19,109,236,0.03)]"
+                                            : "border-[#e2e8f0] hover:border-[#cbd5e1]"
+                                    )}
+                                >
+                                    <div className="flex items-start gap-3">
+                                        <div className={cn(
+                                            "mt-1 w-5 h-5 rounded-full border flex items-center justify-center",
+                                            sheetOrganization === 'separate' ? "border-[#136dec]" : "border-[#cbd5e1]"
+                                        )}>
+                                            {sheetOrganization === 'separate' && <div className="w-2.5 h-2.5 rounded-full bg-[#136dec]" />}
+                                        </div>
+                                        <div>
+                                            <div className="font-bold text-sm text-[#111418]">Create separate sheets</div>
+                                            <div className="text-xs text-[#617289] mt-1 leading-relaxed">
+                                                Keep page structure intact. One tab per PDF page.
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                                {sheetOrganization === 'merge' && (
-                                    <div className="absolute top-2 right-2 bg-blue-100 text-blue-600 text-[10px] font-bold px-2 py-0.5 rounded">
-                                        RECOMMENDED
-                                    </div>
-                                )}
                             </div>
+                        </div>
 
-                            <div 
-                                onClick={() => setSheetOrganization('separate')}
-                                className={cn(
-                                    "p-4 rounded-xl border-2 cursor-pointer transition-all",
-                                    sheetOrganization === 'separate'
-                                        ? "border-blue-500 bg-blue-50/30"
-                                        : "border-slate-200 hover:border-slate-300"
-                                )}
-                            >
-                                <div className="flex items-start gap-3">
-                                    <div className={cn(
-                                        "mt-1 w-5 h-5 rounded-full border flex items-center justify-center",
-                                        sheetOrganization === 'separate' ? "border-blue-500" : "border-slate-300"
-                                    )}>
-                                        {sheetOrganization === 'separate' && <div className="w-2.5 h-2.5 rounded-full bg-blue-500" />}
+                        {/* Preview Data */}
+                        <div className="space-y-3">
+                            <Label className="text-[#617289] text-xs font-bold uppercase tracking-wider">Preview Data</Label>
+                            <div className="bg-[#f6f7f8] rounded-lg border border-[#e2e8f0] p-4">
+                                <div className="flex items-center gap-2 text-[#617289] mb-3">
+                                    <Table className="h-4 w-4" />
+                                    <span className="text-xs">Extracting all tables from PDF</span>
+                                </div>
+                                <div className="space-y-2 opacity-60">
+                                    <div className="flex gap-2">
+                                        {[1, 2, 3, 4].map(i => (
+                                            <div key={i} className="h-2 bg-[#cbd5e1] rounded flex-1" />
+                                        ))}
                                     </div>
-                                    <div>
-                                        <div className="font-bold text-sm text-slate-900">Create separate sheets</div>
-                                        <div className="text-xs text-slate-500 mt-1 leading-relaxed">
-                                            Keep page structure intact. One tab per PDF page.
-                                        </div>
+                                    <div className="flex gap-2">
+                                        {[1, 2, 3, 4].map(i => (
+                                            <div key={i} className="h-2 bg-[#e2e8f0] rounded flex-1" />
+                                        ))}
+                                    </div>
+                                    <div className="flex gap-2">
+                                        {[1, 2, 3, 4].map(i => (
+                                            <div key={i} className="h-2 bg-[#e2e8f0] rounded flex-1" />
+                                        ))}
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    {/* Preview Data */}
-                    <div className="space-y-3">
-                        <Label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Preview Data</Label>
-                        <div className="bg-slate-50 rounded-lg border border-slate-200 p-4">
-                            <div className="flex items-center gap-2 text-slate-500 mb-3">
-                                <Table className="h-4 w-4" />
-                                <span className="text-xs">Extracting all tables from PDF</span>
-                            </div>
-                            <div className="space-y-2 opacity-60">
-                                <div className="flex gap-2">
-                                    {[1, 2, 3, 4].map(i => (
-                                        <div key={i} className="h-2 bg-slate-300 rounded flex-1" />
-                                    ))}
-                                </div>
-                                <div className="flex gap-2">
-                                    {[1, 2, 3, 4].map(i => (
-                                        <div key={i} className="h-2 bg-slate-200 rounded flex-1" />
-                                    ))}
-                                </div>
-                                <div className="flex gap-2">
-                                    {[1, 2, 3, 4].map(i => (
-                                        <div key={i} className="h-2 bg-slate-200 rounded flex-1" />
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
+                    <div className="p-6 border-t border-[#e2e8f0] bg-white mt-auto">
+                        <Button 
+                            className="w-full h-14 text-lg font-bold bg-[#136dec] hover:bg-blue-700 shadow-lg rounded-xl"
+                            onClick={convert}
+                            disabled={isProcessing}
+                        >
+                            {isProcessing ? (
+                                <>
+                                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                                    Converting...
+                                </>
+                            ) : (
+                                <>
+                                    Download Excel File
+                                    <Download className="ml-2 h-5 w-5" />
+                                </>
+                            )}
+                        </Button>
+                        <p className="text-center text-xs text-[#94a3b8] mt-3">
+                            Crunching the numbers, hang tight...
+                        </p>
                     </div>
-                </div>
-
-                <div className="p-6 border-t border-gray-100 bg-white">
-                    <Button 
-                        className="w-full h-14 text-lg font-bold bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-600/20 rounded-xl"
-                        onClick={convert}
-                        disabled={isProcessing}
-                    >
-                        {isProcessing ? (
-                            <>
-                                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                                Converting...
-                            </>
-                        ) : (
-                            <>
-                                Download Excel File
-                                <Download className="ml-2 h-5 w-5" />
-                            </>
-                        )}
-                    </Button>
-                    <p className="text-center text-xs text-slate-400 mt-3">
-                        Crunching the numbers, hang tight...
-                    </p>
                 </div>
             </div>
         </div>

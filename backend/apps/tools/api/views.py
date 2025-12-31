@@ -8,6 +8,9 @@ from django.http import HttpResponse, FileResponse
 import io
 import tempfile
 import os
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class PDFToolAPIView(APIView):
@@ -719,6 +722,87 @@ class PDFPagePreviewsView(PDFToolAPIView):
             })
             
         except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class OfficeFilePreviewView(PDFToolAPIView):
+    """Generate first page preview for Office files (Word, Excel, PowerPoint)."""
+    
+    def post(self, request):
+        file, error = self.get_file_from_request(request)
+        if error:
+            return error
+        
+        try:
+            import fitz
+            import base64
+            import traceback
+            from apps.tools.converters.office_converter import convert_powerpoint_to_pdf, convert_excel_to_pdf
+            from apps.tools.converters.word_to_pdf import convert_word_to_pdf
+            
+            # Determine file type and convert to PDF
+            filename = file.name.lower()
+            
+            logger.info(f"Generating preview for: {filename}")
+            
+            if filename.endswith(('.doc', '.docx')):
+                file.seek(0)
+                pdf_bytes = convert_word_to_pdf(file)
+            elif filename.endswith(('.xls', '.xlsx')):
+                file.seek(0)
+                pdf_bytes = convert_excel_to_pdf(file)
+            elif filename.endswith(('.ppt', '.pptx')):
+                logger.info("Converting PowerPoint to PDF for preview...")
+                file.seek(0)
+                try:
+                    pdf_bytes = convert_powerpoint_to_pdf(file)
+                    logger.info(f"PowerPoint converted, PDF size: {len(pdf_bytes)} bytes")
+                except Exception as primary_error:
+                    logger.warning(f"Primary PPT conversion failed, using fallback: {primary_error}")
+                    try:
+                        file.seek(0)
+                        from apps.tools.converters.python_office_converter import convert_powerpoint_to_pdf_python
+                        pdf_bytes = convert_powerpoint_to_pdf_python(file)
+                        logger.info("Fallback PPT conversion succeeded")
+                    except Exception as fallback_error:
+                        raise Exception(f"PowerPoint preview failed: {fallback_error}")
+            else:
+                return Response({'error': 'Unsupported file type'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Open the generated PDF and extract first page as image
+            doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+            
+            if len(doc) == 0:
+                return Response({'error': 'Generated PDF has no pages'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            
+            logger.info(f"PDF opened successfully, pages: {len(doc)}")
+            
+            # Get first page
+            page = doc.load_page(0)
+            
+            # Render page to image at high quality
+            pix = page.get_pixmap(matrix=fitz.Matrix(2.0, 2.0))
+            img_bytes = pix.tobytes("png")
+            
+            # Convert to base64
+            img_base64 = base64.b64encode(img_bytes).decode('utf-8')
+            
+            preview_data = {
+                'preview': f'data:image/png;base64,{img_base64}',
+                'width': pix.width,
+                'height': pix.height,
+                'totalPages': len(doc)
+            }
+            
+            doc.close()
+            
+            logger.info("Preview generated successfully")
+            return Response(preview_data)
+            
+        except Exception as e:
+            import traceback
+            logger.error(f"Office file preview failed: {e}")
+            logger.error(f"Traceback: {traceback.format_exc()}")
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 

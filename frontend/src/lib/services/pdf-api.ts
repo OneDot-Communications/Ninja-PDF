@@ -54,21 +54,21 @@ const withFallback = async (
  * Helper factory for standard conversions (Backend -> Client Fallback)
  */
 const createStandardConverter = (
-    apiMethod: (file: File) => Promise<any>,
+    apiMethod: (file: File, options?: any) => Promise<any>,
     strategyName: string,
     outputExtOrFn: string | ((name: string) => string),
     clientDefaultOptions: any = {}
 ) => {
-    return async (file: File): Promise<ProcessingResult> => {
+    return async (file: File, options?: any): Promise<ProcessingResult> => {
         const fileName = typeof outputExtOrFn === 'function'
             ? outputExtOrFn(file.name)
             : file.name.replace(/\.[^/.]+$/, "") + outputExtOrFn;
 
         return withFallback(
-            () => apiMethod(file),
+            () => apiMethod(file, options),
             async () => {
                 const processor = await getClientProcessor();
-                return processor.execute(strategyName, [file], clientDefaultOptions);
+                return processor.execute(strategyName, [file], { ...clientDefaultOptions, ...options });
             },
             fileName
         );
@@ -159,19 +159,19 @@ export const pdfApi = {
     // ─────────────────────────────────────────────────────────────────────────────
     // OTHER FORMATS TO PDF
     // ─────────────────────────────────────────────────────────────────────────────
-    wordToPdf: createStandardConverter(
+    wordToPdf: createNoFallbackConverter(
         api.wordToPdf,
-        "convert-to-pdf",
+        "Word to PDF conversion requires server processing. Please check your connection and try again.",
         (name) => name.replace(/\.(docx?|doc)$/i, ".pdf")
     ),
-    excelToPdf: createStandardConverter(
+    excelToPdf: createNoFallbackConverter(
         api.excelToPdf,
-        "convert-to-pdf",
+        "Excel to PDF conversion requires server processing. Please check your connection and try again.",
         (name) => name.replace(/\.(xlsx?|xls)$/i, ".pdf")
     ),
-    powerpointToPdf: createStandardConverter(
+    powerpointToPdf: createNoFallbackConverter(
         api.powerpointToPdf,
-        "convert-to-pdf",
+        "PowerPoint to PDF conversion requires server processing. Please check your connection and try again.",
         (name) => name.replace(/\.(pptx?|ppt)$/i, ".pdf")
     ),
     jpgToPdf: createStandardConverter(

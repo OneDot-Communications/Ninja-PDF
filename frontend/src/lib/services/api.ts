@@ -362,9 +362,9 @@ export const api = {
   // ─────────────────────────────────────────────────────────────────────────────
   // PDF TOOLS - CONVERSION TO PDF (/api/tools/)
   // ─────────────────────────────────────────────────────────────────────────────
-  wordToPdf: (file: File) => uploadFile("/api/tools/word-to-pdf/", file),
-  powerpointToPdf: (file: File) => uploadFile("/api/tools/powerpoint-to-pdf/", file),
-  excelToPdf: (file: File) => uploadFile("/api/tools/excel-to-pdf/", file),
+  wordToPdf: (file: File, options?: any) => uploadFile("/api/tools/word-to-pdf/", file, options),
+  powerpointToPdf: (file: File, options?: any) => uploadFile("/api/tools/powerpoint-to-pdf/", file, options),
+  excelToPdf: (file: File, options?: any) => uploadFile("/api/tools/excel-to-pdf/", file, options),
   jpgToPdf: (file: File) => uploadFile("/api/tools/jpg-to-pdf/", file),
   htmlToPdf: (file: File) => uploadFile("/api/tools/html-to-pdf/", file),
   markdownToPdf: (file: File) => uploadFile("/api/tools/markdown-to-pdf/", file),
@@ -419,6 +419,14 @@ export const api = {
     formData.append("file", file);
     return fetch(`${getBaseUrl()}/api/tools/page-previews/`, { method: "POST", body: formData, credentials: "include" }).then(async res => {
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || "Failed to get page previews");
+      return res.json();
+    });
+  },
+  getOfficeFilePreview: (file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return fetch(`${getBaseUrl()}/api/tools/office-preview/`, { method: "POST", body: formData, credentials: "include" }).then(async res => {
+      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || "Failed to get office file preview");
       return res.json();
     });
   },

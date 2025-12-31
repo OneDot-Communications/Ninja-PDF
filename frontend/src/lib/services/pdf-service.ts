@@ -27,9 +27,10 @@ export async function getPdfJs() {
             (pdfjsModule as any).GlobalWorkerOptions = {};
         }
 
-        // Always set the worker source to our local file
-        // This file must exist at public/pdfjs/pdf.worker.v5.mjs
-        (pdfjsModule as any).GlobalWorkerOptions.workerSrc = '/pdfjs/pdf.worker.v5.mjs';
+        // Use worker from the installed package
+        // This ensures the worker version matches the API version exactly
+        (pdfjsModule as any).GlobalWorkerOptions.workerSrc = 
+            new URL('pdfjs-dist/build/pdf.worker.mjs', import.meta.url).toString();
     }
 
     return pdfjsModule;
