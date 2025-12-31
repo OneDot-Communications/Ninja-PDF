@@ -35,7 +35,7 @@ export function ExcelToPdfTool() {
 
         try {
             for (const file of files) {
-                const result = await pdfApi.excelToPdf(file, options);
+                const result = await pdfApi.excelToPdf(file);
                 saveAs(result.blob, result.fileName);
             }
 

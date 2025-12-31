@@ -35,7 +35,7 @@ export function WordToPdfTool() {
 
         try {
             for (const file of files) {
-                const result = await pdfApi.wordToPdf(file, options);
+                const result = await pdfApi.wordToPdf(file);
                 saveAs(result.blob, result.fileName);
             }
 

@@ -35,7 +35,7 @@ export function PowerPointToPdfTool() {
 
         try {
             for (const file of files) {
-                const result = await pdfApi.powerpointToPdf(file, options);
+                const result = await pdfApi.powerpointToPdf(file);
                 saveAs(result.blob, result.fileName);
             }
 
