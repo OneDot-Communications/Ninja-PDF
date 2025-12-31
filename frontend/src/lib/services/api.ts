@@ -615,11 +615,12 @@ export const api = {
       if (cache) return cache;
       if (promise) return promise;
 
-      promise = api.publicRequest("GET", "/api/billing/features/")
+      promise = api.request("GET", "/api/billing/features/")
         .then(data => {
-          cache = data;
+          const features = data.data || data;
+          cache = features;
           promise = null;
-          return data;
+          return features;
         })
         .catch(err => {
           promise = null;
