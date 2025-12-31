@@ -10,6 +10,8 @@ interface PdfPreviewProps {
     scale?: number;
     className?: string;
     onLoadSuccess?: (numPages: number) => void;
+    children?: React.ReactNode;
+    contentRef?: React.RefObject<HTMLDivElement>;
 }
 
 export function PdfPreview({
@@ -18,6 +20,8 @@ export function PdfPreview({
     scale = 1,
     className,
     onLoadSuccess,
+    children,
+    contentRef
 }: PdfPreviewProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [loading, setLoading] = useState(true);
@@ -26,22 +30,32 @@ export function PdfPreview({
 
     useEffect(() => {
         let isMounted = true;
+
         const loadPdf = async () => {
             try {
                 if (!isMounted) return;
                 setLoading(true);
                 setError(null);
 
-                // Cancel any previous render task
+                // Cancel any previous render task immediately
                 if (renderTaskRef.current) {
-                    renderTaskRef.current.cancel();
+                    try {
+                        await renderTaskRef.current.cancel();
+                    } catch (e) {
+                        // ignore
+                    }
+                    renderTaskRef.current = null;
                 }
 
                 const pdfjsLib = await getPdfJs();
-
                 const arrayBuffer = await file.arrayBuffer();
+
+                if (!isMounted) return;
+
                 const loadingTask = (pdfjsLib as any).getDocument({ data: new Uint8Array(arrayBuffer) });
                 const pdf = await loadingTask.promise;
+
+                if (!isMounted) return;
 
                 if (onLoadSuccess) {
                     onLoadSuccess(pdf.numPages);
@@ -56,6 +70,7 @@ export function PdfPreview({
                 const context = canvas.getContext("2d");
                 if (!context) return;
 
+                // Ensure canvas runs in clean state
                 canvas.height = viewport.height;
                 canvas.width = viewport.width;
 
@@ -66,30 +81,37 @@ export function PdfPreview({
 
                 const renderTask = page.render(renderContext as any);
                 renderTaskRef.current = renderTask;
+
                 await renderTask.promise;
-                renderTaskRef.current = null;
             } catch (err: any) {
                 if (err.name !== 'RenderingCancelledException') {
                     console.error("Error rendering PDF:", err);
-                    if (err.name === 'InvalidPDFException' || err.message?.includes('Invalid PDF structure')) {
-                        setError("Invalid or corrupted PDF file.");
-                    } else if (err.name === 'PasswordException' || err.message?.includes('password')) {
-                        setError("Password protected PDF.");
-                    } else {
-                        setError("Failed to load PDF preview.");
+                    if (isMounted) {
+                        if (err.name === 'InvalidPDFException' || err.message?.includes('Invalid PDF structure')) {
+                            setError("Invalid or corrupted PDF file.");
+                        } else if (err.name === 'PasswordException' || err.message?.includes('password')) {
+                            setError("Password protected PDF.");
+                        } else {
+                            setError("Failed to load PDF preview.");
+                        }
                     }
                 }
             } finally {
                 if (isMounted) {
                     setLoading(false);
+                    // Clear ref if this task finished
+                    if (renderTaskRef.current?.promise?._status === 1) {
+                        renderTaskRef.current = null;
+                    }
                 }
             }
         };
 
-        loadPdf();
+        const timer = setTimeout(loadPdf, 50);
 
         return () => {
             isMounted = false;
+            clearTimeout(timer);
             if (renderTaskRef.current) {
                 renderTaskRef.current.cancel();
                 renderTaskRef.current = null;
@@ -98,18 +120,23 @@ export function PdfPreview({
     }, [file, pageNumber, scale, onLoadSuccess]);
 
     return (
-        <div className={cn("relative flex items-center justify-center bg-muted/20", className)}>
+        <div className={cn("relative flex items-center justify-center bg-muted/20 min-h-[600px]", className)}>
             {loading && (
-                <div className="absolute inset-0 flex items-center justify-center">
+                <div className="absolute inset-0 flex items-center justify-center bg-white/50 z-10">
                     <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
                 </div>
             )}
             {error && (
-                <div className="absolute inset-0 flex items-center justify-center text-sm text-destructive">
+                <div className="absolute inset-0 flex items-center justify-center text-sm text-destructive bg-white/80 z-20">
                     {error}
                 </div>
             )}
-            <canvas ref={canvasRef} className="max-w-full shadow-md" />
+
+            {/* TIGHT WRAPPER for Canvas + Overlay */}
+            <div className="relative shadow-md inline-block" ref={contentRef}>
+                <canvas ref={canvasRef} className="block max-w-full" />
+                {children}
+            </div>
         </div>
     );
 }

@@ -6,44 +6,8 @@ import FileUploadHero from "../ui/file-upload-hero"; // Hero uploader (big CTA, 
 import { Button } from "../ui/button";
 import {
     FileText,
-    ChevronLeft,
-    ChevronRight,
-    ZoomIn,
-    ZoomOut,
-    Maximize,
-    Grid3x3,
-    Settings,
-    Undo,
-    Redo,
-    Download,
-    X,
-    Move,
-    Square as SquareIcon,
-    Monitor,
-    Smartphone,
-    Tablet,
-    Sliders,
-    HelpCircle,
-    Sun,
-    Moon,
-    Layers,
-    History,
-    Scan,
-    Command,
     RotateCw,
-    RefreshCw,
     Plus,
-    Trash2,
-    Copy,
-    CheckSquare,
-    Square,
-    LayoutGrid,
-    List,
-    Eye,
-    EyeOff,
-    ArrowUp,
-    ArrowDown,
-    GripVertical,
     RotateCcw
 } from "lucide-react";
 import { pdfStrategyManager, getPdfJs } from "@/lib/services/pdf-service";
@@ -59,53 +23,28 @@ interface PageItem {
     isBlank?: boolean;
 }
 
-// History state for undo/redo
-interface HistoryState {
-    pages: PageItem[];
-    currentPage: number;
-}
+
 
 export function RotatePdfTool() {
     // File and PDF state
+    // State
     const [file, setFile] = useState<File | null>(null);
     const [pdfProxy, setPdfProxy] = useState<any>(null);
     const [pages, setPages] = useState<PageItem[]>([]);
-    const [currentPage, setCurrentPage] = useState(1);
     const [numPages, setNumPages] = useState(0);
     const [isProcessing, setIsProcessing] = useState(false);
-    const [zoom, setZoom] = useState(100);
-
-    // Canvas refs
-    const canvasRefs = useRef<(HTMLCanvasElement | null)[]>([]);
-    const containerRef = useRef<HTMLDivElement>(null);
-    const scrollContainerRef = useRef<HTMLDivElement>(null);
-
-    // Selection state
-    const [selectedPages, setSelectedPages] = useState<Set<number>>(new Set());
-    const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-    const [rotationAngle, setRotationAngle] = useState(90); // Default rotation angle
-
-    // UI state
-    const [showToolbar, setShowToolbar] = useState(true);
-    const [showProperties, setShowProperties] = useState(true);
-    const [darkMode, setDarkMode] = useState(false);
-    const [deviceView, setDeviceView] = useState<"desktop" | "tablet" | "mobile">("desktop");
-    const [showGrid, setShowGrid] = useState(false);
-    const [showPageNumbers, setShowPageNumbers] = useState(true);
     const [loadingThumbnails, setLoadingThumbnails] = useState(false);
     const [thumbnails, setThumbnails] = useState<string[]>([]);
+    const [rotationAngle, setRotationAngle] = useState(90);
 
-    // History state for undo/redo
-    const [history, setHistory] = useState<HistoryState[]>([]);
-    const [historyIndex, setHistoryIndex] = useState(-1);
+    // Refs
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const handleFileSelected = async (files: File[]) => {
         if (files.length > 0) {
             const selectedFile = files[0];
             setFile(selectedFile);
             setPages([]);
-            setCurrentPage(1);
-            setSelectedPages(new Set());
 
             try {
                 const pdfjsLib = await getPdfJs();
@@ -116,9 +55,6 @@ export function RotatePdfTool() {
                 }).promise;
                 setPdfProxy(pdf);
                 setNumPages(pdf.numPages);
-
-                // Initialize canvas refs
-                canvasRefs.current = Array(pdf.numPages).fill(null);
 
                 // Generate thumbnails
                 await generateThumbnails(selectedFile);
@@ -134,12 +70,6 @@ export function RotatePdfTool() {
                 }
                 setPages(newPages);
 
-                // Initialize history
-                setHistory([{
-                    pages: newPages,
-                    currentPage: 1
-                }]);
-                setHistoryIndex(0);
             } catch (error: any) {
                 console.error("Error loading PDF:", error);
                 setFile(null);
@@ -206,119 +136,16 @@ export function RotatePdfTool() {
         }
     };
 
-    useEffect(() => {
-        if (!file || !pdfProxy) return;
 
-        const renderAllPages = async () => {
-            // Apply zoom
-            const scale = zoom / 100;
-
-            // Render each page
-            for (let i = 0; i < pdfProxy.numPages; i++) {
-                const page = await pdfProxy.getPage(i + 1);
-                const viewport = page.getViewport({ scale });
-
-                // Get or create canvas
-                let canvas = canvasRefs.current[i];
-
-                if (!canvas) continue;
-
-                const context = canvas.getContext("2d")!;
-
-                canvas.height = viewport.height;
-                canvas.width = viewport.width;
-
-                await page.render({
-                    canvasContext: context,
-                    viewport: viewport,
-                    canvas: canvas,
-                }).promise;
-            }
-        };
-
-        renderAllPages();
-    }, [file, pdfProxy, zoom]);
-
-    // Save current state to history
-    const saveToHistory = useCallback(() => {
-        const newState = {
-            pages: [...pages],
-            currentPage
-        };
-
-        // Remove any states after the current index
-        const newHistory = history.slice(0, historyIndex + 1);
-        newHistory.push(newState);
-
-        // Limit history to 20 states
-        if (newHistory.length > 20) {
-            newHistory.shift();
-        }
-
-        setHistory(newHistory);
-        setHistoryIndex(newHistory.length - 1);
-    }, [pages, currentPage, history, historyIndex]);
-
-    // Undo
-    const undo = useCallback(() => {
-        if (historyIndex > 0) {
-            const prevState = history[historyIndex - 1];
-            setPages(prevState.pages);
-            setCurrentPage(prevState.currentPage);
-            setHistoryIndex(historyIndex - 1);
-        }
-    }, [historyIndex, history]);
-
-    // Redo
-    const redo = useCallback(() => {
-        if (historyIndex < history.length - 1) {
-            const nextState = history[historyIndex + 1];
-            setPages(nextState.pages);
-            setCurrentPage(nextState.currentPage);
-            setHistoryIndex(historyIndex + 1);
-        }
-    }, [historyIndex, history]);
-
-    // Fit to page
-    const fitToPage = () => {
-        setZoom(100);
-    };
-
-    // Toggle selection
-    const toggleSelection = (pageIndex: number) => {
-        const newSelection = new Set(selectedPages);
-        if (newSelection.has(pageIndex)) {
-            newSelection.delete(pageIndex);
-        } else {
-            newSelection.add(pageIndex);
-        }
-        setSelectedPages(newSelection);
-    };
-
-    // Rotate selected pages
-    const rotateSelected = (direction: "cw" | "ccw") => {
-        if (selectedPages.size === 0) return;
-
-        saveToHistory();
-        setPages(prev => prev.map(p => {
-            if (selectedPages.has(p.originalIndex)) {
-                const angle = direction === "cw" ? rotationAngle : -rotationAngle;
-                return { ...p, rotation: (p.rotation + angle + 360) % 360 };
-            }
-            return p;
-        }));
-    };
 
     // Rotate all pages
     const rotateAll = (direction: "cw" | "ccw") => {
-        saveToHistory();
         const angle = direction === "cw" ? rotationAngle : -rotationAngle;
         setPages(prev => prev.map(p => ({ ...p, rotation: (p.rotation + angle + 360) % 360 })));
     };
 
     // Reset all rotations
     const resetRotations = () => {
-        saveToHistory();
         setPages(prev => prev.map(p => ({ ...p, rotation: 0 })));
     };
 
@@ -361,528 +188,295 @@ export function RotatePdfTool() {
         }
     };
 
+    const handleFileClick = () => {
+        if (fileInputRef.current) {
+            fileInputRef.current.click();
+        }
+    };
+
+    const handleFilesAppend = async (newFiles: File[]) => {
+        if (!file || newFiles.length === 0) return;
+        setIsProcessing(true);
+
+        try {
+            // Merge existing file with new files
+            const result = await pdfApi.merge([file, ...newFiles]);
+            const mergedFilename = file.name; // Keep original name or use result.fileName
+            const mergedFile = new File([result.blob], mergedFilename, { type: "application/pdf" });
+
+            // Reload PDF to get new page count
+            const pdfjsLib = await getPdfJs();
+            const arrayBuffer = await mergedFile.arrayBuffer();
+            const pdf = await (pdfjsLib as any).getDocument({
+                data: new Uint8Array(arrayBuffer),
+                verbosity: 0
+            }).promise;
+
+            // Update file and proxy
+            setFile(mergedFile);
+            setPdfProxy(pdf);
+
+            const oldNumPages = numPages;
+            const newNumPagesTotal = pdf.numPages;
+            setNumPages(newNumPagesTotal);
+
+
+
+            // Regenerate thumbnails for the NEW merged file
+            await generateThumbnails(mergedFile);
+
+            // Update pages state: preserve old rotations, add new pages with 0 rotation
+            const newPagesToAdd: PageItem[] = [];
+            for (let i = oldNumPages; i < newNumPagesTotal; i++) {
+                newPagesToAdd.push({
+                    id: Math.random().toString(36).substr(2, 9),
+                    originalIndex: i, // Index in the merged file
+                    rotation: 0
+                });
+            }
+
+            setPages(prev => [...prev, ...newPagesToAdd]);
+
+
+
+            toast.show({
+                title: "Files Added",
+                message: `Success! Document now has ${newNumPagesTotal} pages.`,
+                variant: "success",
+                position: "top-right",
+            });
+
+        } catch (error) {
+            console.error("Error appending files:", error);
+            toast.show({
+                title: "Append Failed",
+                message: "Failed to merge files. Please try again.",
+                variant: "error",
+                position: "top-right",
+            });
+        } finally {
+            setIsProcessing(false);
+            // Reset input so change event fires again if same file selected
+            if (fileInputRef.current) fileInputRef.current.value = "";
+        }
+    };
+
+    const textRotateAll = (angle: number) => {
+        setPages(prev => prev.map(p => ({ ...p, rotation: angle })));
+        setRotationAngle(angle);
+    };
+
     // If no file, show file upload
     if (!file) {
         return (
-            <div className="flex flex-col items-center justify-center h-[calc(100vh-64px)] bg-linear-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
-                <div className="max-w-md w-full p-8 bg-white dark:bg-gray-800 rounded-2xl shadow-xl">
-                    <div className="flex items-center justify-center mb-6">
-                        <div className="p-4 bg-blue-100 dark:bg-blue-900 rounded-full">
-                            <RotateCw className="h-12 w-12 text-blue-600 dark:text-blue-400" />
-                        </div>
-                    </div>
-                    <h1 className="text-2xl font-bold text-center mb-2 text-gray-900 dark:text-white">Rotate PDF</h1>
-                    <p className="text-center text-gray-600 dark:text-gray-400 mb-6">Upload a PDF to rotate pages</p>
-                    <FileUploadHero
-                        title=""
-                        onFilesSelected={handleFileSelected}
-                        maxFiles={1}
-                        accept={{ "application/pdf": [".pdf"] }}
-                    />
-                    <div className="mt-6 text-center">
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                            Rotate pages in your PDF with precision control
-                        </p>
-                    </div>
-                </div>
+            <div className="min-h-[calc(100vh-120px)] flex items-center justify-center">
+                <FileUploadHero
+                    title="Rotate PDF"
+                    onFilesSelected={handleFileSelected}
+                    maxFiles={1}
+                    accept={{ "application/pdf": [".pdf"] }}
+                />
             </div>
         );
     }
 
     return (
-        <div className={cn(
-            "flex flex-col h-[calc(100vh-64px)]",
-            darkMode ? "dark" : ""
-        )}>
-            {/* Floating Toolbar */}
-            <div className={cn(
-                "fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-2 transition-all duration-300",
-                showToolbar ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2 pointer-events-none"
-            )}>
-                <div className="flex items-center gap-1">
-                    {/* Navigation */}
-                    <div className="flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-1 mr-2">
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                            disabled={currentPage === 1}
+        <div className="bg-[#f6f7f8] min-h-screen pb-8 flex flex-row">
+            {/* Main Content Area */}
+            <div className="flex-1 flex flex-col p-8 lg:mr-[380px]">
+                {/* Header */}
+                <div className="flex flex-col mb-8">
+                    <h1 className="text-4xl font-extrabold text-[#111418] mb-3">Rotate PDF Pages</h1>
+                    <div className="flex items-center justify-between">
+                        <p className="text-[#617289] text-base">Click on pages to rotate individually or use the global controls below. <br /> Righty-tighty, lefty-loosey!</p>
+
+                        {/* File Pill */}
+                        <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-lg border border-[#e2e8f0] shadow-sm">
+                            <FileText className="h-4 w-4 text-[#617289]" />
+                            <span className="text-[#111418] text-sm font-bold">{file.name}</span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Toolbar */}
+                <div className="bg-white rounded-xl shadow-sm border border-[#e2e8f0] p-4 mb-8 flex items-center justify-between">
+                    <div className="flex items-center gap-6">
+                        <button
+                            onClick={() => rotateAll('ccw')}
+                            className="flex items-center gap-2 hover:bg-gray-50 px-3 py-2 rounded-lg transition-colors group"
                         >
-                            <ChevronLeft className="h-4 w-4" />
-                        </Button>
-                        <span className="text-sm font-medium px-2 min-w-20 text-center text-gray-700 dark:text-gray-300">
-                            {currentPage} / {numPages}
-                        </span>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => setCurrentPage(Math.min(numPages, currentPage + 1))}
-                            disabled={currentPage === numPages}
+                            <RotateCcw className="h-5 w-5 text-[#136dec] group-hover:scale-110 transition-transform" />
+                            <span className="text-[#111418] font-bold text-sm">Rotate All Left</span>
+                        </button>
+                        <button
+                            onClick={() => rotateAll('cw')}
+                            className="flex items-center gap-2 hover:bg-gray-50 px-3 py-2 rounded-lg transition-colors group"
                         >
-                            <ChevronRight className="h-4 w-4" />
-                        </Button>
+                            <RotateCw className="h-5 w-5 text-[#136dec] group-hover:scale-110 transition-transform" />
+                            <span className="text-[#111418] font-bold text-sm">Rotate All Right</span>
+                        </button>
                     </div>
 
-                    {/* Rotation Angle */}
-                    <div className="flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-1 mr-2">
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => setRotationAngle(45)}
-                            title="Set rotation to 45°"
+                    <button
+                        onClick={resetRotations}
+                        className="flex items-center gap-2 hover:bg-red-50 px-3 py-2 rounded-lg transition-colors group text-[#ef4444]"
+                    >
+                        <RotateCcw className="h-4 w-4 group-hover:rotate-[-45deg] transition-transform" />
+                        <span className="font-bold text-sm">Reset</span>
+                    </button>
+                </div>
+
+                {/* Grid */}
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                    {pages.map((page, index) => (
+                        <div key={page.id} className="flex flex-col gap-3">
+                            {/* Card */}
+                            <div
+                                onClick={() => {
+                                    // Click rotates 90deg CW
+                                    setPages(prev => prev.map(p =>
+                                        p.id === page.id ? { ...p, rotation: (p.rotation + 90) % 360 } : p
+                                    ));
+                                }}
+                                className="group relative bg-white rounded-2xl shadow-sm border border-[#e2e8f0] aspect-[3/4] p-4 cursor-pointer hover:shadow-md transition-all flex items-center justify-center overflow-hidden"
+                            >
+                                {/* Thumbnail Container with Rotation */}
+                                <div
+                                    className="relative w-full h-full flex items-center justify-center transition-transform duration-300 ease-out"
+                                    style={{ transform: `rotate(${page.rotation}deg)` }}
+                                >
+                                    {loadingThumbnails ? (
+                                        <div className="text-gray-400 text-xs font-medium">Loading...</div>
+                                    ) : thumbnails[index] ? (
+                                        <img
+                                            src={thumbnails[index]}
+                                            alt={`Page ${index + 1}`}
+                                            className="max-w-full max-h-full object-contain shadow-sm"
+                                        />
+                                    ) : (
+                                        <div className="bg-gray-50 w-full h-full rounded flex items-center justify-center">
+                                            <FileText className="text-gray-300 h-10 w-10" />
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Hover Overlay */}
+                                <div className="absolute inset-0 bg-[#136dec]/0 group-hover:bg-[#136dec]/5 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                                    <div className="bg-white/90 backdrop-blur rounded-full p-3 shadow-lg transform scale-75 group-hover:scale-100 transition-all duration-200">
+                                        <RotateCw className="h-6 w-6 text-[#136dec]" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Page Info */}
+                            <div className="text-center">
+                                <span className="text-[#617289] text-xs font-bold uppercase tracking-wide">Page {index + 1}</span>
+                            </div>
+                        </div>
+                    ))}
+
+                    {/* Add File Card */}
+                    <div className="flex flex-col gap-3">
+                        <button
+                            onClick={handleFileClick}
+                            className="bg-white border-2 border-dashed border-[#e2e8f0] rounded-2xl aspect-[3/4] flex flex-col items-center justify-center gap-3 hover:border-[#136dec] hover:bg-[#136dec]/5 transition-all group"
                         >
-                            45°
-                        </Button>
-                        <Button
-                            variant={rotationAngle === 90 ? "secondary" : "ghost"}
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => setRotationAngle(90)}
-                            title="Set rotation to 90°"
-                        >
-                            90°
-                        </Button>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => setRotationAngle(180)}
-                            title="Set rotation to 180°"
-                        >
-                            180°
-                        </Button>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => setRotationAngle(270)}
-                            title="Set rotation to 270°"
-                        >
-                            270°
-                        </Button>
+                            <div className="w-12 h-12 rounded-full bg-[#f1f5f9] flex items-center justify-center group-hover:bg-white group-hover:shadow-sm transition-all">
+                                <Plus className="h-6 w-6 text-[#94a3b8] group-hover:text-[#136dec]" />
+                            </div>
+                            <span className="text-[#94a3b8] font-bold text-sm group-hover:text-[#136dec]">Add File</span>
+                            <span className="text-[#cbd5e1] text-xs px-4 text-center group-hover:text-[#136dec]/60">Append pages</span>
+                        </button>
+                    </div>
+                </div>
+
+                <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".pdf"
+                    className="hidden"
+                    onChange={(e) => {
+                        if (e.target.files && e.target.files.length > 0) {
+                            const selectedFiles = Array.from(e.target.files);
+                            if (file) {
+                                handleFilesAppend(selectedFiles);
+                            } else {
+                                handleFileSelected(selectedFiles);
+                            }
+                        }
+                    }}
+                />
+            </div>
+
+            {/* Right Sidebar - Sticky Card */}
+            <div className="hidden lg:block w-[350px] fixed right-8 top-24 bottom-8 z-10">
+                <div className="bg-white rounded-2xl shadow-xl border border-[#e2e8f0] p-6 h-full flex flex-col">
+                    <div className="flex items-center justify-between mb-2">
+                        <h2 className="text-[#111418] font-extrabold text-xl">Rotate Settings</h2>
+                        <button onClick={resetRotations} className="text-[#136dec] text-xs font-bold hover:underline">Reset</button>
+                    </div>
+                    <p className="text-[#617289] text-sm mb-6">Customize your angle</p>
+
+                    {/* Rotation Control */}
+                    <div className="mb-auto">
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-2">
+                                <RotateCw className="h-5 w-5 text-[#136dec]" />
+                                <span className="text-[#111418] font-bold text-base">Rotation</span>
+                            </div>
+                            <div className="bg-[#f1f5f9] px-3 py-1 rounded text-[#111418] font-bold text-sm">
+                                {rotationAngle}°
+                            </div>
+                        </div>
+
+                        <div className="flex gap-2">
+                            {[90, 180, 270].map((angle) => (
+                                <button
+                                    key={angle}
+                                    onClick={() => textRotateAll(angle)}
+                                    className={`flex-1 py-2 rounded-lg text-xs font-bold border transition-all ${false
+                                        ? "bg-[#eff6ff] border-[#136dec] text-[#136dec]"
+                                        : "bg-white border-[#e2e8f0] text-[#617289] hover:border-[#136dec] hover:text-[#136dec]"
+                                        }`}
+                                >
+                                    {angle}°
+                                </button>
+                            ))}
+                        </div>
+
+                        <div className="mt-8 p-4 bg-[#f8fafc] rounded-xl border border-[#e2e8f0]">
+                            <div className="flex items-start gap-3">
+                                <div className="bg-yellow-100 p-2 rounded-full mt-1">
+                                    <div className="h-2 w-2 bg-yellow-400 rounded-full animate-pulse" />
+                                </div>
+                                <div>
+                                    <h4 className="text-[#111418] font-bold text-sm mb-1">Quick Tip</h4>
+                                    <p className="text-[#617289] text-xs leading-relaxed">
+                                        You can verify the visual orientation of each page in the preview grid before downloading.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
-                    {/* Zoom Controls */}
-                    <div className="flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => setZoom(Math.max(25, zoom - 25))}
-                        >
-                            <ZoomOut className="h-4 w-4" />
-                        </Button>
-                        <span className="text-sm font-medium px-2 min-w-[60px] text-center text-gray-700 dark:text-gray-300">{zoom}%</span>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => setZoom(Math.min(200, zoom + 25))}
-                        >
-                            <ZoomIn className="h-4 w-4" />
-                        </Button>
-                        <div className="w-px h-4 bg-gray-300 dark:bg-gray-600 mx-1" />
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={fitToPage}
-                            title="Fit to Page"
-                        >
-                            <Maximize className="h-4 w-4" />
-                        </Button>
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex items-center gap-1 ml-2">
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={undo}
-                            disabled={historyIndex <= 0}
-                            title="Undo"
-                        >
-                            <Undo className="h-4 w-4" />
-                        </Button>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={redo}
-                            disabled={historyIndex >= history.length - 1}
-                            title="Redo"
-                        >
-                            <Redo className="h-4 w-4" />
-                        </Button>
+                    {/* Download Button */}
+                    <div className="mt-8">
                         <Button
                             onClick={savePdf}
-                            disabled={isProcessing || pages.length === 0}
-                            className="h-8 px-3 bg-blue-600 hover:bg-blue-700 text-white"
+                            disabled={isProcessing}
+                            className="w-full h-14 text-lg font-bold bg-[#136dec] hover:bg-blue-700 text-white rounded-xl shadow-lg shadow-blue-500/20 transition-all flex items-center justify-center gap-2"
                         >
-                            {isProcessing ? "Processing..." : <><Download className="h-4 w-4 mr-1" /> Save</>}
+                            {isProcessing ? "Processing..." : (
+                                <>
+                                    Download Document
+                                </>
+                            )}
                         </Button>
+                        <p className="text-[#94a3b8] text-xs text-center mt-4">
+                            Don't worry, we didn't make you dizzy.
+                        </p>
                     </div>
                 </div>
-            </div>
-
-            {/* Properties Panel */}
-            <div className={cn(
-                "fixed right-4 top-20 z-40 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-4 w-80 transition-all duration-300",
-                showProperties ? "opacity-100 translate-x-0" : "opacity-0 translate-x-2 pointer-events-none"
-            )}>
-                <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-semibold text-gray-900 dark:text-white">Rotation Properties</h3>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6"
-                        onClick={() => setShowProperties(false)}
-                    >
-                        <X className="h-4 w-4" />
-                    </Button>
-                </div>
-
-                {/* Page Info */}
-                <div className="mb-4 p-3 bg-gray-100 dark:bg-gray-700 rounded-lg">
-                    <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                        <div>Total Pages: {numPages}</div>
-                        <div>Selected Pages: {selectedPages.size}</div>
-                        <div>Current Page: {currentPage}</div>
-                        <div>Rotation Angle: {rotationAngle}°</div>
-                    </div>
-                </div>
-
-                {/* Rotation Options */}
-                <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Rotation Options</label>
-                    <div className="grid grid-cols-2 gap-2">
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => rotateSelected("ccw")}
-                            disabled={selectedPages.size === 0}
-                            className="h-10"
-                        >
-                            <RotateCcw className="h-4 w-4 mr-2" />
-                            Rotate Selected Left
-                        </Button>
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => rotateSelected("cw")}
-                            disabled={selectedPages.size === 0}
-                            className="h-10"
-                        >
-                            <RotateCw className="h-4 w-4 mr-2" />
-                            Rotate Selected Right
-                        </Button>
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => rotateAll("ccw")}
-                            className="h-10"
-                        >
-                            <RotateCcw className="h-4 w-4 mr-2" />
-                            Rotate All Left
-                        </Button>
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => rotateAll("cw")}
-                            className="h-10"
-                        >
-                            <RotateCw className="h-4 w-4 mr-2" />
-                            Rotate All Right
-                        </Button>
-                    </div>
-                </div>
-
-                {/* Reset Option */}
-                <div className="mb-4">
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={resetRotations}
-                        className="w-full"
-                    >
-                        <RefreshCw className="h-4 w-4 mr-2" />
-                        Reset All Rotations
-                    </Button>
-                </div>
-
-                {/* Selection Options */}
-                <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Selection Options</label>
-                    <div className="grid grid-cols-2 gap-2">
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                                const allSelected = new Set<number>();
-                                for (let i = 0; i < numPages; i++) {
-                                    allSelected.add(i);
-                                }
-                                setSelectedPages(allSelected);
-                            }}
-                            className="h-10"
-                        >
-                            {selectedPages.size === numPages ? "Deselect All" : "Select All"}
-                        </Button>
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                                const odd = new Set<number>();
-                                for (let i = 0; i < numPages; i += 2) {
-                                    odd.add(i);
-                                }
-                                setSelectedPages(odd);
-                            }}
-                            className="h-10"
-                        >
-                            Select Odd Pages
-                        </Button>
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                                const even = new Set<number>();
-                                for (let i = 1; i < numPages; i += 2) {
-                                    even.add(i);
-                                }
-                                setSelectedPages(even);
-                            }}
-                            className="h-10"
-                        >
-                            Select Even Pages
-                        </Button>
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setSelectedPages(new Set())}
-                            className="h-10"
-                        >
-                            Deselect All
-                        </Button>
-                    </div>
-                </div>
-            </div>
-
-            {/* Main Canvas Area */}
-            <div
-                ref={scrollContainerRef}
-                className="flex-1 bg-gray-50 dark:bg-gray-900 overflow-auto p-8 relative"
-            >
-                <div className="flex flex-col items-center">
-                    {viewMode === 'grid' ? (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                            {pages.map((page, index) => (
-                                <div
-                                    key={page.id}
-                                    className={cn(
-                                        "relative group cursor-pointer transition-all duration-200",
-                                        selectedPages.has(page.originalIndex) && "ring-2 ring-blue-500 ring-offset-2"
-                                    )}
-                                    onClick={() => toggleSelection(page.originalIndex)}
-                                    style={{
-                                        transform: `scale(${zoom / 100}) rotate(${page.rotation}deg)`
-                                    }}
-                                >
-                                    <div className="relative aspect-3/4 w-full overflow-hidden rounded-lg shadow-md bg-white">
-                                        {/* Page Thumbnail */}
-                                        <div className="relative h-full w-full">
-                                            {loadingThumbnails ? (
-                                                <div className="flex h-full w-full items-center justify-center bg-gray-100 text-gray-500 text-sm">
-                                                    Loading...
-                                                </div>
-                                            ) : thumbnails[index] ? (
-                                                <img
-                                                    src={thumbnails[index]}
-                                                    alt={`Page ${index + 1}`}
-                                                    className="h-full w-full object-contain"
-                                                />
-                                            ) : (
-                                                <div className="flex h-full w-full items-center justify-center bg-gray-100 text-gray-500 text-sm">
-                                                    Page {index + 1}
-                                                </div>
-                                            )}
-
-                                            {/* Page Number */}
-                                            {showPageNumbers && (
-                                                <div className="absolute bottom-2 right-2 bg-gray-800 bg-opacity-70 text-white px-2 py-1 rounded text-xs">
-                                                    {index + 1}
-                                                </div>
-                                            )}
-
-                                            {/* Selection Indicator */}
-                                            {selectedPages.has(page.originalIndex) && (
-                                                <div className="absolute top-2 right-2 bg-blue-500 text-white p-1 rounded-full">
-                                                    <CheckSquare className="h-3 w-3" />
-                                                </div>
-                                            )}
-
-                                            {/* Rotation Indicator */}
-                                            {page.rotation !== 0 && (
-                                                <div className="absolute top-2 left-2 bg-gray-800 bg-opacity-70 text-white p-1 rounded-full">
-                                                    <RotateCw className="h-3 w-3" style={{ transform: `rotate(${page.rotation}deg)` }} />
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    {/* Page Info */}
-                                    <div className="mt-2 text-center">
-                                        <div className="text-sm font-medium">
-                                            Page {page.originalIndex + 1}
-                                        </div>
-                                        <div className="text-xs text-gray-500">
-                                            Rotation: {page.rotation}°
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="w-full max-w-2xl space-y-4">
-                            {pages.map((page, index) => (
-                                <div
-                                    key={page.id}
-                                    className={cn(
-                                        "flex items-center p-4 bg-white dark:bg-gray-800 rounded-lg shadow-md cursor-pointer transition-all duration-200",
-                                        selectedPages.has(page.originalIndex) && "ring-2 ring-blue-500 ring-offset-2"
-                                    )}
-                                    onClick={() => toggleSelection(page.originalIndex)}
-                                    style={{
-                                        transform: `scale(${zoom / 100}) rotate(${page.rotation}deg)`
-                                    }}
-                                >
-                                    {/* Page Thumbnail */}
-                                    <div className="flex-1 relative h-32 w-48 overflow-hidden rounded border border-gray-200 dark:border-gray-700">
-                                        {loadingThumbnails ? (
-                                            <div className="flex h-full w-full items-center justify-center bg-gray-100 text-gray-500 text-sm">
-                                                Loading...
-                                            </div>
-                                        ) : thumbnails[index] ? (
-                                            <img
-                                                src={thumbnails[index]}
-                                                alt={`Page ${index + 1}`}
-                                                className="h-full w-full object-contain"
-                                            />
-                                        ) : (
-                                            <div className="flex h-full w-full items-center justify-center bg-gray-100 text-gray-500 text-sm">
-                                                Page {index + 1}
-                                            </div>
-                                        )}
-
-                                        {/* Page Number */}
-                                        {showPageNumbers && (
-                                            <div className="absolute bottom-2 right-2 bg-gray-800 bg-opacity-70 text-white px-2 py-1 rounded text-xs">
-                                                {index + 1}
-                                            </div>
-                                        )}
-
-                                        {/* Selection Indicator */}
-                                        {selectedPages.has(page.originalIndex) && (
-                                            <div className="absolute top-2 right-2 bg-blue-500 text-white p-1 rounded-full">
-                                                <CheckSquare className="h-3 w-3" />
-                                            </div>
-                                        )}
-
-                                        {/* Rotation Indicator */}
-                                        {page.rotation !== 0 && (
-                                            <div className="absolute top-2 left-2 bg-gray-800 bg-opacity-70 text-white p-1 rounded-full">
-                                                <RotateCw className="h-3 w-3" style={{ transform: `rotate(${page.rotation}deg)` }} />
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {/* Page Info */}
-                                    <div className="ml-4 flex-1">
-                                        <div className="text-sm font-medium">
-                                            Page {page.originalIndex + 1}
-                                        </div>
-                                        <div className="text-xs text-gray-500">
-                                            Rotation: {page.rotation}°
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
-            </div>
-
-            {/* Settings Panel */}
-            <div className="fixed bottom-4 left-4 z-40">
-                <div className="flex items-center gap-2 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-2">
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => setShowToolbar(!showToolbar)}
-                        title={showToolbar ? "Hide Toolbar" : "Show Toolbar"}
-                    >
-                        <Settings className="h-4 w-4" />
-                    </Button>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => setShowProperties(!showProperties)}
-                        title={showProperties ? "Hide Properties" : "Show Properties"}
-                    >
-                        <Sliders className="h-4 w-4" />
-                    </Button>
-                    <div className="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-1" />
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => setDarkMode(!darkMode)}
-                        title={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
-                    >
-                        {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-                    </Button>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => {
-                            if (deviceView === 'desktop') setDeviceView('tablet');
-                            else if (deviceView === 'tablet') setDeviceView('mobile');
-                            else setDeviceView('desktop');
-                        }}
-                        title={`View Mode: ${deviceView}`}
-                    >
-                        {deviceView === 'desktop' && <Monitor className="h-4 w-4" />}
-                        {deviceView === 'tablet' && <Tablet className="h-4 w-4" />}
-                        {deviceView === 'mobile' && <Smartphone className="h-4 w-4" />}
-                    </Button>
-                </div>
-            </div>
-
-            {/* Help Button */}
-            <div className="fixed bottom-4 right-4 z-40">
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-10 w-10 rounded-full bg-white dark:bg-gray-800 shadow-lg border border-gray-200 dark:border-gray-700"
-                    onClick={() => {
-                        toast.show({
-                            title: "Rotate PDF Help",
-                            message: "Select pages to rotate individually or use the rotation options to rotate all pages. Adjust the rotation angle for precise control.",
-                            variant: "default",
-                            position: "top-right",
-                        });
-                    }}
-                    title="Help"
-                >
-                    <HelpCircle className="h-5 w-5" />
-                </Button>
             </div>
         </div>
     );

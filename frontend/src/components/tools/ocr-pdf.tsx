@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import FileUploadHero from "../ui/file-upload-hero"; // Hero uploader (big CTA, full-page drag overlay)
+import FileUploadHero from "../ui/file-upload-hero";
 import { Button } from "../ui/button";
-import { Search, FileText, Download, Loader2, RefreshCw, Copy, Check } from "lucide-react";
+import { Download, Settings, Plus, Check } from "lucide-react";
 import { saveAs } from "file-saver";
 import { cn } from "@/lib/utils";
 import { pdfStrategyManager } from "@/lib/services/pdf-service";
+import { toast } from "@/lib/hooks/use-toast";
 
 const LANGUAGES = [
     { code: "eng", name: "English" },
@@ -23,57 +24,73 @@ const LANGUAGES = [
 export function OcrPdfTool() {
     const [files, setFiles] = useState<File[]>([]);
     const [isProcessing, setIsProcessing] = useState(false);
-    const [progress, setProgress] = useState(0);
-    const [status, setStatus] = useState("");
-    const [resultText, setResultText] = useState("");
+    const [activeView, setActiveView] = useState<"file" | "page">("file");
+    const [outputType, setOutputType] = useState<"searchable" | "text">("searchable");
     const [selectedLang, setSelectedLang] = useState("eng");
-    const [copied, setCopied] = useState(false);
+    const [cleanUp, setCleanUp] = useState(false);
 
     const handleFilesSelected = (newFiles: File[]) => {
         setFiles((prev) => [...prev, ...newFiles]);
-        setResultText("");
-        setProgress(0);
+    };
+
+    const removeFile = (index: number) => {
+        setFiles(files.filter((_, i) => i !== index));
+    };
+
+    const clearAll = () => {
+        setFiles([]);
+    };
+
+    const formatFileSize = (bytes: number) => {
+        if (bytes < 1024) return bytes + " B";
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+        return (bytes / (1024 * 1024)).toFixed(1) + " MB";
     };
 
     const processOcr = async () => {
         if (files.length === 0) return;
         setIsProcessing(true);
-        setResultText("");
-        setProgress(0);
 
         try {
             const result = await pdfStrategyManager.execute('ocr', files, {
                 lang: selectedLang,
+                outputType: outputType,
+                cleanUp: cleanUp,
                 onProgress: (m: any) => {
                     if (m.status === 'recognizing text') {
-                        setProgress(Math.round(m.progress * 100));
-                        setStatus(`Recognizing text... ${Math.round(m.progress * 100)}%`);
-                    } else {
-                        setStatus(m.status);
+                        toast.show({
+                            title: "Processing",
+                            message: `Recognizing text... ${Math.round(m.progress * 100)}%`,
+                            variant: "default",
+                            position: "top-right",
+                        });
                     }
                 }
             });
 
-            const text = await result.blob.text();
-            setResultText(text);
-            setStatus("Completed!");
-        } catch (error) {
+            const fileName = outputType === "searchable"
+                ? `ocr-${files[0].name.replace(/\.[^/.]+$/, "")}.pdf`
+                : `ocr-${files[0].name.replace(/\.[^/.]+$/, "")}.txt`;
+
+            saveAs(result.blob, fileName);
+
+            toast.show({
+                title: "Success",
+                message: "OCR processing completed successfully!",
+                variant: "success",
+                position: "top-right",
+            });
+        } catch (error: any) {
             console.error("OCR Error:", error);
-            setStatus("Error occurred during OCR processing.");
+            toast.show({
+                title: "Error",
+                message: error.message || "Failed to process OCR. Please try again.",
+                variant: "error",
+                position: "top-right",
+            });
         } finally {
             setIsProcessing(false);
         }
-    };
-
-    const downloadText = () => {
-        const blob = new Blob([resultText], { type: "text/plain;charset=utf-8" });
-        saveAs(blob, `ocr-result-${files[0].name}.txt`);
-    };
-
-    const copyToClipboard = () => {
-        navigator.clipboard.writeText(resultText);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
     };
 
     if (files.length === 0) {
@@ -82,7 +99,7 @@ export function OcrPdfTool() {
                 <FileUploadHero
                     title="OCR PDF"
                     onFilesSelected={handleFilesSelected}
-                    maxFiles={1}
+                    maxFiles={10}
                     accept={{ "application/pdf": [".pdf"], "image/png": [".png"], "image/jpeg": [".jpg", ".jpeg"] }}
                 />
             </div>
@@ -90,97 +107,250 @@ export function OcrPdfTool() {
     }
 
     return (
-        <div className="space-y-8">
-            <div className="flex items-center justify-between rounded-xl border bg-card p-6 shadow-sm">
-                <div className="flex items-center gap-4">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                        <FileText className="h-6 w-6" />
-                    </div>
-                    <div>
-                        <h2 className="text-lg font-semibold">{files[0].name}</h2>
-                        <p className="text-sm text-muted-foreground">
-                            {(files[0].size / 1024 / 1024).toFixed(2)} MB
-                        </p>
-                    </div>
-                </div>
-                <Button variant="ghost" size="icon" onClick={() => setFiles([])}>
-                    <RefreshCw className="h-5 w-5" />
-                </Button>
-            </div>
-
-            {!resultText && (
-                <div className="flex flex-col items-center justify-center space-y-8 py-8">
-                    {!isProcessing && (
-                        <div className="w-full max-w-md space-y-4">
-                            <label className="text-sm font-medium text-muted-foreground">Select Document Language</label>
-                            <div className="grid grid-cols-3 gap-2">
-                                {LANGUAGES.map((lang) => (
+        <div className="bg-[#f6f7f8] min-h-screen pb-8">
+            <div className="max-w-[1800px] mx-auto px-4 py-4">
+                <div className="flex flex-col lg:flex-row gap-6">
+                    {/* Left Column - Files Grid */}
+                    <div className="flex-1 lg:max-w-[calc(100%-448px)]">
+                        {/* Top Toolbar */}
+                        <div className="bg-white rounded-xl border border-gray-200 shadow-sm mb-6 p-4">
+                            <div className="flex items-center justify-between">
+                                {/* View Tabs */}
+                                <div className="flex gap-1 bg-gray-100 p-1 rounded-lg">
                                     <button
-                                        key={lang.code}
-                                        onClick={() => setSelectedLang(lang.code)}
+                                        onClick={() => setActiveView("file")}
                                         className={cn(
-                                            "flex items-center justify-center rounded-md border px-3 py-2 text-sm transition-all hover:bg-accent hover:text-accent-foreground",
-                                            selectedLang === lang.code
-                                                ? "border-primary bg-primary/5 ring-1 ring-primary"
-                                                : "bg-background"
+                                            "px-4 py-2 rounded-md text-sm font-medium transition-colors",
+                                            activeView === "file"
+                                                ? "bg-white text-gray-900 shadow-sm"
+                                                : "text-gray-600 hover:text-gray-900"
                                         )}
                                     >
-                                        {lang.name}
+                                        File View
                                     </button>
-                                ))}
+                                    <button
+                                        onClick={() => setActiveView("page")}
+                                        className={cn(
+                                            "px-4 py-2 rounded-md text-sm font-medium transition-colors",
+                                            activeView === "page"
+                                                ? "bg-white text-gray-900 shadow-sm"
+                                                : "text-gray-600 hover:text-gray-900"
+                                        )}
+                                    >
+                                        Page View
+                                    </button>
+                                </div>
+
+                                {/* Actions */}
+                                <div className="flex items-center gap-3">
+                                    <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                                        <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                                        </svg>
+                                    </button>
+                                    <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                                        <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                                        </svg>
+                                    </button>
+                                    <button
+                                        onClick={clearAll}
+                                        className="px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                                    >
+                                        Clear All
+                                    </button>
+                                </div>
                             </div>
                         </div>
-                    )}
 
-                    {isProcessing ? (
-                        <div className="w-full max-w-md space-y-4 text-center">
-                            <Loader2 className="mx-auto h-10 w-10 animate-spin text-primary" />
-                            <p className="text-lg font-medium">{status}</p>
-                            <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
-                                <div 
-                                    className="h-full bg-primary transition-all duration-300" 
-                                    style={{ width: `${progress}%` }}
+                        {/* Files Grid */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                            {files.map((file, index) => (
+                                <div
+                                    key={index}
+                                    className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden hover:shadow-md transition-shadow"
+                                >
+                                    {/* File Preview */}
+                                    <div className="relative bg-gray-100 h-48 flex items-center justify-center">
+                                        <div className="absolute top-2 left-2 bg-gray-800 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
+                                            {index + 1}
+                                        </div>
+                                        <svg className="w-16 h-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                        </svg>
+                                    </div>
+                                    {/* File Info */}
+                                    <div className="p-3">
+                                        <h3 className="text-sm font-medium text-gray-900 truncate" title={file.name}>
+                                            {file.name}
+                                        </h3>
+                                        <p className="text-xs text-gray-500 mt-1">
+                                            {formatFileSize(file.size)}
+                                        </p>
+                                    </div>
+                                </div>
+                            ))}
+
+                            {/* Add More Files Card */}
+                            <label className="bg-white rounded-xl border-2 border-dashed border-blue-300 hover:border-blue-500 cursor-pointer overflow-hidden group transition-colors">
+                                <input
+                                    type="file"
+                                    multiple
+                                    accept=".pdf,.png,.jpg,.jpeg"
+                                    onChange={(e) => {
+                                        if (e.target.files) {
+                                            handleFilesSelected(Array.from(e.target.files));
+                                        }
+                                    }}
+                                    className="hidden"
                                 />
-                            </div>
+                                <div className="h-48 flex flex-col items-center justify-center text-blue-600 group-hover:text-blue-700">
+                                    <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center mb-3">
+                                        <Plus className="w-6 h-6" />
+                                    </div>
+                                    <p className="text-sm font-medium">Add more files</p>
+                                    <p className="text-xs text-gray-500 mt-1">or drag & drop here</p>
+                                </div>
+                            </label>
                         </div>
-                    ) : (
-                        <Button
-                            size="lg"
-                            onClick={processOcr}
-                            className="h-14 min-w-[200px] text-lg shadow-lg transition-all hover:scale-105"
-                        >
-                            Start OCR <Search className="ml-2 h-5 w-5" />
-                        </Button>
-                    )}
-                </div>
-            )}
+                    </div>
 
-            {resultText && (
-                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                    <div className="rounded-xl border bg-card p-6 shadow-sm">
-                        <div className="mb-4 flex items-center justify-between">
-                            <h3 className="text-lg font-semibold">Extracted Text</h3>
-                            <div className="flex gap-2">
-                                <Button onClick={copyToClipboard} variant="outline" size="sm">
-                                    {copied ? <Check className="mr-2 h-4 w-4" /> : <Copy className="mr-2 h-4 w-4" />}
-                                    {copied ? "Copied" : "Copy"}
-                                </Button>
-                                <Button onClick={downloadText} variant="outline" size="sm">
-                                    <Download className="mr-2 h-4 w-4" /> Download Text
-                                </Button>
+                    {/* Right Sidebar - Sticky Full Height Card */}
+                    <div className="hidden lg:block w-[424px] fixed right-4 top-24 bottom-4 z-10">
+                        <div className="bg-white rounded-3xl border border-gray-200 p-6 shadow-xl h-full flex flex-col">
+                            {/* Header */}
+                            <div className="flex items-center justify-between mb-6 flex-shrink-0">
+                                <div>
+                                    <h2 className="text-lg font-bold text-gray-900">Configuration</h2>
+                                </div>
+                                <button className="p-2 hover:bg-gray-100 rounded-lg">
+                                    <Settings className="w-5 h-5 text-gray-600" />
+                                </button>
+                            </div>
+
+                            {/* Scrollable Content */}
+                            <div className="flex-1 overflow-y-auto pr-2 mb-6">
+                                {/* Output Type Section */}
+                                <div className="mb-6">
+                                    <label className="text-sm font-medium text-gray-700 block mb-3">How do you want it?</label>
+
+                                    {/* Searchable PDF Option */}
+                                    <div
+                                        onClick={() => setOutputType("searchable")}
+                                        className={cn(
+                                            "border-2 rounded-xl p-4 mb-3 cursor-pointer transition-all",
+                                            outputType === "searchable"
+                                                ? "border-blue-500 bg-blue-50"
+                                                : "border-gray-200 hover:border-gray-300"
+                                        )}
+                                    >
+                                        <div className="flex items-start justify-between">
+                                            <div className="flex-1">
+                                                <h3 className="text-sm font-semibold text-gray-900 mb-1">Searchable PDF</h3>
+                                                <p className="text-xs text-gray-600">Image over text. Keeps formatting.</p>
+                                            </div>
+                                            {outputType === "searchable" && (
+                                                <div className="w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0 ml-2">
+                                                    <Check className="w-3 h-3 text-white" />
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Pure Text Option */}
+                                    <div
+                                        onClick={() => setOutputType("text")}
+                                        className={cn(
+                                            "border-2 rounded-xl p-4 cursor-pointer transition-all",
+                                            outputType === "text"
+                                                ? "border-blue-500 bg-blue-50"
+                                                : "border-gray-200 hover:border-gray-300"
+                                        )}
+                                    >
+                                        <div className="flex items-start justify-between">
+                                            <div className="flex-1">
+                                                <h3 className="text-sm font-semibold text-gray-900 mb-1">Pure Text (.txt)</h3>
+                                                <p className="text-xs text-gray-600">Just the raw words. No styling.</p>
+                                            </div>
+                                            {outputType === "text" && (
+                                                <div className="w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0 ml-2">
+                                                    <Check className="w-3 h-3 text-white" />
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Document Language */}
+                                <div className="mb-6">
+                                    <label className="text-sm font-medium text-gray-700 block mb-2">Document Language</label>
+                                    <select
+                                        value={selectedLang}
+                                        onChange={(e) => setSelectedLang(e.target.value)}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white appearance-none"
+                                        style={{
+                                            backgroundImage: `url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%23666' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`,
+                                            backgroundRepeat: 'no-repeat',
+                                            backgroundPosition: 'right 12px center',
+                                            paddingRight: '36px'
+                                        }}
+                                    >
+                                        {LANGUAGES.map((lang) => (
+                                            <option key={lang.code} value={lang.code}>
+                                                {lang.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                {/* Clean up Toggle */}
+                                <div className="mb-8">
+                                    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                                        <div>
+                                            <h3 className="text-sm font-medium text-gray-900">Clean up?</h3>
+                                            <p className="text-xs text-gray-500">Auto-rotate & deskew pages</p>
+                                        </div>
+                                        <button
+                                            onClick={() => setCleanUp(!cleanUp)}
+                                            className={cn(
+                                                "w-11 h-6 rounded-full transition-colors relative",
+                                                cleanUp ? "bg-blue-600" : "bg-gray-300"
+                                            )}
+                                        >
+                                            <div className={cn(
+                                                "w-4 h-4 bg-white rounded-full shadow-sm absolute top-1 transition-transform",
+                                                cleanUp ? "left-6" : "left-1"
+                                            )} />
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Download Button - Fixed at bottom */}
+                            <div className="mt-auto pt-4 flex-shrink-0">
+                                <button
+                                    onClick={processOcr}
+                                    disabled={isProcessing || files.length === 0}
+                                    className="w-full h-14 bg-blue-600 hover:bg-blue-700 text-white font-bold text-lg rounded-xl flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-lg shadow-blue-500/20 mb-3"
+                                >
+                                    <Download className="h-5 w-5" />
+                                    {isProcessing ? "Processing..." : "Download Document"}
+                                </button>
+
+                                {/* Footer */}
+                                <div className="text-center text-xs text-gray-500">
+                                    Don't worry, we didn't make you dizzy.
+                                </div>
                             </div>
                         </div>
-                        <div className="max-h-[500px] overflow-y-auto rounded-lg border bg-muted/30 p-4 font-mono text-sm whitespace-pre-wrap">
-                            {resultText}
-                        </div>
-                    </div>
-                    <div className="flex justify-center">
-                        <Button onClick={() => setFiles([])} variant="outline">
-                            Process Another File
-                        </Button>
                     </div>
                 </div>
-            )}
+
+                {/* Footer Copyright */}
+                <div className="text-center text-xs text-gray-500 mt-8">
+                    © 2023 I❤️Blue PDF. All rights reserved.
+                </div>
+            </div>
         </div>
     );
 }

@@ -120,9 +120,9 @@ export const pdfApi = {
         // Backend only - no client fallback to avoid PDF.js version mismatch
         try {
             const blob = await api.pdfToWord(file, options?.useOcr, options?.language);
-            return { 
-                blob, 
-                fileName: file.name.replace(/\.[^/.]+$/, "") + ".docx" 
+            return {
+                blob,
+                fileName: file.name.replace(/\.[^/.]+$/, "") + ".docx"
             };
         } catch (error: any) {
             console.error("PDF to Word conversion failed:", error);
@@ -350,14 +350,21 @@ export const pdfApi = {
         return processor.execute("ocr", files, options || {});
     },
 
-    organize: async (file: File, options: any): Promise<ProcessingResult> => {
+    organize: async (files: File[], options: any): Promise<ProcessingResult> => {
+        // If we have multiple files, we MUST use the client-side processor because
+        // the backend API (api.organizePdf) currently only supports a single storage file reference.
+        if (files.length > 1) {
+            const processor = await getClientProcessor();
+            return processor.execute("organize", files, options);
+        }
+
         return withFallback(
-            () => api.organizePdf(file, options.pages || []),
+            () => api.organizePdf(files[0], options.pages || []),
             async () => {
                 const processor = await getClientProcessor();
-                return processor.execute("organize", [file], options);
+                return processor.execute("organize", files, options);
             },
-            `organized-${file.name}`
+            `organized-document.pdf`
         );
     },
 
