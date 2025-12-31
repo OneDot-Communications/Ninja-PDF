@@ -6,6 +6,7 @@ export default function PowerPointToPdfPage() {
         <ToolShell
             title="PowerPoint to PDF"
             description="Make PPT and PPTX slideshows easy to view by converting them to PDF."
+            variant="editor"
         >
             <PowerPointToPdfTool />
         </ToolShell>

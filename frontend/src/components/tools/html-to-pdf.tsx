@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { FileUpload } from "../ui/file-upload";
+import FileUploadHero from "../ui/file-upload-hero"; // Hero uploader (big CTA, full-page drag overlay)
 import { Button } from "../ui/button";
 import { ArrowRight, Globe, Settings, Layout, Code, FileCode } from "lucide-react";
 import jsPDF from "jspdf";
@@ -76,13 +76,15 @@ export function HtmlToPdfTool() {
             </div>
 
             {!file && !htmlContent && (
-                <div className="mx-auto max-w-2xl mb-8">
-                    <FileUpload
-                        onFilesSelected={handleFileSelected}
-                        maxFiles={1}
-                        accept={{ "text/html": [".html"] }}
-                        description="Drop an HTML file here, or type code below"
-                    />
+                <div className="mb-8">
+                    <div className="min-h-[calc(100vh-120px)] flex items-center justify-center">
+                        <FileUploadHero
+                            title="HTML to PDF"
+                            onFilesSelected={handleFileSelected}
+                            maxFiles={1}
+                            accept={{ "text/html": [".html"] }}
+                        />
+                    </div>
                 </div>
             )}
 

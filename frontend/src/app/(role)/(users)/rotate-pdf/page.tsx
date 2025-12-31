@@ -11,6 +11,7 @@ export default function RotatePdfPage() {
         <ToolShell
             title="Rotate PDF"
             description="Rotate your PDFs the way you need them. You can even rotate multiple PDFs at once!"
+            variant="editor"
         >
             <RotatePdfTool />
         </ToolShell>

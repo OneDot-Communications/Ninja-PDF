@@ -11,6 +11,7 @@ export default function HtmlToPdfPage() {
         <ToolShell
             title="HTML to PDF"
             description="Convert webpages in HTML to PDF."
+            variant="editor"
         >
             <HtmlToPdfTool />
         </ToolShell>

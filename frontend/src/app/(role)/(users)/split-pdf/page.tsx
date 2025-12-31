@@ -11,6 +11,7 @@ export default function SplitPdfPage() {
         <ToolShell
             title="Split PDF"
             description="Separate one page or a whole set for easy conversion into independent PDF files."
+            variant="editor"
         >
             <SplitPdfTool />
         </ToolShell>

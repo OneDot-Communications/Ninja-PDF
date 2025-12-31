@@ -589,8 +589,7 @@ export function HomeView({
                             {/* Brand Column */}
                             <div className="col-span-1 md:col-span-1">
                                 <Link href="/" className="flex items-center mb-6">
-                                    <img src="/logo.svg" alt="18+ PDF" className="h-12 w-auto" />
-                                    <span className="text-slate-800 font-bold font-caveat text-3xl">PDF</span>
+                                    <img src="/pages/auth/18+logo.png" alt="18+ PDF" className="h-20 w-auto" />
                                 </Link>
                                 <p className="text-slate-500 mb-6 leading-relaxed">
                                     Just finish work, and chill. No tension.

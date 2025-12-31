@@ -6,6 +6,7 @@ export default function OcrPdfPage() {
         <ToolShell
             title="OCR PDF"
             description="Easily convert scanned PDF into searchable and selectable documents."
+            variant="editor"
         >
             <OcrPdfTool />
         </ToolShell>

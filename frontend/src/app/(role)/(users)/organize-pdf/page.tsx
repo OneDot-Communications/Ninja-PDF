@@ -11,6 +11,7 @@ export default function OrganizePdfPage() {
         <ToolShell
             title="Organize PDF"
             description="Sort pages of your PDF file however you like. Delete PDF pages or add PDF pages to your document at your convenience."
+            variant="editor"
         >
             <OrganizePdfTool />
         </ToolShell>

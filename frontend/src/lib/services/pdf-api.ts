@@ -116,7 +116,19 @@ export const pdfApi = {
     // ─────────────────────────────────────────────────────────────────────────────
     // PDF TO OTHER FORMATS
     // ─────────────────────────────────────────────────────────────────────────────
-    pdfToWord: createStandardConverter(api.pdfToWord, "pdf-to-word", ".docx"),
+    pdfToWord: async (file: File, options?: { useOcr?: boolean; language?: string }): Promise<ProcessingResult> => {
+        // Backend only - no client fallback to avoid PDF.js version mismatch
+        try {
+            const blob = await api.pdfToWord(file, options?.useOcr, options?.language);
+            return { 
+                blob, 
+                fileName: file.name.replace(/\.[^/.]+$/, "") + ".docx" 
+            };
+        } catch (error: any) {
+            console.error("PDF to Word conversion failed:", error);
+            throw new Error(error.message || "Failed to convert PDF to Word");
+        }
+    },
     pdfToExcel: createStandardConverter(api.pdfToExcel, "pdf-to-excel", ".xlsx"),
     pdfToPowerpoint: createStandardConverter(api.pdfToPowerpoint, "pdf-to-powerpoint", ".pptx"),
 
@@ -261,6 +273,30 @@ export const pdfApi = {
             },
             `split-${file.name}`
         );
+    },
+
+    getPagePreviews: async (file: File): Promise<{ previews: Array<{ pageNumber: number; image: string; width: number; height: number }>; totalPages: number }> => {
+        try {
+            // Try backend API first
+            return await api.getPdfPagePreviews(file);
+        } catch (backendError: any) {
+            // If Quota Limit reached, DO NOT fallback to client side
+            if (backendError.message && backendError.message.includes("QUOTA_EXCEEDED")) {
+                throw backendError;
+            }
+
+            console.warn("Backend API failed, falling back to client-side:", backendError);
+
+            try {
+                // Fallback to client-side processing
+                const processor = await getClientProcessor();
+                const result = await processor.execute("getPagePreviews", [file], {});
+                return result as any;
+            } catch (clientError) {
+                console.error("Both backend and client-side processing failed:", clientError);
+                throw new Error("Failed to get page previews. Please try again later.");
+            }
+        }
     },
 
     rotate: async (file: File, options: any): Promise<ProcessingResult> => {

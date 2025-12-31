@@ -12,6 +12,7 @@ export default function MetadataCleanerPage() {
         <ToolShell
             title="Metadata Cleaner"
             description="Remove hidden metadata and personal information from your PDF files."
+            variant="editor"
         >
             <MetadataCleanerTool />
         </ToolShell>

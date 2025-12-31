@@ -161,14 +161,12 @@ export function SignPdfTool() {
 
     if (!file) {
         return (
-            <div className="mx-auto max-w-2xl">
-                <FileUpload
-                    onFilesSelected={handleFileSelected}
-                    maxFiles={1}
-                    accept={{ "application/pdf": [".pdf"] }}
-                    description="Drop a PDF file here to sign it"
-                />
-            </div>
+            <FileUpload
+                onFilesSelected={handleFileSelected}
+                maxFiles={1}
+                accept={{ "application/pdf": [".pdf"] }}
+                description="Drop a PDF file here to sign it"
+            />
         );
     }
 

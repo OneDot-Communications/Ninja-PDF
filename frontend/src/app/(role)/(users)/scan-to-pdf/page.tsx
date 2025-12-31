@@ -6,6 +6,7 @@ export default function ScanToPdfPage() {
         <ToolShell
             title="Scan to PDF"
             description="Capture document scans from your mobile device and send them instantly to your browser."
+            variant="editor"
         >
             <ScanToPdfTool />
         </ToolShell>

@@ -367,7 +367,16 @@ export const api = {
   pdfToJpg: (file: File) => uploadFile("/api/tools/pdf-to-jpg/", file),
   pdfToExcel: (file: File) => uploadFile("/api/tools/pdf-to-excel/", file),
   pdfToPowerpoint: (file: File) => uploadFile("/api/tools/pdf-to-powerpoint/", file),
-  pdfToWord: (file: File) => uploadFile("/api/tools/pdf-to-word/", file),
+  pdfToWord: (file: File, useOcr?: boolean, language?: string) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    if (useOcr !== undefined) formData.append("use_ocr", String(useOcr));
+    if (language) formData.append("language", language);
+    return fetch(`${getBaseUrl()}/api/tools/pdf-to-word/`, { method: "POST", body: formData, credentials: "include" }).then(async res => {
+      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || "Conversion failed");
+      return res.blob();
+    });
+  },
   pdfToPdfa: (file: File) => uploadFile("/api/tools/pdf-to-pdfa/", file),
   pdfToHtml: (file: File) => uploadFile("/api/tools/pdf-to-html/", file),
 
@@ -390,6 +399,14 @@ export const api = {
     return fetch(`${getBaseUrl()}/api/tools/split/`, { method: "POST", body: formData, credentials: "include" }).then(async res => {
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || "Split failed");
       return res.blob();
+    });
+  },
+  getPdfPagePreviews: (file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return fetch(`${getBaseUrl()}/api/tools/page-previews/`, { method: "POST", body: formData, credentials: "include" }).then(async res => {
+      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || "Failed to get page previews");
+      return res.json();
     });
   },
   organizePdf: (file: File, pages: any[]) => {

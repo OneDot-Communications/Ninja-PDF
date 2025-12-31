@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { saveAs } from "file-saver";
-import { FileUpload } from "../ui/file-upload";
+import FileUploadHero from "../ui/file-upload-hero"; // Hero uploader (big CTA, full-page drag overlay)
 import { Button } from "../ui/button";
 import { Lock, ShieldCheck, Eye, EyeOff } from "lucide-react";
 import { pdfApi } from "@/lib/services/pdf-api";
@@ -78,12 +78,12 @@ export function ProtectPdfTool() {
 
     if (!file) {
         return (
-            <div className="mx-auto max-w-2xl">
-                <FileUpload
+            <div className="min-h-[calc(100vh-120px)] flex items-center justify-center">
+                <FileUploadHero
+                    title="Protect PDF"
                     onFilesSelected={handleFileSelected}
                     maxFiles={1}
                     accept={{ "application/pdf": [".pdf"] }}
-                    description="Drop a PDF file here to protect it"
                 />
             </div>
         );
