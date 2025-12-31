@@ -7,11 +7,13 @@ import Image from "next/image";
 
 export const FileUploadHero = ({
   title = "Upload Files",
+  description = "Drag & drop PDF files here",
   onFilesSelected,
   accept = { "application/pdf": [".pdf"] },
   maxFiles = 20,
 }: {
   title?: string;
+  description?: string;
   onFilesSelected?: (files: File[]) => void;
   accept?: Record<string, string[]>;
   maxFiles?: number;
@@ -37,7 +39,7 @@ export const FileUploadHero = ({
         if (types && Array.from(types).includes('Files')) {
           setPageDragActive(true);
         }
-      } catch (_err) {}
+      } catch (_err) { }
     };
 
     const onWindowDragLeave = (e: any) => {
@@ -136,11 +138,11 @@ export const FileUploadHero = ({
               >
                 <img src="/merge/link.png" alt="From link" className="w-4 h-4 md:w-5 md:h-5 object-contain" />
               </button>
-            </div> 
+            </div>
           </div>
 
           {/* Prominent subtitle and helper text - styled to #585858 */}
-          <p className="mt-6 md:mt-8 text-xl md:text-2xl lg:text-3xl font-extrabold text-[#585858]">Drag &amp; drop PDF files here</p>
+          <p className="mt-6 md:mt-8 text-xl md:text-2xl lg:text-3xl font-extrabold text-[#585858]">{description}</p>
           <div className="text-sm md:text-base text-slate-400 mt-2">or click to select from your local drive</div>
 
           {/* Drag state hint (subtle) */}

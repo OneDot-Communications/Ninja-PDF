@@ -77,12 +77,7 @@ export function Header() {
                 {/* Desktop Actions */}
                 <div className="hidden md:flex items-center gap-2">
                     {/* Show skeleton until mounted to prevent hydration mismatch */}
-                    {!mounted ? (
-                        <div className="flex items-center gap-2">
-                            <Skeleton className="h-10 w-16 rounded-lg" />
-                            <Skeleton className="h-10 w-20 rounded-lg" />
-                        </div>
-                    ) : isLoading && !user ? (
+                    {!mounted || (isLoading && !user) ? (
                         <div className="flex items-center gap-2">
                             <Skeleton className="h-10 w-16 rounded-lg" />
                             <Skeleton className="h-10 w-20 rounded-lg" />

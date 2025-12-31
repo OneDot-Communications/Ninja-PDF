@@ -127,139 +127,140 @@ const LoginPage = () => {
                 transition={{ duration: 0.4 }}
                 className="w-full"
             >
-                    {/* Sign Up Link (Top Right) */}
-                    <div className="text-right mb-6">
-                        <span className="text-[#000000] font-['Poppins',sans-serif] text-base">
-                            No Account ?{" "}
-                        </span>
-                        <Link href="/signup" className="text-[#000000] font-['Poppins',sans-serif] text-base font-semibold hover:underline">
-                            Sign up
-                        </Link>
-                    </div>
+                {/* Sign Up Link (Top Right) */}
+                <div className="text-right mb-6">
+                    <span className="text-[#000000] font-['Poppins',sans-serif] text-base">
+                        No Account ?{" "}
+                    </span>
+                    <Link href="/signup" className="text-[#000000] font-['Poppins',sans-serif] text-base font-semibold hover:underline">
+                        Sign up
+                    </Link>
+                </div>
 
-                    {/* Logo */}
-                    <div className="mb-6 flex justify-center">
-                        <Image
-                            src="/pages/auth/18+christmas_logo.png"
-                            alt="Logo"
-                            width={120}
-                            height={60}
-                            className="object-contain"
+                {/* Logo */}
+                <div className="mb-6 flex justify-center">
+                    <Image
+                        src="/pages/auth/18+christmas_logo.png"
+                        alt="Logo"
+                        width={120}
+                        height={60}
+                        className="object-contain"
+                    />
+                </div>
+
+                {/* Greeting */}
+                <div className="mb-8">
+                    <p className="text-[#000000] font-['Poppins',sans-serif] text-xl mb-2 text-center">
+                        <span className="font-normal">Hey Honey</span>
+                        <br />
+                        <span className="font-normal">Welcome back!</span>
+                    </p>
+                </div>
+
+                {/* Sign in Title */}
+                <h1 className="text-[rgba(0,0,0,0.71)] text-left font-['Poppins',sans-serif] text-[32px] font-medium mb-8">
+                    Sign in
+                </h1>
+
+                {error && (
+                    <div className="mb-4 rounded-lg bg-red-50 border border-red-200 p-3 text-red-700 text-sm">
+                        {error}
+                    </div>
+                )}
+                <form onSubmit={handleSubmit} className="space-y-6">
+                    {/* Email Field */}
+                    <div className="space-y-2">
+                        <label htmlFor="email" className="text-[#000000] font-['Poppins',sans-serif] text-base font-normal">
+                            Enter your email address
+                        </label>
+                        <input
+                            type="email"
+                            id="email"
+                            required
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            className="bg-[#ffffff] rounded-[9px] border-solid border-[#01b0f1] border w-full h-[49px] px-5 text-[#000000] font-['Poppins',sans-serif] text-sm placeholder:text-[#808080] placeholder:font-['Poppins',sans-serif] placeholder:font-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#01b0f1] focus-visible:ring-offset-0"
+                            placeholder="Email address"
                         />
                     </div>
 
-                    {/* Greeting */}
-                    <div className="mb-8">
-                        <p className="text-[#000000] font-['Poppins',sans-serif] text-xl mb-2 text-center">
-                            <span className="font-normal">Hey Honey</span>
-                            <br />
-                            <span className="font-normal">Welcome back!</span>
-                        </p>
-                    </div>
-
-                    {/* Sign in Title */}
-                    <h1 className="text-[rgba(0,0,0,0.71)] text-left font-['Poppins',sans-serif] text-[32px] font-medium mb-8">
-                        Sign in
-                    </h1>
-
-                    {error && (
-                        <div className="mb-4 rounded-lg bg-red-50 border border-red-200 p-3 text-red-700 text-sm">
-                            {error}
-                        </div>
-                    )}
-                    <form onSubmit={handleSubmit} className="space-y-6">
-                        {/* Email Field */}
-                        <div className="space-y-2">
-                            <label htmlFor="email" className="text-[#000000] font-['Poppins',sans-serif] text-base font-normal">
-                                Enter your email address
-                            </label>
+                    {/* Password Field */}
+                    <div className="space-y-2">
+                        <label htmlFor="password" className="text-[#000000] font-['Poppins',sans-serif] text-base font-normal">
+                            Enter your Password
+                        </label>
+                        <div className="relative">
                             <input
-                                type="email"
-                                id="email"
+                                type="password"
+                                id="password"
                                 required
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
                                 className="bg-[#ffffff] rounded-[9px] border-solid border-[#01b0f1] border w-full h-[49px] px-5 text-[#000000] font-['Poppins',sans-serif] text-sm placeholder:text-[#808080] placeholder:font-['Poppins',sans-serif] placeholder:font-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#01b0f1] focus-visible:ring-offset-0"
-                                placeholder="Email address"
+                                placeholder="Password"
                             />
                         </div>
+                    </div>
 
-                        {/* Password Field */}
-                        <div className="space-y-2">
-                            <label htmlFor="password" className="text-[#000000] font-['Poppins',sans-serif] text-base font-normal">
-                                Enter your Password
+                    {/* Remember Me & Forgot Password */}
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <input
+                                type="checkbox"
+                                id="remember"
+                                className="rounded border-[#cfd9e0] border w-4 h-4 text-[#01b0f1] focus:ring-[#01b0f1]"
+                            />
+                            <label htmlFor="remember" className="text-[#718096] font-['Poppins',sans-serif] text-[13px] font-normal">
+                                Remember me
                             </label>
-                            <div className="relative">
-                                <input
-                                    type="password"
-                                    id="password"
-                                    required
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    className="bg-[#ffffff] rounded-[9px] border-solid border-[#01b0f1] border w-full h-[49px] px-5 text-[#000000] font-['Poppins',sans-serif] text-sm placeholder:text-[#808080] placeholder:font-['Poppins',sans-serif] placeholder:font-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#01b0f1] focus-visible:ring-offset-0"
-                                    placeholder="Password"
-                                />
-                            </div>
                         </div>
+                        <Link href="/forgot-password" className="text-[#226db4] font-['Poppins',sans-serif] text-[13px] font-normal hover:underline">
+                            Forgot Password
+                        </Link>
+                    </div>
 
-                        {/* Remember Me & Forgot Password */}
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <input
-                                    type="checkbox"
-                                    id="remember"
-                                    className="rounded border-[#cfd9e0] border w-4 h-4 text-[#01b0f1] focus:ring-[#01b0f1]"
-                                />
-                                <label htmlFor="remember" className="text-[#718096] font-['Poppins',sans-serif] text-[13px] font-normal">
-                                    Remember me
-                                </label>
-                            </div>
-                            <Link href="/forgot-password" className="text-[#226db4] font-['Poppins',sans-serif] text-[13px] font-normal hover:underline">
-                                Forgot Password
-                            </Link>
-                        </div>
+                    {/* Sign In Button */}
+                    <button
+                        type="submit"
+                        disabled={loading}
+                        className="bg-[#226db4] rounded-[10px] w-full h-[46.49px] shadow-[0px_4px_19px_0px_rgba(119,147,65,0.3)] text-[#ffffff] font-['Poppins',sans-serif] text-base font-medium hover:bg-[#1a5690] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        {loading ? "Signing in..." : "Sign in"}
+                    </button>
+                </form>
 
-                        {/* Sign In Button */}
+                {requires2fa && (
+                    <form onSubmit={handleSubmitOtp} className="mt-6 space-y-4">
+                        <div className="mb-2 text-sm text-yellow-700 bg-yellow-50 border border-yellow-200 p-3 rounded-lg">Two-factor authentication is required for this account. Enter your authentication token below.</div>
+                        {cooldown && (
+                            <div className="mb-2 text-sm text-red-700 bg-red-50 border border-red-200 p-3 rounded-lg">Too many attempts. Please wait {(Math.ceil(((cooldown || 0) - Date.now()) / 1000))}s before retrying.</div>
+                        )}
+                        <label htmlFor="otp" className="text-[#000000] font-['Poppins',sans-serif] text-base font-normal">Two-factor token</label>
+                        <input
+                            id="otp"
+                            inputMode="numeric"
+                            pattern="[0-9]*"
+                            value={otpToken}
+                            onChange={(e) => setOtpToken(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                            className="bg-[#ffffff] rounded-[9px] border-solid border-[#01b0f1] border w-full h-[49px] px-5 text-[#000000] font-['Poppins',sans-serif] text-sm placeholder:text-[#808080] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#01b0f1]"
+                            placeholder="123456"
+                            maxLength={6}
+                        />
                         <button
                             type="submit"
-                            disabled={loading}
-                            className="bg-[#226db4] rounded-[10px] w-full h-[46.49px] shadow-[0px_4px_19px_0px_rgba(119,147,65,0.3)] text-[#ffffff] font-['Poppins',sans-serif] text-base font-medium hover:bg-[#1a5690] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="bg-[#226db4] rounded-[10px] w-full h-[46.49px] shadow-[0px_4px_19px_0px_rgba(119,147,65,0.3)] text-[#ffffff] font-['Poppins',sans-serif] text-base font-medium hover:bg-[#1a5690] transition-colors"
                         >
-                            {loading ? "Signing in..." : "Sign in"}
+                            Verify 2FA
                         </button>
                     </form>
+                )}
 
-                    {requires2fa && (
-                        <form onSubmit={handleSubmitOtp} className="mt-6 space-y-4">
-                            <div className="mb-2 text-sm text-yellow-700 bg-yellow-50 border border-yellow-200 p-3 rounded-lg">Two-factor authentication is required for this account. Enter your authentication token below.</div>
-                            {cooldown && (
-                                <div className="mb-2 text-sm text-red-700 bg-red-50 border border-red-200 p-3 rounded-lg">Too many attempts. Please wait {(Math.ceil(((cooldown || 0) - Date.now()) / 1000))}s before retrying.</div>
-                            )}
-                            <label htmlFor="otp" className="text-[#000000] font-['Poppins',sans-serif] text-base font-normal">Two-factor token</label>
-                            <input
-                                id="otp"
-                                inputMode="numeric"
-                                pattern="[0-9]*"
-                                value={otpToken}
-                                onChange={(e) => setOtpToken(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                                className="bg-[#ffffff] rounded-[9px] border-solid border-[#01b0f1] border w-full h-[49px] px-5 text-[#000000] font-['Poppins',sans-serif] text-sm placeholder:text-[#808080] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#01b0f1]"
-                                placeholder="123456"
-                                maxLength={6}
-                            />
-                            <button
-                                type="submit"
-                                className="bg-[#226db4] rounded-[10px] w-full h-[46.49px] shadow-[0px_4px_19px_0px_rgba(119,147,65,0.3)] text-[#ffffff] font-['Poppins',sans-serif] text-base font-medium hover:bg-[#1a5690] transition-colors"
-                            >
-                                Verify 2FA
-                            </button>
-                        </form>
-                    )}
-
-                    {/* Google Sign In Button */}
-                    <div className="mt-6">
+                {/* Google Sign In Button */}
+                {/* Google Sign In Button */}
+                {/* <div className="mt-6">
                         <GoogleLoginButton />
-                    </div>
-                </motion.div>
+                    </div> */}
+            </motion.div>
         </div>
     );
 };

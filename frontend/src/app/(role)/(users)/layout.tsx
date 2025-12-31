@@ -39,7 +39,7 @@ export default function UserDashboardLayout({
     const protectedPrefixes = ['/profile', '/files', '/settings', '/api-keys', '/dashboard', '/team', '/billing', '/trash'];
     const isProtected = pathname ? protectedPrefixes.some(prefix => pathname.startsWith(prefix)) : false;
 
-    if (loading || (isProtected && !authorized)) {
+    if (isProtected && (loading || !authorized)) {
         return (
             <div className="flex h-screen items-center justify-center bg-slate-50">
                 <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
