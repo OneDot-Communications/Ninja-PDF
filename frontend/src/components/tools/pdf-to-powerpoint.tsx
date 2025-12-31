@@ -305,8 +305,8 @@ export function PdfToPowerPointTool() {
                     </div>
 
                     {/* Right Sidebar - Export Settings */}
-                    <div className="lg:w-[424px] lg:fixed lg:right-4 lg:top-24">
-                        <div className="bg-white rounded-3xl border border-[#e2e8f0] p-6 shadow-xl">
+                    <div className="lg:w-[424px] lg:fixed lg:right-4 lg:top-24 lg:h-[calc(100vh-120px)]">
+                        <div className="bg-white rounded-3xl border border-[#e2e8f0] p-6 shadow-xl h-full flex flex-col">
                             {/* Header */}
                             <div className="flex items-center justify-between mb-6">
                                 <h2 className="text-[#0f172a] font-bold text-lg">Export Settings</h2>
@@ -314,7 +314,7 @@ export function PdfToPowerPointTool() {
                             </div>
 
                             {/* Conversion Mode Summary */}
-                            <div className="mb-6">
+                            <div className="mb-6 flex-1 overflow-y-auto">
                                 <h3 className="text-[#94a3b8] text-xs font-bold tracking-wider uppercase mb-4">
                                     Conversion Mode
                                 </h3>
@@ -390,7 +390,7 @@ export function PdfToPowerPointTool() {
                             <button
                                 onClick={convertToPptx}
                                 disabled={isProcessing || uploadedFiles.length === 0}
-                                className="w-full bg-[#136dec] hover:bg-blue-700 text-white rounded-xl h-[60px] flex items-center justify-center gap-3 font-bold text-lg shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all mb-4"
+                                className="mt-auto w-full bg-[#136dec] hover:bg-blue-700 text-white rounded-xl h-[60px] flex items-center justify-center gap-3 font-bold text-lg shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all mb-4"
                             >
                                 <span>
                                     {isProcessing

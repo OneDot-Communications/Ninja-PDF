@@ -1,72 +1,53 @@
 "use client";
 
-import { useState, useRef } from "react";
-import FileUploadHero from "../ui/file-upload-hero"; // Hero uploader (big CTA, full-page drag overlay)
-import { Button } from "../ui/button";
-import { ArrowRight, FileText, Settings, Layout, Type } from "lucide-react";
-import mammoth from "mammoth";
-import jsPDF from "jspdf";
+import { useState } from "react";
+import { ConversionLayout } from "./shared/conversion-layout";
+import { pdfApi } from "@/lib/services/pdf-api";
 import { saveAs } from "file-saver";
 import { toast } from "@/app/client-layout";
 import { useRouter } from "next/navigation";
-import { pdfApi } from "@/lib/services/pdf-api";
 
 export function WordToPdfTool() {
     const router = useRouter();
-    const [file, setFile] = useState<File | null>(null);
+    const [files, setFiles] = useState<File[]>([]);
     const [isProcessing, setIsProcessing] = useState(false);
-    const [htmlContent, setHtmlContent] = useState<string | null>(null);
-    const previewRef = useRef<HTMLDivElement>(null);
+    const [options, setOptions] = useState({
+        orientation: "portrait" as "portrait" | "landscape",
+        margin: "normal" as "small" | "normal" | "big",
+        pdfa: false
+    });
 
-    // Options
-    const [pageSize, setPageSize] = useState<"a4" | "letter">("a4");
-    const [margin, setMargin] = useState<"small" | "medium" | "large">("medium");
-    const [fontSize, setFontSize] = useState<"small" | "medium" | "large">("medium");
-
-    const handleFileSelected = async (files: File[]) => {
-        if (files.length > 0) {
-            const selectedFile = files[0];
-            setFile(selectedFile);
-
-            try {
-                const arrayBuffer = await selectedFile.arrayBuffer();
-                const result = await mammoth.convertToHtml({ arrayBuffer });
-                setHtmlContent(result.value);
-            } catch (error) {
-                console.error("Error reading Word file:", error);
-                toast.show({
-                    title: "Error reading file",
-                    message: "Failed to read the Word file. Please try another.",
-                    variant: "error",
-                    position: "bottom-right"
-                });
-            }
-        }
+    const handleFilesSelected = (newFiles: File[]) => {
+        setFiles((prev) => [...prev, ...newFiles]);
     };
 
-    const convertToPdf = async () => {
-        if (!file) return;
+    const handleRemoveFile = (index: number) => {
+        setFiles((prev) => prev.filter((_, i) => i !== index));
+    };
+
+    const handleClearAll = () => {
+        setFiles([]);
+    };
+
+    const convert = async () => {
+        if (files.length === 0) return;
         setIsProcessing(true);
 
         try {
-            // Backend-first with client-side fallback
-            const result = await pdfApi.wordToPdf(file);
-            saveAs(result.blob, result.fileName);
+            for (const file of files) {
+                const result = await pdfApi.wordToPdf(file, options);
+                saveAs(result.blob, result.fileName);
+            }
 
             toast.show({
                 title: "Success",
-                message: "File converted successfully!",
+                message: "Files converted successfully!",
                 variant: "success",
                 position: "bottom-right"
             });
 
-            // Clear the file after successful conversion to return to upload page
-            setFile(null);
-            setHtmlContent(null);
-
         } catch (error: any) {
-            console.error("Error converting to PDF:", error);
-
+            console.error("Conversion Error:", error);
             if (error.message && error.message.includes("QUOTA_EXCEEDED")) {
                 toast.show({
                     title: "Limit Reached",
@@ -81,7 +62,7 @@ export function WordToPdfTool() {
             } else {
                 toast.show({
                     title: "Conversion Failed",
-                    message: "Failed to convert file. Please try again.",
+                    message: "Failed to convert Word to PDF.",
                     variant: "error",
                     position: "bottom-right"
                 });
@@ -91,129 +72,18 @@ export function WordToPdfTool() {
         }
     };
 
-    if (!file) {
-        return (
-            <div className="min-h-[calc(100vh-120px)] flex items-center justify-center">
-                <FileUploadHero
-                    title="Word to PDF"
-                    onFilesSelected={handleFileSelected}
-                    maxFiles={1}
-                    accept={{ "application/msword": [".doc"], "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"] }}
-                />
-            </div>
-        );
-    }
-
     return (
-        <div className="space-y-8">
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                <div>
-                    <h2 className="text-2xl font-bold">{file.name}</h2>
-                </div>
-                <div className="flex gap-4">
-                    <Button variant="outline" onClick={() => { setFile(null); setHtmlContent(null); }}>
-                        Change File
-                    </Button>
-                </div>
-            </div>
-
-            <div className="grid gap-8 md:grid-cols-3">
-                <div className="space-y-6 rounded-xl border bg-card p-6 h-fit">
-                    <h3 className="font-semibold flex items-center gap-2">
-                        <Settings className="h-5 w-5" /> PDF Settings
-                    </h3>
-
-                    <div>
-                        <label className="mb-2 block text-xs font-medium text-muted-foreground">Page Size</label>
-                        <div className="flex gap-2">
-                            {["a4", "letter"].map((s) => (
-                                <Button
-                                    key={s}
-                                    variant={pageSize === s ? "default" : "outline"}
-                                    size="sm"
-                                    onClick={() => setPageSize(s as any)}
-                                    className="flex-1 capitalize"
-                                >
-                                    {s}
-                                </Button>
-                            ))}
-                        </div>
-                    </div>
-
-                    <div>
-                        <label className="mb-2 block text-xs font-medium text-muted-foreground">Margins</label>
-                        <div className="flex gap-2">
-                            {["small", "medium", "large"].map((m) => (
-                                <Button
-                                    key={m}
-                                    variant={margin === m ? "default" : "outline"}
-                                    size="sm"
-                                    onClick={() => setMargin(m as any)}
-                                    className="flex-1 capitalize"
-                                >
-                                    {m}
-                                </Button>
-                            ))}
-                        </div>
-                    </div>
-
-                    <div>
-                        <label className="mb-2 block text-xs font-medium text-muted-foreground">Font Size (Preview)</label>
-                        <div className="flex gap-2">
-                            {["small", "medium", "large"].map((f) => (
-                                <Button
-                                    key={f}
-                                    variant={fontSize === f ? "default" : "outline"}
-                                    size="sm"
-                                    onClick={() => setFontSize(f as any)}
-                                    className="flex-1 capitalize"
-                                >
-                                    {f}
-                                </Button>
-                            ))}
-                        </div>
-                    </div>
-
-                    <div className="pt-4">
-                        <p className="text-xs text-muted-foreground mb-4">
-                            Note: Client-side conversion is best for simple documents. Complex layouts may vary.
-                        </p>
-                        <Button
-                            size="lg"
-                            onClick={convertToPdf}
-                            disabled={isProcessing || !htmlContent}
-                            className="w-full"
-                        >
-                            {isProcessing ? "Processing..." : "Convert to PDF"}
-                        </Button>
-                    </div>
-                </div>
-
-                <div className="md:col-span-2 space-y-4">
-                    <h3 className="text-lg font-semibold flex items-center gap-2">
-                        <Layout className="h-5 w-5" /> Preview
-                    </h3>
-                    <div className="rounded-xl border bg-muted/30 p-4 min-h-[500px] overflow-auto flex justify-center">
-                        {htmlContent ? (
-                            <div
-                                ref={previewRef}
-                                className={`bg-white shadow-lg p-8 ${fontSize === "small" ? "prose-sm" : fontSize === "large" ? "prose-lg" : "prose"
-                                    } max-w-none`}
-                                style={{
-                                    width: "100%",
-                                    maxWidth: "650px", // Approximate A4 width for screen
-                                    minHeight: "800px"
-                                }}
-                                dangerouslySetInnerHTML={{ __html: htmlContent }}
-                            />
-                        ) : (
-                            <div className="flex h-full items-center justify-center text-muted-foreground">
-                                Loading preview...
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </div>
-        </div>
+        <ConversionLayout
+            toolName="Word to PDF"
+            files={files}
+            onFilesSelected={handleFilesSelected}
+            onRemoveFile={handleRemoveFile}
+            onClearAll={handleClearAll}
+            onConvert={convert}
+            isProcessing={isProcessing}
+            accept={{ "application/msword": [".doc"], "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"] }}
+            options={options}
+            setOptions={setOptions}
+        />
     );
 }

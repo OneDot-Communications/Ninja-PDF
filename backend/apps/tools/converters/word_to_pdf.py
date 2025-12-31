@@ -47,3 +47,38 @@ def convert(input_path: str, output_path: str, **parameters) -> dict:
     except Exception as e:
         logger.error(f"Word to PDF failed: {e}")
         return {'success': False, 'message': str(e)}
+
+
+def convert_word_to_pdf(file) -> bytes:
+    """
+    Convert Word document to PDF (API wrapper).
+    
+    Args:
+        file: Django UploadedFile or file-like object
+    
+    Returns:
+        PDF bytes
+    """
+    try:
+        content = file.read()
+        
+        # Determine format from filename
+        filename = getattr(file, 'name', 'input.docx')
+        ext = filename.rsplit('.', 1)[-1].lower()
+        if ext not in ('docx', 'doc', 'odt', 'rtf'):
+            ext = 'docx'
+        
+        # Try LibreOffice first
+        try:
+            from apps.tools.converters.office_converter import LibreOfficeConverter
+            return LibreOfficeConverter.convert_to_pdf(content, ext)
+        except (subprocess.TimeoutExpired, FileNotFoundError) as e:
+            # LibreOffice not available, use Python fallback
+            logger.warning(f"LibreOffice conversion failed, using Python fallback: {e}")
+            from apps.tools.converters.python_office_converter import convert_word_to_pdf_python
+            file.seek(0)  # Reset file pointer
+            return convert_word_to_pdf_python(file)
+            
+    except Exception as e:
+        logger.error(f"Word to PDF conversion failed: {e}")
+        raise
