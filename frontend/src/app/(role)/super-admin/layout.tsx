@@ -43,8 +43,8 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
                 <SharedSidebar type="SUPER_ADMIN" className="w-72 hidden md:block fixed top-16 left-0 bottom-0 z-20" />
 
                 {/* Main content on the right, offset by sidebar width */}
-                <main className="flex-1 md:ml-72 p-8 overflow-y-auto">
-                    <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+                <main className="flex-1 md:ml-72 px-12 py-12 overflow-y-auto">
+                    <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
                         {children}
                     </div>
                 </main>
