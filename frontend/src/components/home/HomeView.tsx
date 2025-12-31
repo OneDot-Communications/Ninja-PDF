@@ -8,7 +8,7 @@ import {
 import Link from "next/link";
 import { Button } from "../ui/button"; // Adjusted import path
 import { GlowCard } from "@/components/home/spotlight-card";
-import { motion, useScroll, useTransform, useInView, useSpring } from "framer-motion";
+import { motion, useInView } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useRef, useState } from "react";
 import { useTools } from "@/lib/hooks/useTools";
@@ -42,7 +42,6 @@ const ScrollReveal = ({
             animate={isInView ? { opacity: 1, x: 0, y: 0 } : {}}
             transition={{ duration: 0.5, delay, ease: "easeOut" }}
             className={className}
-            style={{ willChange: "transform, opacity" }}
         >
             {children}
         </motion.div>
@@ -89,7 +88,6 @@ const StaggerItem = ({ children, className = "" }: { children: React.ReactNode; 
             }
         }}
         className={className}
-        style={{ willChange: "transform, opacity" }}
     >
         {children}
     </motion.div>
@@ -98,17 +96,16 @@ const StaggerItem = ({ children, className = "" }: { children: React.ReactNode; 
 // Scale on scroll component - optimized with spring
 const ScaleOnScroll = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => {
     const ref = useRef(null);
-    const { scrollYProgress } = useScroll({
-        target: ref,
-        offset: ["start end", "center center"]
-    });
-
-    const smoothProgress = useSpring(scrollYProgress, { stiffness: 100, damping: 30, restDelta: 0.001 });
-    const scale = useTransform(smoothProgress, [0, 1], [0.9, 1]);
-    const opacity = useTransform(smoothProgress, [0, 0.3], [0, 1]);
+    const isInView = useInView(ref, { once: true, amount: 0.3 });
 
     return (
-        <motion.div ref={ref} style={{ scale, opacity, willChange: "transform, opacity" }} className={className}>
+        <motion.div
+            ref={ref}
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={isInView ? { scale: 1, opacity: 1 } : {}}
+            transition={{ duration: 0.6, ease: "easeOut" }}
+            className={className}
+        >
             {children}
         </motion.div>
     );
@@ -349,34 +346,22 @@ export function HomeView({
     // Filter out internal/admin tools (Category 'Other') and then slice
     const dashboardTools = tools.filter(t => t.category !== "Other").slice(0, 30);
     const heroRef = useRef(null);
-    const { scrollYProgress } = useScroll();
     const [showCompetitors, setShowCompetitors] = useState(false);
-
-    // Smooth scroll progress for better performance
-    const smoothScrollProgress = useSpring(scrollYProgress, { stiffness: 100, damping: 30, restDelta: 0.001 });
 
     // Effective highlight settings (can be controlled from super-admin)
     const effectiveHighlightHeight = typeof highlightHeight === 'number' ? highlightHeight : 1.05; // em
     const highlightFill = primaryColor || '#AEEBFF';
     const highlightShadow = primaryColor || '#01B0F1';
 
-    // Hero parallax effects - optimized with smoother values
-    const heroY = useTransform(smoothScrollProgress, [0, 0.3], [0, -100]);
-    const heroOpacity = useTransform(smoothScrollProgress, [0, 0.15], [1, 0]);
-    const heroScale = useTransform(smoothScrollProgress, [0, 0.15], [1, 0.98]);
-
     return (
-        <div className="flex min-h-screen flex-col bg-white font-sans text-slate-900 overflow-x-hidden">
+        <div className="flex min-h-screen flex-col bg-white font-sans text-slate-900">
             <Header /> {/* Note: Header might need props too if it displays platform name */}
 
             <main className="flex-1">
                 {/* Hero Section - Centered Layout */}
                 <section ref={heroRef} className="relative pt-4 pb-4 md:pt-6 md:pb-6 overflow-visible">
 
-                    <motion.div
-                        className="container px-4 mx-auto relative z-10"
-                        style={{ y: heroY, opacity: heroOpacity, willChange: "transform, opacity" }}
-                    >
+                    <div className="container px-4 mx-auto relative z-10">
                         {loading ? (
                             <HeroSkeleton />
                         ) : (
@@ -481,7 +466,7 @@ export function HomeView({
                                 </div>
                             </>
                         )}
-                    </motion.div>
+                    </div>
                 </section>
 
                 {/* App Grid Section - Clean Card Layout */}
