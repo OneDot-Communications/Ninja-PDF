@@ -18,6 +18,7 @@ from apps.tools.api.views import (
     # Optimization
     MergePDFView,
     SplitPDFView,
+    PDFPagePreviewsView,
     CompressPDFView,
     OrganizePDFView,
     FlattenPDFView,
@@ -57,6 +58,7 @@ urlpatterns = [
     # ─────────────────────────────────────────────────────────────────────────
     path('merge/', MergePDFView.as_view(), name='merge-pdf'),
     path('split/', SplitPDFView.as_view(), name='split-pdf'),
+    path('page-previews/', PDFPagePreviewsView.as_view(), name='pdf-page-previews'),
     path('compress-pdf/', CompressPDFView.as_view(), name='compress-pdf'),
     path('organize/', OrganizePDFView.as_view(), name='organize-pdf'),
     path('flatten/', FlattenPDFView.as_view(), name='flatten-pdf'),

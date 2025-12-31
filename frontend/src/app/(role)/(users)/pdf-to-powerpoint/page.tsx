@@ -6,6 +6,7 @@ export default function PdfToPowerPointPage() {
         <ToolShell
             title="PDF to PowerPoint"
             description="Turn your PDF files into easy to edit PPT and PPTX slideshows."
+            variant="editor"
         >
             <PdfToPowerPointTool />
         </ToolShell>

@@ -11,6 +11,7 @@ export default function RepairPdfPage() {
         <ToolShell
             title="Repair PDF"
             description="Repair a damaged PDF and recover data from corrupt PDF."
+            variant="editor"
         >
             <RepairPdfTool />
         </ToolShell>

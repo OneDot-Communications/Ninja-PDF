@@ -12,6 +12,7 @@ export default function MergePdfPage() {
             toolCode="merge-pdf"
             defaultTitle="Merge PDF"
             defaultDescription="Combine PDFs in the order you want with the easiest PDF merger available."
+            toolVariant="editor" // use editor layout to hide footer for a cleaner upload experience
         >
             <MergePdfTool />
         </DynamicToolShell>

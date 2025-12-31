@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { saveAs } from "file-saver";
-import { FileUpload } from "../ui/file-upload";
+import FileUploadHero from "../ui/file-upload-hero"; // Hero uploader (big CTA, full-page drag overlay)
 import { Button } from "../ui/button";
 import { 
     FileText, 
@@ -516,12 +516,14 @@ export function MetadataCleanerTool() {
                     </div>
                     <h1 className="text-2xl font-bold text-center mb-2 text-gray-900 dark:text-white">Clean PDF Metadata</h1>
                     <p className="text-center text-gray-600 dark:text-gray-400 mb-6">Upload a PDF to clean metadata</p>
-                    <FileUpload
-                        onFilesSelected={handleFileSelected}
-                        maxFiles={1}
-                        accept={{ "application/pdf": [".pdf"] }}
-                        description="Drop a PDF file here or click to browse"
-                    />
+                    <div className="min-h-[320px] flex items-center justify-center">
+                        <FileUploadHero
+                            title="Metadata Cleaner"
+                            onFilesSelected={handleFileSelected}
+                            maxFiles={1}
+                            accept={{ "application/pdf": [".pdf"] }}
+                        />
+                    </div>
                     <div className="mt-6 text-center">
                         <p className="text-sm text-gray-500 dark:text-gray-400">
                             Remove sensitive information from PDF metadata

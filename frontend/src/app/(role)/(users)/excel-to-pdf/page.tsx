@@ -6,6 +6,7 @@ export default function ExcelToPdfPage() {
         <ToolShell
             title="Excel to PDF"
             description="Make EXCEL spreadsheets easy to read by converting them to PDF."
+            variant="editor"
         >
             <ExcelToPdfTool />
         </ToolShell>

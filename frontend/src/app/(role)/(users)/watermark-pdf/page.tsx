@@ -11,6 +11,7 @@ export default function WatermarkPdfPage() {
         <ToolShell
             title="Watermark PDF"
             description="Stamp an image or text over your PDF in seconds. Choose the typography, transparency and position."
+            variant="editor"
         >
             <WatermarkPdfTool />
         </ToolShell>

@@ -11,6 +11,7 @@ export default function CompressPdfPage() {
         <ToolShell
             title="Compress PDF"
             description="Reduce file size while optimizing for maximal PDF quality."
+            variant="editor"
         >
             <CompressPdfTool />
         </ToolShell>

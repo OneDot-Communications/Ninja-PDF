@@ -6,6 +6,7 @@ export default function PdfToExcelPage() {
         <ToolShell
             title="PDF to Excel"
             description="Pull data straight from PDFs into Excel spreadsheets in a few short seconds."
+            variant="editor"
         >
             <PdfToExcelTool />
         </ToolShell>

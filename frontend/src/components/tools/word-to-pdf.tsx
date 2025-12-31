@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { FileUpload } from "../ui/file-upload";
+import FileUploadHero from "../ui/file-upload-hero"; // Hero uploader (big CTA, full-page drag overlay)
 import { Button } from "../ui/button";
 import { ArrowRight, FileText, Settings, Layout, Type } from "lucide-react";
 import mammoth from "mammoth";
@@ -93,12 +93,12 @@ export function WordToPdfTool() {
 
     if (!file) {
         return (
-            <div className="mx-auto max-w-2xl">
-                <FileUpload
+            <div className="min-h-[calc(100vh-120px)] flex items-center justify-center">
+                <FileUploadHero
+                    title="Word to PDF"
                     onFilesSelected={handleFileSelected}
                     maxFiles={1}
                     accept={{ "application/msword": [".doc"], "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"] }}
-                    description="Drop a Word file (.doc or .docx) here to convert it to PDF"
                 />
             </div>
         );

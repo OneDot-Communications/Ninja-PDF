@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { FileUpload } from "../ui/file-upload";
+import FileUploadHero from "../ui/file-upload-hero"; // Hero uploader (big CTA, full-page drag overlay)
 import { Button } from "../ui/button";
 import { ArrowRight, Presentation, Loader2, RefreshCw, Settings, LayoutTemplate } from "lucide-react";
 import JSZip from "jszip";
@@ -70,11 +70,11 @@ export function PowerPointToPdfTool() {
     if (files.length === 0) {
         return (
             <div className="mx-auto max-w-2xl">
-                <FileUpload
+                <FileUploadHero
+                    title="PowerPoint to PDF"
                     onFilesSelected={handleFilesSelected}
                     maxFiles={1}
                     accept={{ "application/vnd.openxmlformats-officedocument.presentationml.presentation": [".pptx"], "application/vnd.ms-powerpoint": [".ppt"] }}
-                    description="Drop PowerPoint file here to convert to PDF"
                 />
             </div>
         );

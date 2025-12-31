@@ -11,6 +11,7 @@ export default function UnlockPdfPage() {
         <ToolShell
             title="Unlock PDF"
             description="Remove PDF password security, giving you the freedom to use your PDFs as you want."
+            variant="editor"
         >
             <UnlockPdfTool />
         </ToolShell>

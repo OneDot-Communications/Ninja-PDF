@@ -557,7 +557,7 @@ class MergePDFView(PDFToolAPIView):
     
     def post(self, request):
         # Usage Check
-        allowed, error_response = check_usage_limit(request.user, 'MERGE_PDF')
+        allowed, error_response = check_usage_limit(request, 'MERGE_PDF')
         if not allowed:
             return error_response
 
@@ -639,6 +639,50 @@ class SplitPDFView(PDFToolAPIView):
                 response = HttpResponse(zip_buffer.read(), content_type='application/zip')
                 response['Content-Disposition'] = 'attachment; filename="split_pages.zip"'
                 return response
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class PDFPagePreviewsView(PDFToolAPIView):
+    """Generate page previews for PDF files."""
+    
+    def post(self, request):
+        file, error = self.get_file_from_request(request)
+        if error:
+            return error
+        
+        try:
+            import fitz
+            import base64
+            
+            doc = fitz.open(stream=file.read(), filetype="pdf")
+            total_pages = len(doc)
+            
+            previews = []
+            for page_num in range(total_pages):
+                page = doc.load_page(page_num)
+                
+                # Render page to image at higher quality for sharper previews
+                pix = page.get_pixmap(matrix=fitz.Matrix(2.0, 2.0))  # 2.0x scaling for high quality
+                img_bytes = pix.tobytes("png")  # Use PNG for lossless quality
+
+                # Convert to base64
+                img_base64 = base64.b64encode(img_bytes).decode('utf-8')
+
+                previews.append({
+                    'pageNumber': page_num + 1,
+                    'image': f'data:image/png;base64,{img_base64}',
+                    'width': pix.width,
+                    'height': pix.height
+                })
+            
+            doc.close()
+            
+            return Response({
+                'previews': previews,
+                'totalPages': total_pages
+            })
+            
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 

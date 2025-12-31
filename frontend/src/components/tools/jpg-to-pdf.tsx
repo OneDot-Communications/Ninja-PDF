@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { saveAs } from "file-saver";
-import { FileUpload } from "../ui/file-upload";
+import { FileUpload } from "../ui/file-upload"; // compact uploader used for 'Add more'
+import FileUploadHero from "../ui/file-upload-hero"; // Hero uploader (big CTA, full-page drag overlay)
 import { Button } from "../ui/button";
 import { ArrowRight, Trash2, Settings } from "lucide-react";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
@@ -83,12 +84,12 @@ export function JpgToPdfTool() {
 
     if (files.length === 0) {
         return (
-            <div className="mx-auto max-w-2xl">
-                <FileUpload
+            <div className="min-h-[calc(100vh-120px)] flex items-center justify-center">
+                <FileUploadHero
+                    title="JPG to PDF"
                     onFilesSelected={handleFilesSelected}
                     accept={{ "image/jpeg": [".jpg", ".jpeg"], "image/png": [".png"], "image/gif": [".gif"], "image/webp": [".webp"], "image/bmp": [".bmp"] }}
                     maxFiles={50}
-                    description="Drop JPG, PNG, GIF, WEBP or BMP images here"
                 />
             </div>
         );

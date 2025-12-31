@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { saveAs } from "file-saver";
-import { FileUpload } from "../ui/file-upload";
+import FileUploadHero from "../ui/file-upload-hero"; // Hero uploader (big CTA, full-page drag overlay)
 import { Button } from "../ui/button";
 import { Wrench, AlertTriangle, CheckCircle, FileText, Eye, RefreshCw } from "lucide-react";
 import { pdfStrategyManager } from "@/lib/services/pdf-service";
@@ -74,12 +74,12 @@ export function RepairPdfTool() {
 
     if (!file) {
         return (
-            <div className="mx-auto max-w-2xl">
-                <FileUpload
+            <div className="min-h-[calc(100vh-120px)] flex items-center justify-center">
+                <FileUploadHero
+                    title="Repair PDF"
                     onFilesSelected={handleFileSelected}
                     maxFiles={1}
                     accept={{ "application/pdf": [".pdf"] }}
-                    description="Drop a damaged PDF file here to attempt repair"
                 />
             </div>
         );

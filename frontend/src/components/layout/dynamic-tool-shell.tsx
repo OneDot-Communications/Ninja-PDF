@@ -9,13 +9,16 @@ interface DynamicToolShellProps {
     children: React.ReactNode;
     defaultTitle: string;
     defaultDescription: string;
+    /** Optional: pass a ToolShell variant (e.g. 'editor') to control layout (hides footer when 'editor') */
+    toolVariant?: "default" | "editor";
 }
 
 export function DynamicToolShell({
     toolCode,
     children,
     defaultTitle,
-    defaultDescription
+    defaultDescription,
+    toolVariant = "default"
 }: DynamicToolShellProps) {
     const { tools, loading } = useTools();
 
@@ -44,6 +47,7 @@ export function DynamicToolShell({
         <ToolShell
             title={title}
             description={description}
+            variant={toolVariant}
         >
             {children}
         </ToolShell>

@@ -11,6 +11,7 @@ export default function WordToPdfPage() {
         <ToolShell
             title="Word to PDF"
             description="Make DOC and DOCX files easy to read by converting them to PDF."
+            variant="editor"
         >
             <WordToPdfTool />
         </ToolShell>

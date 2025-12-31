@@ -11,6 +11,7 @@ export default function PageNumbersPage() {
         <ToolShell
             title="Page Numbers"
             description="Add page numbers into PDFs with ease. Choose your positions, dimensions, typography."
+            variant="editor"
         >
             <PageNumbersTool />
         </ToolShell>
