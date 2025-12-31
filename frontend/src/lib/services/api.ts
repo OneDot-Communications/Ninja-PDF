@@ -99,7 +99,15 @@ const uploadFile = async (endpoint: string, file: File, additionalData?: Record<
   }
 
   // For file downloads, return blob
-  if (contentType && (contentType.includes("application/pdf") || contentType.includes("application/octet-stream"))) {
+  if (contentType && (
+    contentType.includes("application/pdf") || 
+    contentType.includes("application/octet-stream") ||
+    contentType.includes("application/vnd.openxmlformats-officedocument") || // MS Office formats (docx, xlsx, pptx)
+    contentType.includes("application/vnd.ms-powerpoint") || // Old PowerPoint format (.ppt)
+    contentType.includes("application/vnd.ms-excel") || // Old Excel format (.xls)
+    contentType.includes("application/msword") || // Old Word format (.doc)
+    contentType.includes("application/zip") // ZIP files
+  )) {
     return response.blob();
   }
   return response.text();
@@ -365,7 +373,12 @@ export const api = {
   // PDF TOOLS - CONVERSION FROM PDF (/api/tools/)
   // ─────────────────────────────────────────────────────────────────────────────
   pdfToJpg: (file: File) => uploadFile("/api/tools/pdf-to-jpg/", file),
-  pdfToExcel: (file: File) => uploadFile("/api/tools/pdf-to-excel/", file),
+  pdfToExcel: (file: File, options?: { mergeSheets?: boolean; outputFormat?: 'xlsx' | 'csv' }) => {
+    const additionalData: Record<string, string> = {};
+    if (options?.mergeSheets !== undefined) additionalData.merge_sheets = String(options.mergeSheets);
+    if (options?.outputFormat) additionalData.output_format = options.outputFormat;
+    return uploadFile("/api/tools/pdf-to-excel/", file, additionalData);
+  },
   pdfToPowerpoint: (file: File) => uploadFile("/api/tools/pdf-to-powerpoint/", file),
   pdfToWord: (file: File, useOcr?: boolean, language?: string) => {
     const formData = new FormData();

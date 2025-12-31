@@ -249,8 +249,11 @@ class PDFToExcelView(PDFToolAPIView):
         if error:
             return error
         
+        merge_sheets = request.data.get('merge_sheets', 'false').lower() == 'true'
+        output_format = request.data.get('output_format', 'xlsx').lower()
+        
         try:
-            import tabula
+            import pdfplumber
             import pandas as pd
             
             # Write to temp file
@@ -258,15 +261,50 @@ class PDFToExcelView(PDFToolAPIView):
                 tmp_in.write(file.read())
                 input_path = tmp_in.name
             
-            output_path = input_path.replace('.pdf', '.xlsx')
+            output_ext = '.csv' if output_format == 'csv' else '.xlsx'
+            output_path = input_path.replace('.pdf', output_ext)
             
-            # Extract tables
-            dfs = tabula.read_pdf(input_path, pages='all', multiple_tables=True)
+            all_tables = []
             
-            # Write to Excel
-            with pd.ExcelWriter(output_path, engine='openpyxl') as writer:
-                for i, df in enumerate(dfs):
-                    df.to_excel(writer, sheet_name=f'Table_{i+1}', index=False)
+            with pdfplumber.open(input_path) as pdf:
+                for i, page in enumerate(pdf.pages):
+                    tables = page.extract_tables()
+                    for j, table in enumerate(tables):
+                        if not table: continue
+                        
+                        # Basic header detection: Use first row
+                        if len(table) > 1:
+                            # Clean headers to avoid duplicates or empty
+                            headers = table[0]
+                            # Ensure unique headers
+                            headers = [str(h) if h else f"Col_{k}" for k, h in enumerate(headers)]
+                            df = pd.DataFrame(table[1:], columns=headers)
+                        else:
+                            df = pd.DataFrame(table)
+                            
+                        all_tables.append((f"P{i+1}_T{j+1}", df))
+            
+            if not all_tables:
+                 # Create a dummy dataframe if no tables found
+                 all_tables.append(("Sheet1", pd.DataFrame([["No tables detected"]], columns=["Message"])))
+
+            if output_format == 'csv':
+                # For CSV, merge all tables
+                final_df = pd.concat([t[1] for t in all_tables], ignore_index=True)
+                final_df.to_csv(output_path, index=False)
+                content_type = 'text/csv'
+            else:
+                # XLSX
+                if merge_sheets:
+                    final_df = pd.concat([t[1] for t in all_tables], ignore_index=True)
+                    final_df.to_excel(output_path, index=False)
+                else:
+                    with pd.ExcelWriter(output_path, engine='openpyxl') as writer:
+                        for name, df in all_tables:
+                            # Excel sheet names max 31 chars
+                            safe_name = name[:31]
+                            df.to_excel(writer, sheet_name=safe_name, index=False)
+                content_type = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
             
             # Read output
             with open(output_path, 'rb') as f:
@@ -276,11 +314,8 @@ class PDFToExcelView(PDFToolAPIView):
             os.unlink(input_path)
             os.unlink(output_path)
             
-            response = HttpResponse(
-                output_content,
-                content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-            )
-            response['Content-Disposition'] = f'attachment; filename="{file.name.rsplit(".", 1)[0]}.xlsx"'
+            response = HttpResponse(output_content, content_type=content_type)
+            response['Content-Disposition'] = f'attachment; filename="{file.name.rsplit(".", 1)[0]}{output_ext}"'
             return response
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
