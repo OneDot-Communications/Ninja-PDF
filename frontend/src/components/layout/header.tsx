@@ -51,27 +51,27 @@ export function Header() {
             {/* Main Header Container */}
             <div className="w-full flex h-16 items-center justify-between px-6 relative max-w-[1536px] mx-auto">
                 <Link href="/" className="flex items-center">
-                    <img src="/pages/auth/18+christmas_logo.png" alt="18+ PDF" className="h-12 w-auto" />
+                    <img src="/pages/auth/18+logo.png" alt="18+ PDF" className="h-12 w-auto" />
                 </Link>
 
                 {/* Navigation Menu - Desktop */}
                 <div className="hidden md:flex items-center gap-6 mx-8">
-                    <Link href="/tools/merge-pdf" className="text-[#111418] font-bold text-sm hover:text-blue-600 transition-colors">
+                    <Link href="/merge-pdf" className="text-[#111418] font-bold text-sm hover:text-blue-600 transition-colors">
                         Merge PDF
                     </Link>
-                    <Link href="/tools/split-pdf" className="text-[#617289] font-medium text-sm hover:text-blue-600 transition-colors">
+                    <Link href="/split-pdf" className="text-[#617289] font-medium text-sm hover:text-blue-600 transition-colors">
                         Split PDF
                     </Link>
-                    <Link href="/tools/compress-pdf" className="text-[#617289] font-medium text-sm hover:text-blue-600 transition-colors">
+                    <Link href="/compress-pdf" className="text-[#617289] font-medium text-sm hover:text-blue-600 transition-colors">
                         Compress PDF
                     </Link>
                     <Link href="/tools" className="text-[#617289] font-medium text-sm hover:text-blue-600 transition-colors">
                         Convert PDF
                     </Link>
-                    <div className="flex items-center gap-1 text-[#617289] cursor-pointer hover:text-blue-600 transition-colors">
+                    <Link href="/tools" className="text-[#617289] font-medium text-sm hover:text-blue-600 transition-colors">
                         <span className="font-medium text-sm">All Tools</span>
-                        <span className="text-lg">▼</span>
-                    </div>
+                        <span className="text-lg ml-1">▼</span>
+                    </Link>
                 </div>
 
                 {/* Desktop Actions */}

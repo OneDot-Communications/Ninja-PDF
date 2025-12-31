@@ -9,6 +9,7 @@ import { ArrowRight, Download, Trash2, FileText, Settings, CheckSquare, Square, 
 import { motion, AnimatePresence } from "framer-motion";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { pdfApi } from "@/lib/services/pdf-api";
+import { api } from "@/lib/services/api";
 import { getPdfJs } from "@/lib/services/pdf-service";
 import { toast } from "@/lib/hooks/use-toast";
 
@@ -30,44 +31,44 @@ export function MergePdfTool() {
 
     const generatePdfPreview = async (file: File): Promise<{previewUrl: string, pagePreviews: string[]}> => {
         try {
-            const pdfjsLib = await getPdfJs();
-
-            // Use streaming for better performance and error handling
-            const arrayBuffer = await file.arrayBuffer();
-            const uint8Array = new Uint8Array(arrayBuffer);
-
-            const pdf = await (pdfjsLib as any).getDocument({
-                data: uint8Array,
-                cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/cmaps/',
-                cMapPacked: true,
-            }).promise;
-
-            // Generate first page preview
-            const page = await pdf.getPage(1);
-            const viewport = page.getViewport({ scale: 0.2 });
-            const canvas = document.createElement("canvas");
-            const context = canvas.getContext("2d");
-            canvas.height = viewport.height;
-            canvas.width = viewport.width;
-
-            if (context) {
-                const renderContext = {
-                    canvasContext: context,
-                    viewport: viewport
-                };
-
-                await page.render(renderContext).promise;
-                const previewUrl = canvas.toDataURL('image/png');
-
-                // For page view, we'll just use the same first page preview
-                const pagePreviews: string[] = [previewUrl];
-
+            // First try backend previews for consistent high quality
+            const result = await api.getPdfPagePreviews(file);
+            if (result && result.previews && result.previews.length > 0) {
+                const previewUrl = result.previews[0].image;
+                const pagePreviews = result.previews.map((p: any) => p.image);
                 return { previewUrl, pagePreviews };
             }
-        } catch (error) {
-            console.warn("PDF preview generation failed, using fallback:", error);
-            // Silently fail and return empty previews - the UI will show the file icon
+        } catch (err) {
+            // If backend fails, fallback to client-side rendering with higher scale
+            try {
+                const pdfjsLib = await getPdfJs();
+                const arrayBuffer = await file.arrayBuffer();
+                const uint8Array = new Uint8Array(arrayBuffer);
+
+                const pdf = await (pdfjsLib as any).getDocument({
+                    data: uint8Array,
+                    cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/cmaps/',
+                    cMapPacked: true,
+                }).promise;
+
+                // Higher quality thumbnail
+                const page = await pdf.getPage(1);
+                const viewport = page.getViewport({ scale: 1.5 });
+                const canvas = document.createElement("canvas");
+                const context = canvas.getContext("2d");
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+
+                if (context) {
+                    await page.render({ canvasContext: context, viewport }).promise;
+                    const previewUrl = canvas.toDataURL('image/png');
+                    return { previewUrl, pagePreviews: [previewUrl] };
+                }
+            } catch (error) {
+                console.warn("PDF preview generation failed, using fallback:", error);
+            }
         }
+
         return { previewUrl: "", pagePreviews: [] };
     };
 
@@ -337,6 +338,39 @@ export function MergePdfTool() {
                         </div>
                     </div>
 
+                    {/* Mobile Action Bar: bottom Merge button */}
+                    <div className="lg:hidden fixed bottom-4 left-4 right-4 z-40">
+                        <Button
+                            onClick={mergePdfs}
+                            disabled={isProcessing || files.length < 2}
+                            className="w-full h-14 bg-[#136dec] hover:bg-blue-700 text-white rounded-xl flex items-center justify-center gap-2 font-bold text-sm shadow-lg disabled:opacity-50"
+                        >
+                            <GitMerge className="h-5 w-5" />
+                            <span>{isProcessing ? 'Merging...' : 'Merge Files'}</span>
+                        </Button>
+                    </div>
+
+                    {/* Mobile Actions FAB - Top Right */}
+                    <div className="lg:hidden fixed top-20 right-4 z-40">
+                        <div className="relative">
+                            <button
+                                onClick={() => setShowArrangeMenu((s) => !s)}
+                                className="w-12 h-12 rounded-full bg-white shadow-lg flex items-center justify-center"
+                                aria-label="Actions"
+                            >
+                                <ArrowUpDown className="h-5 w-5 text-[#374151]" />
+                            </button>
+
+                            {showArrangeMenu && (
+                                <div className="absolute top-16 right-0 bg-white shadow-lg rounded-lg p-2 flex flex-col gap-2 min-w-[120px]">
+                                    <button onClick={() => { sortFiles('asc'); setShowArrangeMenu(false); }} className="px-3 py-2 rounded text-sm bg-[#f8fafc] hover:bg-[#e2e8f0] transition-colors">A-Z</button>
+                                    <button onClick={() => { sortFiles('desc'); setShowArrangeMenu(false); }} className="px-3 py-2 rounded text-sm bg-[#f8fafc] hover:bg-[#e2e8f0] transition-colors">Z-A</button>
+                                    <button onClick={() => { if (confirm('Clear all files?')) setFiles([]); setShowArrangeMenu(false); }} className="px-3 py-2 rounded text-sm text-red-600 bg-[#fff3f3] hover:bg-red-50 transition-colors">Clear</button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
                     {/* Merge Summary - Desktop only */}
                     <div className="hidden lg:block lg:w-[424px] lg:fixed lg:right-4 lg:top-24 lg:h-[calc(100vh-120px)] lg:z-10 order-2 lg:order-1">
                         <div className="bg-white rounded-2xl lg:rounded-3xl border border-[#e2e8f0] p-4 lg:p-6 h-auto lg:h-full flex flex-col shadow-xl">
@@ -459,40 +493,6 @@ export function MergePdfTool() {
                                     <span className="text-[#617289] text-xs opacity-60 italic">
                                         "Stitching these together like a Frankenstein monster... but prettier."
                                     </span>
-                                </div>
-                            </div>
-
-                            {/* Mobile Action Buttons: Merge + Actions FAB in top-right */}
-                            <div className="lg:hidden">
-                                <div className="fixed top-4 right-4 z-50 flex flex-col items-end gap-3">
-                                    {/* Merge FAB */}
-                                    <button
-                                        onClick={mergePdfs}
-                                        disabled={isProcessing || files.length < 2}
-                                        className="w-14 h-14 rounded-full bg-[#136dec] hover:bg-blue-700 text-white flex items-center justify-center shadow-lg disabled:opacity-50"
-                                        aria-label="Merge Files"
-                                    >
-                                        <GitMerge className="h-5 w-5" />
-                                    </button>
-
-                                    {/* Actions FAB */}
-                                    <div className="relative">
-                                        <button
-                                            onClick={() => setShowArrangeMenu((s) => !s)}
-                                            className="w-11 h-11 rounded-full bg-white shadow flex items-center justify-center text-[#374151]"
-                                            aria-label="Actions"
-                                        >
-                                            <ArrowUpDown className="h-5 w-5" />
-                                        </button>
-
-                                        {showArrangeMenu && (
-                                            <div className="absolute top-14 right-0 bg-white shadow-md rounded-lg p-2 flex flex-col gap-2">
-                                                <button onClick={() => { sortFiles('asc'); setShowArrangeMenu(false); }} className="flex items-center gap-2 px-3 py-1 rounded text-sm bg-[#f8fafc]"><SortAsc className="h-4 w-4" /> A-Z</button>
-                                                <button onClick={() => { sortFiles('desc'); setShowArrangeMenu(false); }} className="flex items-center gap-2 px-3 py-1 rounded text-sm bg-[#f8fafc]"><SortDesc className="h-4 w-4" /> Z-A</button>
-                                                <button onClick={() => { if (confirm('Clear all files?')) setFiles([]); setShowArrangeMenu(false); }} className="flex items-center gap-2 px-3 py-1 rounded text-sm text-red-600 bg-[#fff3f3]"><Trash2 className="h-4 w-4" /> Clear</button>
-                                            </div>
-                                        )}
-                                    </div>
                                 </div>
                             </div>
                         </div>

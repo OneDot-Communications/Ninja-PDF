@@ -2,115 +2,151 @@
 
 import { useState } from "react";
 import { saveAs } from "file-saver";
-import FileUploadHero from "../ui/file-upload-hero"; // Hero uploader (big CTA, full-page drag overlay)
+import FileUploadHero from "../ui/file-upload-hero";
 import { Button } from "../ui/button";
-import { ArrowRight, CheckCircle2, Loader2 } from "lucide-react";
+import { ArrowRight, Minus, Plus, Maximize2, Layers, Scissors, X, Edit, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { pdfApi } from "@/lib/services/pdf-api";
-import { getPdfJs } from "@/lib/services/pdf-service";
+import { api } from "@/lib/services/api";
 import { toast } from "@/lib/hooks/use-toast";
+
+interface PagePreview {
+    pageNumber: number;
+    image: string;
+    width: number;
+    height: number;
+}
 
 export function SplitPdfTool() {
     const [file, setFile] = useState<File | null>(null);
+    const [originalFile, setOriginalFile] = useState<File | null>(null);
+    const [pagePreviews, setPagePreviews] = useState<PagePreview[]>([]);
     const [numPages, setNumPages] = useState<number>(0);
-    const [selectedPages, setSelectedPages] = useState<number[]>([]);
+    const [zoom, setZoom] = useState<number>(100);
     const [isProcessing, setIsProcessing] = useState(false);
-    const [splitMode, setSplitMode] = useState<"merge" | "separate">("merge");
-    const [thumbnails, setThumbnails] = useState<string[]>([]);
-    const [loadingThumbnails, setLoadingThumbnails] = useState(false);
+    const [loadingPreview, setLoadingPreview] = useState(false);
+    const [deletedPages, setDeletedPages] = useState<Set<number>>(new Set());
+    const [splitMode, setSplitMode] = useState<"visual" | "fixed">("visual");
+    const [pageRanges, setPageRanges] = useState<string>("");
+    const [explodeMode, setExplodeMode] = useState(false);
 
     const handleFileSelected = async (files: File[]) => {
         if (files.length > 0) {
             const selectedFile = files[0];
             setFile(selectedFile);
-            setSelectedPages([]);
+            setOriginalFile(selectedFile);
             setNumPages(0);
-            setThumbnails([]);
-            await generateThumbnails(selectedFile);
+            setPagePreviews([]);
+            setDeletedPages(new Set());
+            await loadPdfPreview(selectedFile);
         }
     };
 
-    const generateThumbnails = async (file: File) => {
-        setLoadingThumbnails(true);
+    const loadPdfPreview = async (file: File) => {
+        setLoadingPreview(true);
         try {
-            const pdfjsLib = await getPdfJs();
-            const arrayBuffer = await file.arrayBuffer();
-            const pdf = await (pdfjsLib as any).getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
-            setNumPages(pdf.numPages);
-
-            const thumbs: string[] = [];
-            for (let i = 1; i <= pdf.numPages; i++) {
-                const page = await pdf.getPage(i);
-                const viewport = page.getViewport({ scale: 0.2 });
-                const canvas = document.createElement("canvas");
-                const context = canvas.getContext("2d");
-                canvas.height = viewport.height;
-                canvas.width = viewport.width;
-
-                if (context) {
-                    await page.render({
-                        canvasContext: context,
-                        viewport: viewport,
-                        canvas: canvas
-                    }).promise;
-                    thumbs.push(canvas.toDataURL());
-                }
+            // Get only first 10 pages for quick preview, load rest lazily
+            const result = await api.getPdfPagePreviews(file);
+            
+            // Load first batch immediately
+            const firstBatch = result.previews.slice(0, 10);
+            setPagePreviews(firstBatch);
+            setNumPages(result.totalPages);
+            
+            // Load remaining pages after a short delay
+            if (result.previews.length > 10) {
+                setTimeout(() => {
+                    setPagePreviews(result.previews);
+                }, 500);
             }
-            setThumbnails(thumbs);
         } catch (error) {
-            console.error("Error generating thumbnails", error);
+            console.error("Error loading PDF preview", error);
+            toast.show({
+                title: "Preview Error",
+                message: "Failed to load PDF preview",
+                variant: "error",
+                position: "top-right",
+            });
         } finally {
-            setLoadingThumbnails(false);
+            setLoadingPreview(false);
         }
     };
 
-    const togglePageSelection = (pageIndex: number) => {
-        setSelectedPages((prev) =>
-            prev.includes(pageIndex)
-                ? prev.filter((p) => p !== pageIndex)
-                : [...prev, pageIndex].sort((a, b) => a - b)
-        );
-    };
 
-    const selectAll = () => {
-        if (selectedPages.length === numPages) {
-            setSelectedPages([]);
-        } else {
-            setSelectedPages(Array.from({ length: numPages }, (_, i) => i + 1));
+    const handleZoomIn = () => setZoom(prev => Math.min(prev + 10, 200));
+    const handleZoomOut = () => setZoom(prev => Math.max(prev - 10, 50));
+    const handleFitScreen = () => setZoom(100);
+
+    const handleDeletePage = async (pageNumber: number) => {
+        setDeletedPages(prev => new Set([...prev, pageNumber]));
+        
+        // Merge remaining pages
+        const remainingPages = pagePreviews
+            .filter(p => !deletedPages.has(p.pageNumber) && p.pageNumber !== pageNumber)
+            .map(p => p.pageNumber);
+
+        if (remainingPages.length === 0) {
+            toast.show({
+                title: "Cannot Delete",
+                message: "Cannot delete all pages. At least one page must remain.",
+                variant: "error",
+                position: "top-right",
+            });
+            setDeletedPages(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(pageNumber);
+                return newSet;
+            });
+            return;
         }
+
+        toast.show({
+            title: "Page Deleted",
+            message: `Page ${pageNumber} marked for deletion. Download to get updated PDF.`,
+            variant: "success",
+            position: "top-right",
+        });
     };
 
-    const splitPdf = async () => {
-        if (!file || selectedPages.length === 0) return;
+    const downloadMergedPdf = async () => {
+        if (!originalFile) return;
+
+        const remainingPages = pagePreviews
+            .filter(p => !deletedPages.has(p.pageNumber))
+            .map(p => p.pageNumber);
+
+        if (remainingPages.length === 0) {
+            toast.show({
+                title: "No Pages",
+                message: "No pages remaining to download.",
+                variant: "error",
+                position: "top-right",
+            });
+            return;
+        }
+
         setIsProcessing(true);
 
         try {
-            const result = await pdfApi.split(file, {
-                selectedPages,
-                splitMode
+            const result = await pdfApi.split(originalFile, {
+                selectedPages: remainingPages,
+                splitMode: "extract"
             });
 
-            saveAs(result.blob, result.fileName || `split-${file.name}`);
+            saveAs(result.blob, result.fileName || `merged-${originalFile.name}`);
 
             toast.show({
                 title: "Success",
-                message: "PDF split successfully!",
+                message: `PDF with ${remainingPages.length} page${remainingPages.length > 1 ? 's' : ''} downloaded!`,
                 variant: "success",
                 position: "top-right",
             });
         } catch (error: any) {
-            console.error("Error splitting PDF:", error);
-
-            let errorMessage = "Failed to split PDF. Please try again.";
-            if (error.message?.includes('corrupted') || error.message?.includes('Invalid PDF structure')) {
-                errorMessage = "The PDF file appears to be corrupted. Try using the Repair PDF tool first.";
-            } else if (error.message?.includes('encrypted') || error.message?.includes('password')) {
-                errorMessage = "The PDF is encrypted. Please use the Unlock PDF tool first.";
-            }
+            console.error("Error merging PDF:", error);
 
             toast.show({
-                title: "Split Failed",
-                message: errorMessage,
+                title: "Merge Failed",
+                message: "Failed to merge PDF. Please try again.",
                 variant: "error",
                 position: "top-right",
             });
@@ -118,6 +154,121 @@ export function SplitPdfTool() {
             setIsProcessing(false);
         }
     };
+
+    const getRemainingPages = () => {
+        return pagePreviews.filter(p => !deletedPages.has(p.pageNumber)).length;
+    };
+
+    const calculateOutputFiles = () => {
+        if (explodeMode) return numPages;
+        if (splitMode === "visual") return deletedPages.size > 0 ? 1 : 0;
+        if (pageRanges.trim()) {
+            const ranges = pageRanges.split(',').filter(r => r.trim());
+            return ranges.length;
+        }
+        return 0;
+    };
+
+    const getSelectionText = () => {
+        if (explodeMode) return "All pages";
+        if (splitMode === "visual" && deletedPages.size > 0) {
+            const remaining = getRemainingPages();
+            return `p1-${remaining}`;
+        }
+        if (pageRanges.trim()) return pageRanges.trim();
+        return "None";
+    };
+
+    const splitPdf = async () => {
+        if (!originalFile) return;
+
+        if (splitMode === "fixed" && !pageRanges.trim() && !explodeMode) {
+            toast.show({
+                title: "No Ranges",
+                message: "Please specify page ranges to split",
+                variant: "error",
+                position: "top-right",
+            });
+            return;
+        }
+
+        setIsProcessing(true);
+
+        try {
+            let selectedPages: number[] = [];
+            
+            if (explodeMode) {
+                // Explode mode: split into separate files
+                selectedPages = Array.from({ length: numPages }, (_, i) => i + 1);
+                const result = await pdfApi.split(originalFile, {
+                    selectedPages: selectedPages,
+                    splitMode: "separate"
+                });
+                saveAs(result.blob, result.fileName || `split-${originalFile.name}`);
+            } else if (splitMode === "visual") {
+                // Visual mode: use deleted pages logic (keep remaining pages)
+                selectedPages = pagePreviews
+                    .filter(p => !deletedPages.has(p.pageNumber))
+                    .map(p => p.pageNumber);
+                
+                if (selectedPages.length === 0 || selectedPages.length === numPages) {
+                    toast.show({
+                        title: "No Split",
+                        message: "Please delete some pages to create a split",
+                        variant: "error",
+                        position: "top-right",
+                    });
+                    setIsProcessing(false);
+                    return;
+                }
+                
+                const result = await pdfApi.split(originalFile, {
+                    selectedPages: selectedPages,
+                    splitMode: "extract"
+                });
+                saveAs(result.blob, result.fileName || `split-${originalFile.name}`);
+            } else {
+                // Fixed range mode
+                const ranges = pageRanges.split(',').map(r => r.trim()).filter(Boolean);
+                ranges.forEach(range => {
+                    if (range.includes('-')) {
+                        const [start, end] = range.split('-').map(Number);
+                        for (let i = start; i <= end; i++) {
+                            if (i >= 1 && i <= numPages) selectedPages.push(i);
+                        }
+                    } else {
+                        const page = Number(range);
+                        if (page >= 1 && page <= numPages) selectedPages.push(page);
+                    }
+                });
+
+                const result = await pdfApi.split(originalFile, {
+                    selectedPages: Array.from(new Set(selectedPages)).sort((a, b) => a - b),
+                    splitMode: "extract"
+                });
+                saveAs(result.blob, result.fileName || `split-${originalFile.name}`);
+            }
+
+            toast.show({
+                title: "Success",
+                message: `PDF split successfully!`,
+                variant: "success",
+                position: "top-right",
+            });
+        } catch (error: any) {
+            console.error("Error splitting PDF:", error);
+
+            toast.show({
+                title: "Split Failed",
+                message: "Failed to split PDF. Please try again.",
+                variant: "error",
+                position: "top-right",
+            });
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
 
     if (!file) {
         return (
@@ -133,96 +284,268 @@ export function SplitPdfTool() {
     }
 
     return (
-        <div className="space-y-8">
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                <div>
-                    <h2 className="text-2xl font-bold">{file.name}</h2>
-                    <p className="text-muted-foreground">
-                        {numPages > 0 ? `${numPages} pages` : "Loading..."}
-                    </p>
-                </div>
-                <div className="flex gap-4">
-                    <Button variant="outline" onClick={() => setFile(null)}>
-                        Change File
-                    </Button>
-                    <Button variant="secondary" onClick={selectAll}>
-                        {selectedPages.length === numPages ? "Deselect All" : "Select All"}
-                    </Button>
-                </div>
-            </div>
+        <div className="bg-[#f6f7f8] min-h-screen relative pb-24 lg:pb-8">
+            <div className="max-w-[1800px] mx-auto px-4 py-4 md:py-8">
+                <div className="flex flex-col lg:flex-row gap-4 lg:gap-8">
+                    {/* Left Column - PDF Preview */}
+                    <div className="flex-1 max-w-full lg:max-w-[calc(100%-448px)] lg:mr-[448px]">
+                        {/* Header Section */}
+                        <div className="mb-4 md:mb-6">
+                            <h1 className="text-[#111418] text-2xl md:text-3xl lg:text-[32px] font-bold leading-8 md:leading-10 mb-2" style={{letterSpacing: '-0.8px'}}>
+                                Split PDF
+                            </h1>
+                            <p className="text-[#617289] text-sm md:text-base leading-5 md:leading-6 font-normal">
+                                {file.name} • {numPages} pages • {getRemainingPages()} remaining
+                            </p>
+                        </div>
 
-            {loadingThumbnails ? (
-                <div className="flex h-60 items-center justify-center">
-                    <Loader2 className="h-10 w-10 animate-spin text-primary" />
-                    <span className="ml-4 text-lg font-medium">Generating thumbnails...</span>
-                </div>
-            ) : (
-                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 max-h-[60vh] overflow-y-auto p-2">
-                    {thumbnails.map((src, i) => {
-                        const pageNum = i + 1;
-                        const isSelected = selectedPages.includes(pageNum);
-                        return (
-                            <div
-                                key={pageNum}
-                                onClick={() => togglePageSelection(pageNum)}
-                                className={cn(
-                                    "group relative cursor-pointer overflow-hidden rounded-lg border-2 transition-all hover:shadow-md",
-                                    isSelected ? "border-primary ring-2 ring-primary ring-offset-2" : "border-transparent hover:border-primary/50"
-                                )}
-                            >
-                                <div className="aspect-[1/1.4] bg-muted/20">
-                                    <img
-                                        src={src}
-                                        alt={`Page ${pageNum}`}
-                                        className="h-full w-full object-contain"
-                                    />
-                                </div>
-                                <div className="absolute bottom-2 right-2 flex h-6 w-6 items-center justify-center rounded-full bg-background shadow-sm">
-                                    <span className="text-xs font-medium">{pageNum}</span>
-                                </div>
-                                {isSelected && (
-                                    <div className="absolute inset-0 flex items-center justify-center bg-primary/20">
-                                        <CheckCircle2 className="h-8 w-8 text-primary drop-shadow-md" />
-                                    </div>
-                                )}
+                        {/* Zoom Controls */}
+                        <div className="mb-4 flex justify-center">
+                            <div className="bg-white rounded-full border border-[#e2e8f0] shadow-sm h-14 px-4 flex items-center gap-3">
+                                <button
+                                    onClick={handleZoomOut}
+                                    className="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center transition-colors"
+                                    aria-label="Zoom Out"
+                                >
+                                    <Minus className="h-5 w-5 text-[#475569]" />
+                                </button>
+                                <span className="text-[#334155] font-bold text-xs min-w-[60px] text-center">
+                                    {zoom}%
+                                </span>
+                                <button
+                                    onClick={handleZoomIn}
+                                    className="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center transition-colors"
+                                    aria-label="Zoom In"
+                                >
+                                    <Plus className="h-5 w-5 text-[#475569]" />
+                                </button>
+                                <div className="w-px h-4 bg-[#cbd5e1]"></div>
+                                <button
+                                    onClick={handleFitScreen}
+                                    className="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center transition-colors"
+                                    aria-label="Fit Screen"
+                                >
+                                    <Maximize2 className="h-5 w-5 text-[#475569]" />
+                                </button>
                             </div>
-                        );
-                    })}
-                </div>
-            )}
+                        </div>
 
-            <div className="flex flex-col items-center gap-6 border-t pt-8">
-                <div className="flex gap-4 rounded-lg border p-1">
-                    <Button
-                        variant={splitMode === "merge" ? "default" : "ghost"}
-                        onClick={() => setSplitMode("merge")}
-                        className="w-40"
-                    >
-                        Merge Selected
-                    </Button>
-                    <Button
-                        variant={splitMode === "separate" ? "default" : "ghost"}
-                        onClick={() => setSplitMode("separate")}
-                        className="w-40"
-                    >
-                        Extract Separately
-                    </Button>
-                </div>
+                        {/* PDF Pages Preview Area */}
+                        <div className="bg-white rounded-xl border border-[#e2e8f0] shadow-sm p-4 min-h-[600px] max-h-[calc(100vh-240px)] overflow-y-auto">
+                            {loadingPreview ? (
+                                <div className="flex flex-col items-center gap-4 p-8">
+                                    <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                                    <p className="text-[#617289] font-medium">Loading PDF pages...</p>
+                                </div>
+                            ) : pagePreviews.length > 0 ? (
+                                <div className="space-y-4" style={{transform: `scale(${zoom / 100})`, transformOrigin: 'top center', transition: 'transform 0.2s ease'}}>
+                                    {pagePreviews.map((page) => (
+                                        <div 
+                                            key={page.pageNumber}
+                                            className={cn(
+                                                "relative group rounded-lg border-2 transition-all",
+                                                deletedPages.has(page.pageNumber)
+                                                    ? "border-red-300 bg-red-50 opacity-50"
+                                                    : "border-[#e2e8f0] bg-white hover:border-blue-300"
+                                            )}
+                                        >
+                                            <div className="p-2">
+                                                {/* Page Number Badge */}
+                                                <div className="absolute top-4 left-4 z-10">
+                                                    <div className="bg-white rounded-full border border-[#e2e8f0] shadow-sm px-3 py-1">
+                                                        <span className="text-[#334155] font-bold text-xs">
+                                                            Page {page.pageNumber}
+                                                        </span>
+                                                    </div>
+                                                </div>
 
-                <Button
-                    size="lg"
-                    onClick={splitPdf}
-                    disabled={isProcessing || selectedPages.length === 0 || loadingThumbnails}
-                    className="h-14 min-w-[200px] text-lg"
-                >
-                    {isProcessing ? (
-                        "Processing..."
-                    ) : (
-                        <>
-                            Split PDF <ArrowRight className="ml-2 h-5 w-5" />
-                        </>
-                    )}
-                </Button>
+                                                {/* Delete Button */}
+                                                {!deletedPages.has(page.pageNumber) && (
+                                                    <button
+                                                        onClick={() => handleDeletePage(page.pageNumber)}
+                                                        className="absolute top-4 right-4 z-10 bg-red-500 hover:bg-red-600 text-white rounded-full p-2 shadow-lg transition-all"
+                                                        aria-label="Delete Page"
+                                                    >
+                                                        <Trash2 className="h-5 w-5" />
+                                                    </button>
+                                                )}
+
+                                                {/* Deleted Badge */}
+                                                {deletedPages.has(page.pageNumber) && (
+                                                    <div className="absolute top-4 right-4 z-10">
+                                                        <div className="bg-red-500 rounded-full border border-red-600 shadow-sm px-3 py-1">
+                                                            <span className="text-white font-bold text-xs">
+                                                                Deleted
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {/* Page Image */}
+                                                <img 
+                                                    src={page.image} 
+                                                    alt={`Page ${page.pageNumber}`}
+                                                    className="w-full h-auto rounded-lg"
+                                                />
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="text-center p-8">
+                                    <p className="text-[#617289] font-medium">No preview available</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Mobile Action Bar */}
+                    <div className="lg:hidden fixed bottom-4 left-4 right-4 z-40">
+                        <Button
+                            onClick={splitPdf}
+                            disabled={isProcessing}
+                            className="w-full h-14 bg-[#136dec] hover:bg-blue-700 text-white rounded-xl flex items-center justify-center gap-2 font-bold text-sm shadow-lg disabled:opacity-50"
+                        >
+                            <span>{isProcessing ? 'Splitting...' : 'Split PDF'}</span>
+                            <ArrowRight className="h-5 w-5" />
+                        </Button>
+                    </div>
+
+                    {/* Right Sidebar - Settings (Desktop only) */}
+                    <div className="hidden lg:block lg:w-[424px] lg:fixed lg:right-4 lg:top-24 lg:h-[calc(100vh-120px)] lg:z-10">
+                        <div className="bg-white rounded-3xl border border-[#e2e8f0] p-6 h-full flex flex-col shadow-xl">
+                            {/* Header */}
+                            <div className="mb-6">
+                                <h2 className="text-[#0f172a] font-bold text-xl leading-7">Slice & Dice Settings</h2>
+                                <p className="text-[#64748b] text-sm leading-5 mt-1">Configure how you want your document split.</p>
+                            </div>
+
+                            {/* Mode Toggle */}
+                            <div className="mb-6">
+                                <div className="bg-[#f1f5f9] rounded-xl p-1 flex gap-1">
+                                    <button
+                                        onClick={() => setSplitMode("visual")}
+                                        className={cn(
+                                            "flex-1 rounded-lg px-4 py-2.5 font-bold text-sm transition-all",
+                                            splitMode === "visual"
+                                                ? "bg-white text-[#136dec] shadow-sm"
+                                                : "text-[#64748b] hover:text-[#0f172a]"
+                                        )}
+                                    >
+                                        Visual Split
+                                    </button>
+                                    <button
+                                        onClick={() => setSplitMode("fixed")}
+                                        className={cn(
+                                            "flex-1 rounded-lg px-4 py-2.5 font-bold text-sm transition-all",
+                                            splitMode === "fixed"
+                                                ? "bg-white text-[#136dec] shadow-sm"
+                                                : "text-[#64748b] hover:text-[#0f172a]"
+                                        )}
+                                    >
+                                        Fixed Range
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Page Ranges */}
+                            <div className="mb-6">
+                                <h3 className="text-[#0f172a] font-bold text-base mb-3">Page Ranges</h3>
+                                <div className="relative">
+                                    <input
+                                        type="text"
+                                        value={pageRanges}
+                                        onChange={(e) => setPageRanges(e.target.value)}
+                                        placeholder="e.g., 1-5, 8, 11-15"
+                                        disabled={splitMode === "visual"}
+                                        className="bg-white rounded-xl border border-[#cbd5e1] w-full h-12 px-4 pr-10 text-sm text-[#0f172a] placeholder:text-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-[#136dec] focus:border-transparent disabled:bg-[#f1f5f9] disabled:text-[#94a3b8] transition-all"
+                                    />
+                                    <Edit className="absolute right-3 top-3 h-6 w-6 text-[#94a3b8] pointer-events-none" />
+                                </div>
+                                <p className="mt-2 text-xs text-[#64748b] leading-relaxed">
+                                    Use commas to separate ranges. E.g., <span className="text-[#0f172a] font-medium">1-5, 8, 11-15</span>. We'll do the math.
+                                </p>
+                            </div>
+
+                            {/* Explode PDF Option */}
+                            <div className="mb-6">
+                                <div className="bg-[#eff6ff] rounded-2xl border border-[#dbeafe] p-4">
+                                    <div className="flex items-start gap-3">
+                                        <input
+                                            type="checkbox"
+                                            id="explode"
+                                            checked={explodeMode}
+                                            onChange={(e) => setExplodeMode(e.target.checked)}
+                                            className="mt-0.5 w-5 h-5 rounded border-[#cbd5e1] text-[#136dec] focus:ring-2 focus:ring-[#136dec] cursor-pointer"
+                                        />
+                                        <div className="flex-1">
+                                            <label htmlFor="explode" className="text-[#0f172a] font-bold text-sm block cursor-pointer mb-1">
+                                                Explode PDF
+                                            </label>
+                                            <p className="text-[#64748b] text-xs leading-relaxed">
+                                                Extract every single page into a separate file. Warning: lots of files incoming!
+                                            </p>
+                                        </div>
+                                        <Layers className="h-8 w-8 text-[#60a5fa] flex-shrink-0" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* File Summary */}
+                            <div className="flex-1 mb-6">
+                                <div className="bg-[#f8fafc] rounded-2xl border border-[#e2e8f0] p-5">
+                                    <div className="flex items-center gap-2 mb-4">
+                                        <svg className="w-5 h-5 text-[#94a3b8]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                        </svg>
+                                        <h3 className="text-[#0f172a] font-bold text-base">File Summary</h3>
+                                    </div>
+                                    <div className="space-y-3">
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-[#475569] text-sm">Total Pages:</span>
+                                            <span className="text-[#0f172a] font-bold text-base">{numPages}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-[#475569] text-sm">Output Files:</span>
+                                            <span className="text-[#136dec] font-bold text-base">
+                                                {calculateOutputFiles()} PDF{calculateOutputFiles() !== 1 ? 's' : ''}
+                                            </span>
+                                        </div>
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-[#475569] text-sm">Selection:</span>
+                                            <div className="text-[#0f172a] font-medium text-sm">
+                                                {getSelectionText()}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Split Button - Fixed at bottom */}
+                            <div className="mt-auto">
+                                <Button
+                                    onClick={splitPdf}
+                                    disabled={isProcessing}
+                                    className="w-full h-14 bg-[#136dec] hover:bg-blue-700 text-white rounded-xl flex items-center justify-center gap-2 font-bold text-base shadow-lg disabled:opacity-50 transition-all"
+                                >
+                                    <span>{isProcessing ? "Splitting PDF..." : "Split PDF"}</span>
+                                    <ArrowRight className="h-5 w-5" />
+                                </Button>
+                                <div className="text-center mt-3">
+                                    <div className="flex items-center justify-center gap-2">
+                                        <svg className="w-4 h-4 text-[#94a3b8] animate-spin" fill="none" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        <span className="text-[#617289] text-xs italic">
+                                            Translating pixels into paragraphs...
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     );
