@@ -356,17 +356,19 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
     "https://18pluspdf.com",
+    "https://18pluspdf.in",
     "https://www.18pluspdf.com",
 ]
 CORS_ALLOW_CREDENTIALS = True
 
-ALLOWED_HOSTS = ["localhost", "127.0.0.1", "18pluspdf.com", "api.18pluspdf.com", ".onrender.com", ".ondigitalocean.app"]
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", "18pluspdf.com","https://18pluspdf.in", "api.18pluspdf.com", ".onrender.com", ".ondigitalocean.app"]
 
 # CSRF trusted origins for local dev (frontend running on port 3000)
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
     "https://18pluspdf.com",
+    "https://18pluspdf.in",
     "https://www.18pluspdf.com",
 ]
 
