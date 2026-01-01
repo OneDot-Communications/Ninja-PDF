@@ -100,19 +100,19 @@ export function Sidebar() {
                     label="My Account"
                     active={isActive("/profile")}
                 />
-                <SidebarItem
+                {/* <SidebarItem
                     href="/files"
                     icon={Folder}
                     label="My Files"
                     active={isActive("/files")}
-                />
+                /> */}
                 <SidebarItem
                     href="/profile/feedback"
                     icon={MessageSquare}
                     label="Feedback"
                     active={isActive("/profile/feedback")}
                 />
-                <SidebarItem
+                {/* <SidebarItem
                     href="/profile/security"
                     icon={Shield}
                     label="Security"
@@ -135,14 +135,13 @@ export function Sidebar() {
                     icon={History}
                     label="Last Tasks"
                     active={isActive("/profile/tasks")}
-                />
+                /> */}
 
                 {/* Productivity Section */}
-                <div className="pt-6 pb-2 px-3">
+                {/* <div className="pt-6 pb-2 px-3">
                     <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Productivity</h2>
                 </div>
 
-                {/* Signatures Group */}
                 <SidebarItem
                     icon={PenTool}
                     label="Signatures"
@@ -168,7 +167,7 @@ export function Sidebar() {
                     )}
                 </AnimatePresence>
 
-                {/* Billing Group */}
+
                 <SidebarItem
                     icon={CreditCard}
                     label="Billing"
@@ -202,7 +201,7 @@ export function Sidebar() {
                     icon={Gift}
                     label="Referrals"
                     active={isActive("/profile/referrals")}
-                />
+                /> */}
 
 
                 {/* SUPER ADMIN: Special Section */}
@@ -212,10 +211,10 @@ export function Sidebar() {
                             <h2 className="text-xs font-semibold text-violet-600 uppercase tracking-wider">Super Admin</h2>
                         </div>
                         <SidebarItem
-                            href="/super-admin"
+                            href="/super-admin/dashboard"
                             icon={LayoutTemplate}
                             label="Dashboard"
-                            active={isActive("/super-admin")}
+                            active={isActive("/super-admin/dashboard")}
                         />
                         <SidebarItem
                             href="/super-admin/plans"

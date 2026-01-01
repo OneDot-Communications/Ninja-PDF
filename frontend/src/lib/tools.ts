@@ -120,9 +120,9 @@ export const tools = [
         description: "Add text, images, shapes or freehand annotations to a PDF document.",
         icon: "/home/edit-pdf.png",
         href: "/edit-pdf",
-        category: "Edit PDF",
         isNew: true,
         color: toolColors.edit,
+        comingSoon: true,
     },
 
     {
@@ -196,6 +196,7 @@ export const tools = [
         href: "/pdf-to-pdfa",
         category: "Convert PDF",
         color: toolColors.pdf,
+        comingSoon: true,
     },
     {
         title: "Repair PDF",
@@ -204,6 +205,7 @@ export const tools = [
         href: "/repair-pdf",
         category: "Optimize PDF",
         color: toolColors.optimize,
+        comingSoon: true,
     },
     {
         title: "Page Numbers",
@@ -220,6 +222,7 @@ export const tools = [
         href: "/scan-to-pdf",
         category: "Organize PDF",
         color: toolColors.pdf,
+        comingSoon: true,
     },
     {
         title: "OCR PDF",
@@ -237,6 +240,7 @@ export const tools = [
         category: "Edit PDF",
         isNew: true,
         color: toolColors.pdf,
+        comingSoon: true,
     },
     {
         title: "Redact PDF",
@@ -246,6 +250,7 @@ export const tools = [
         category: "PDF Security",
         isNew: true,
         color: toolColors.security,
+        comingSoon: true,
     },
     {
         title: "Crop PDF",
@@ -263,6 +268,7 @@ export const tools = [
         href: "/html-to-pdf",
         category: "Convert to PDF",
         color: toolColors.convert,
+        comingSoon: true,
     },
     {
         title: "Create Workflow",
@@ -271,6 +277,7 @@ export const tools = [
         href: "/create-workflow",
         category: "Workflows",
         color: toolColors.workflow,
+        comingSoon: true,
     },
     {
         title: "Metadata Cleaner",

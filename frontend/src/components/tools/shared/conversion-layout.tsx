@@ -1,13 +1,13 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { 
-    Settings, 
-    ArrowRight, 
-    FileText, 
-    PlusCircle, 
-    Trash2, 
-    HelpCircle, 
-    RectangleVertical, 
+import {
+    Settings,
+    ArrowRight,
+    FileText,
+    PlusCircle,
+    Trash2,
+    HelpCircle,
+    RectangleVertical,
     RectangleHorizontal,
     ArrowDownAZ,
     ArrowUpAZ,
@@ -68,21 +68,76 @@ export function ConversionLayout({
                 files.map(async (file) => {
                     try {
                         console.log(`Generating preview for: ${file.name}`);
-                        // Generate actual preview from backend
-                        const result = await api.getOfficeFilePreview(file);
-                        console.log(`Preview generated successfully for: ${file.name}`);
-                        return { 
-                            file, 
-                            preview: result.preview,
-                            fileType: file.name.split('.').pop()?.toLowerCase() 
+                        const ext = file.name.split('.').pop()?.toLowerCase();
+
+                        // Client-side preview for DOCX
+                        if (ext === 'docx') {
+                            try {
+                                const arrayBuffer = await file.arrayBuffer();
+                                const mammoth = await import("mammoth");
+                                const result = await mammoth.convertToHtml({ arrayBuffer });
+
+                                if (result.value) {
+                                    // Create generic preview container
+                                    const container = document.createElement('div');
+                                    container.innerHTML = `<div style="padding: 20px; font-family: Arial; font-size: 10px; color: black; background: white; width: 600px; height: 800px; overflow: hidden;">${result.value}</div>`;
+                                    container.style.position = 'fixed';
+                                    container.style.left = '-9999px';
+                                    container.style.top = '0';
+                                    container.style.width = '600px';
+                                    container.style.height = '800px';
+                                    container.style.backgroundColor = 'white';
+                                    container.style.zIndex = '-1000';
+                                    document.body.appendChild(container);
+
+                                    try {
+                                        const html2canvas = (await import("html2canvas")).default;
+                                        const canvas = await html2canvas(container, {
+                                            width: 600,
+                                            height: 800,
+                                            scale: 0.5 // Thumbnail quality
+                                        });
+                                        const dataUrl = canvas.toDataURL("image/png");
+                                        return {
+                                            file,
+                                            preview: dataUrl,
+                                            fileType: ext
+                                        };
+                                    } finally {
+                                        document.body.removeChild(container);
+                                    }
+                                }
+                            } catch (clientError) {
+                                console.warn("Client-side DOCX preview failed, falling back to icon", clientError);
+                            }
+                        }
+
+                        // Generate actual preview from backend for other files
+                        // Or if client-side failed
+                        if (ext !== 'docx') { // Skip backend fallback for docx if we want to force client side or if client side failed (above catch handles it)
+                            const result = await api.getOfficeFilePreview(file);
+                            console.log(`Preview generated successfully for: ${file.name}`);
+                            return {
+                                file,
+                                preview: result.preview,
+                                fileType: ext
+                            };
+                        }
+
+                        // Default return if docx processing failed or fallthrough
+                        return {
+                            file,
+                            preview: undefined, // Will default to icon
+                            fileType: ext
                         };
+
                     } catch (error) {
                         console.error(`Failed to generate preview for ${file.name}:`, error);
                         // Fallback to colored icon on error
-                        return { 
-                            file, 
-                            preview: undefined, 
-                            fileType: file.name.split('.').pop()?.toLowerCase() 
+                        return {
+                            file,
+                            preview: undefined,
+                            fileType: file.name.split('.').pop()?.toLowerCase()
                         };
                     }
                 })
@@ -95,32 +150,32 @@ export function ConversionLayout({
     // Helper to get file icon and color based on extension
     const getFileIconAndColor = (fileName: string) => {
         const ext = fileName.split('.').pop()?.toLowerCase();
-        
-        switch(ext) {
+
+        switch (ext) {
             case 'doc':
             case 'docx':
-                return { 
-                    Icon: FileText, 
+                return {
+                    Icon: FileText,
                     bgColor: 'bg-gradient-to-br from-blue-500 to-blue-600',
                     iconColor: 'text-white'
                 };
             case 'ppt':
             case 'pptx':
-                return { 
-                    Icon: Presentation, 
+                return {
+                    Icon: Presentation,
                     bgColor: 'bg-gradient-to-br from-orange-500 to-red-600',
                     iconColor: 'text-white'
                 };
             case 'xls':
             case 'xlsx':
-                return { 
-                    Icon: FileSpreadsheet, 
+                return {
+                    Icon: FileSpreadsheet,
                     bgColor: 'bg-gradient-to-br from-green-500 to-green-600',
                     iconColor: 'text-white'
                 };
             default:
-                return { 
-                    Icon: FileText, 
+                return {
+                    Icon: FileText,
                     bgColor: 'bg-gradient-to-br from-slate-300 to-slate-400',
                     iconColor: 'text-white'
                 };
@@ -170,9 +225,9 @@ export function ConversionLayout({
                                 onClick={() => setViewMode("file")}
                                 className={cn(
                                     "px-4 py-1.5 rounded-md text-sm font-bold transition-all flex items-center gap-2",
-                                    viewMode === "file" 
-                                        ? "bg-white text-[#4383BF] shadow-sm" 
-                                        : "text-[#617289] hover:text-[#4383BF]"
+                                    viewMode === "file"
+                                        ? "bg-white text-[#136dec] shadow-sm"
+                                        : "text-[#617289] hover:text-[#136dec]"
                                 )}
                             >
                                 <List className="w-4 h-4" />
@@ -182,9 +237,9 @@ export function ConversionLayout({
                                 onClick={() => setViewMode("page")}
                                 className={cn(
                                     "px-4 py-1.5 rounded-md text-sm font-bold transition-all flex items-center gap-2",
-                                    viewMode === "page" 
-                                        ? "bg-white text-[#4383BF] shadow-sm" 
-                                        : "text-[#617289] hover:text-[#4383BF]"
+                                    viewMode === "page"
+                                        ? "bg-white text-[#136dec] shadow-sm"
+                                        : "text-[#617289] hover:text-[#136dec]"
                                 )}
                             >
                                 <LayoutGrid className="w-4 h-4" />
@@ -202,7 +257,7 @@ export function ConversionLayout({
                                 </button>
                             </div>
                             <div className="h-6 w-px bg-slate-300"></div>
-                            <button 
+                            <button
                                 onClick={onClearAll}
                                 className="flex items-center gap-2 text-[#617289] hover:text-red-500 transition-colors px-3 py-1.5 rounded-lg hover:bg-red-50"
                             >
@@ -215,13 +270,13 @@ export function ConversionLayout({
                     {/* File Grid - Dynamic based on view mode */}
                     <div className={cn(
                         "grid gap-6",
-                        viewMode === "file" 
-                            ? "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4" 
+                        viewMode === "file"
+                            ? "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4"
                             : "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6"
                     )}>
                         {filesWithPreviews.map((item, index) => {
                             const { Icon, bgColor, iconColor } = getFileIconAndColor(item.file.name);
-                            
+
                             return (
                                 <div key={index} className={cn(
                                     "bg-white rounded-xl shadow-sm border border-transparent hover:border-[#4383BF]/20 transition-all group relative",
@@ -239,7 +294,7 @@ export function ConversionLayout({
                                         )}>
                                             {index + 1}
                                         </div>
-                                        
+
                                         {/* Show actual preview image if available */}
                                         {item.preview ? (
                                             <Image
@@ -256,8 +311,8 @@ export function ConversionLayout({
                                                 viewMode === "file" ? "w-20 h-20" : "w-12 h-12"
                                             )} />
                                         )}
-                                        
-                                        <button 
+
+                                        <button
                                             onClick={() => onRemoveFile(index)}
                                             className={cn(
                                                 "absolute top-2 right-2 bg-white/90 hover:bg-red-500 text-slate-700 hover:text-white rounded-full opacity-0 group-hover:opacity-100 transition-all z-10 shadow-lg",
@@ -287,7 +342,7 @@ export function ConversionLayout({
                         })}
 
                         {/* Add More Card */}
-                        <div 
+                        <div
                             onClick={() => fileInputRef.current?.click()}
                             className="bg-[#4383BF]/5 border-2 border-dashed border-[#4383BF]/40 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:bg-[#4383BF]/10 transition-all min-h-[280px]"
                         >
@@ -410,8 +465,8 @@ export function ConversionLayout({
                             {/* PDF/A Checkbox */}
                             <div className="mb-8 bg-[#f6f7f8] rounded-lg border border-[#dbe0e6] p-4 flex items-start gap-3">
                                 <div className="pt-0.5">
-                                    <Switch 
-                                        checked={options?.pdfa} 
+                                    <Switch
+                                        checked={options?.pdfa}
                                         onCheckedChange={handlePdfaChange}
                                     />
                                 </div>
