@@ -41,8 +41,30 @@ If you didn't sign up for 18+ PDF, you can safely ignore this email.
 
 Cheers,
 The 18+ PDF Team
-"""
+        """
         EmailService._send(user.email, subject, message)
+
+    @staticmethod
+    def send_feedback_received(user_email, user_name):
+        """Send feedback received confirmation."""
+        subject = "We got your message! (And we're reading it) 📨"
+        message = f"""
+Hey {user_name or 'there'},
+
+Thanks for reaching out! We just received your feedback/message.
+
+We actually read every single message (yes, really). 
+If you found a bug 🐛, we'll squash it. 
+If you have a feature idea 💡, we'll put it on the board.
+
+We'll get back to you soon if we need more info.
+
+Thanks for helping us make 18+ PDF better!
+
+Cheers,
+The 18+ PDF Team
+"""
+        EmailService._send(user_email, subject, message)
 
     # 🚀 GROWTH & ONBOARDING
     

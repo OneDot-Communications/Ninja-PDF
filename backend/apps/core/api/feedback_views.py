@@ -5,6 +5,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from .feedback_serializers import FeedbackSerializer
 from apps.core.services.google_sheets_service import get_sheets_service
+from apps.core.services.email_service import EmailService
 from apps.core.models import Feedback
 import logging
 
@@ -111,6 +112,14 @@ def submit_feedback(request):
             # Log but don't fail if Google Sheets fails
             logger.warning(f"Google Sheets save failed for feedback #{feedback.id}: {str(sheets_error)}")
         
+        # Send confirmation email to user
+        try:
+            EmailService.send_feedback_received(email, name)
+            logger.info(f"Confirmation email sent to {email}")
+        except Exception as email_error:
+            # Log but don't fail if email fails
+            logger.error(f"Failed to send confirmation email to {email}: {str(email_error)}")
+
         # Return success response
         return Response({
             'success': True,
