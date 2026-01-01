@@ -48,7 +48,6 @@ export default function ToolsPage() {
   // Odoo-style App Icon Component with dynamic colors
   const AppIcon = ({ tool }: { tool: any }) => {
     const iconColor = tool.color || "#714B67";
-    const bgColor = `${iconColor}10`; // 10% opacity for background tint
 
     const descriptionId = `tool-desc-${tool.title.replace(/\s+/g, "-").toLowerCase()}`;
 
@@ -68,19 +67,18 @@ export default function ToolsPage() {
         aria-describedby={descriptionId}
       >
         <div
-          className="relative flex h-20 w-20 items-center justify-center rounded-2xl bg-white shadow-[0_4px_12px_rgba(0,0,0,0.08)] transition-all duration-300 group-hover:shadow-[0_8px_20px_rgba(0,0,0,0.12)] mb-3 border border-slate-100/80"
-          style={{ backgroundColor: bgColor }}
+          className="relative flex h-24 w-24 items-center justify-center rounded-2xl bg-transparent shadow-[0_4px_12px_rgba(0,0,0,0.08)] transition-all duration-300 group-hover:shadow-[0_8px_20px_rgba(0,0,0,0.12)] mb-3 border border-slate-100/80"
         >
           {typeof tool.icon === 'string' ? (
-            <img src={tool.icon} alt={tool.title} className="h-10 w-10 object-contain transition-transform duration-200 group-hover:scale-110" />
+            <img src={tool.icon} alt={tool.title} className="h-14 w-14 object-contain transition-transform duration-200 group-hover:scale-110" />
           ) : tool.icon ? (
             <tool.icon
-              className="h-10 w-10 transition-transform duration-200 group-hover:scale-110"
+              className="h-14 w-14 transition-transform duration-200 group-hover:scale-110"
               style={{ color: iconColor }}
               strokeWidth={1.8}
             />
           ) : (
-            <div className="h-10 w-10 bg-slate-200 rounded-lg" />
+            <div className="h-14 w-14 bg-slate-200 rounded-lg" />
           )}
           {tool.isNew && (
             <span className="absolute -top-1.5 -right-1.5 bg-brand-red text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-sm">

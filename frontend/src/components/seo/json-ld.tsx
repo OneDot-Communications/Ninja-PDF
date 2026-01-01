@@ -25,9 +25,8 @@ export default function JsonLd() {
         url: baseUrl,
         logo: `${baseUrl}/icon.png`,
         sameAs: [
-            "https://twitter.com/18pluspdf",
-            "https://github.com/18pluspdf",
-            "https://linkedin.com/company/18pluspdf",
+            "https://www.facebook.com/share/p/1Dank93EJx/",
+            "https://www.instagram.com/p/DS8B0LJGKtD/?utm_source=ig_web_copy_link&igsh=MzRlODBiNWFlZA==",
         ],
         contactPoint: {
             "@type": "ContactPoint",

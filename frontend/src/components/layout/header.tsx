@@ -54,24 +54,25 @@ export function Header() {
             style={{ backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)" }}
         >
             {/* Main Header Container */}
-            <div className="w-full flex h-16 items-center justify-between px-6 relative max-w-[1536px] mx-auto">
-                <div className="flex items-center gap-6">
+            <div className="w-full flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8 relative max-w-full mx-0">
+                <div className="flex items-center gap-4">
                     <Link href="/" className="flex items-center">
                         <img src="/pages/auth/18+christmas_logo.png" alt="18+ PDF" className="h-12 w-auto" />
+                        <span className="ml-3 inline-block bg-[#FF5252] text-white text-[10px] font-bold px-2 py-0.5 rounded-md">ALPHA</span>
                     </Link>
 
                     {/* Navigation Menu - Desktop (moved directly next to logo) */}
-                    <div className="hidden md:flex items-center gap-6 ml-2">
-                        <Link href="/merge-pdf" className={`${isActive('/merge-pdf') ? 'text-[#111418] font-bold' : 'text-[#617289] font-medium'} text-base md:text-lg hover:text-[#4383BF] transition-colors`}>
+                    <div className="hidden md:flex items-center gap-6 ml-4">
+                        <Link href="/merge-pdf" className={`${isActive('/merge-pdf') ? 'text-[#111418] font-bold' : 'text-[#617289] font-medium'} text-sm md:text-base hover:text-[#4383BF] transition-colors`}>
                             Merge PDF
                         </Link>
-                        <Link href="/split-pdf" className={`${isActive('/split-pdf') ? 'text-[#111418] font-bold' : 'text-[#617289] font-medium'} text-base md:text-lg hover:text-[#4383BF] transition-colors`}>
+                        <Link href="/split-pdf" className={`${isActive('/split-pdf') ? 'text-[#111418] font-bold' : 'text-[#617289] font-medium'} text-sm md:text-base hover:text-[#4383BF] transition-colors`}>
                             Split PDF
                         </Link>
-                        <Link href="/compress-pdf" className={`${isActive('/compress-pdf') ? 'text-[#111418] font-bold' : 'text-[#617289] font-medium'} text-base md:text-lg hover:text-[#4383BF] transition-colors`}>
+                        <Link href="/compress-pdf" className={`${isActive('/compress-pdf') ? 'text-[#111418] font-bold' : 'text-[#617289] font-medium'} text-sm md:text-base hover:text-[#4383BF] transition-colors`}>
                             Compress PDF
                         </Link>
-                        <Link href="/tools" className={`${isActive('/tools') ? 'text-[#111418] font-bold' : 'text-[#617289] font-medium'} text-base md:text-lg hover:text-[#4383BF] transition-colors`}>
+                        <Link href="/tools" className={`${isActive('/tools') ? 'text-[#111418] font-bold' : 'text-[#617289] font-medium'} text-sm md:text-base hover:text-[#4383BF] transition-colors`}>
                             Convert PDF
                         </Link>
                         <Link href="/tools" className={`text-[#617289] font-medium text-base md:text-lg hover:text-[#4383BF] transition-colors`}>
@@ -106,7 +107,7 @@ export function Header() {
                             </Link>
                         </>
                     ) : (
-                        <div className="flex items-center gap-3 mr-2">
+                        <div className="flex items-center gap-3">
                             <span className="text-sm font-medium text-slate-700 hidden lg:inline-block">
                                 Hello, {user.first_name || user.email?.split('@')[0] || 'User'}
                             </span>
@@ -127,12 +128,14 @@ export function Header() {
                         </div>
                     )}
                     <div ref={menuRef} className="relative">
+                        {/*
                         <button
                             onClick={() => setIsMenuOpen(!isMenuOpen)}
                             className="p-2 text-slate-600 hover:bg-slate-100 rounded-full transition-colors"
                         >
                             <Grip className="w-6 h-6" />
                         </button>
+                        */}
 
                         <AnimatePresence>
                             {isMenuOpen && (
