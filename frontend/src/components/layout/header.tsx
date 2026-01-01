@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Button } from "../ui/button";
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { Grip, Menu, X, Check } from "lucide-react";
+import { Grip, Menu, X, Check, ArrowRight } from "lucide-react";
 import { FaFilePdf, FaRobot, FaSignature, FaUserGroup, FaDesktop, FaMobile, FaGithub } from "react-icons/fa6";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from '@/lib/context/AuthContext';
@@ -263,10 +263,10 @@ export function Header() {
                                 {/* Mobile Menu Header */}
                                 <div className="flex items-center justify-between p-4 border-b border-slate-100 sticky top-0 bg-white/95 backdrop-blur-sm z-10">
                                     <Link href="/" onClick={() => setIsMobileMenuOpen(false)}>
-                                        <span className="text-2xl font-bold font-caveat">
-                                            <span className="text-[#FF0000]">18+</span>
-                                            <span className="text-slate-800"> PDF</span>
-                                        </span>
+                                        <div className="flex items-center">
+                                            <img src="/pages/auth/18+christmas_logo.png" alt="18+ PDF" className="h-12 w-auto" />
+                                            <span className="ml-3 inline-block bg-[#FF5252] text-white text-[10px] font-bold px-2 py-0.5 rounded-md">ALPHA</span>
+                                        </div>
                                     </Link>
                                     <button
                                         onClick={() => setIsMobileMenuOpen(false)}
@@ -318,58 +318,24 @@ export function Header() {
                                     </div>
 
                                     {/* Menu Sections */}
-                                    <div className="space-y-8">
-                                        {/* Section 1 */}
-                                        <div className="space-y-4">
-                                            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Features</h3>
-                                            <div className="grid grid-cols-1 gap-2">
-                                                <Link href="#" className="flex items-center gap-3 p-3 rounded-xl bg-blue-50 text-blue-700">
-                                                    <FaFilePdf className="w-5 h-5" />
-                                                    <span className="font-semibold">PDF Editor</span>
-                                                </Link>
-                                                <Link href="#" className="flex items-center gap-3 p-3 rounded-xl bg-purple-50 text-purple-700">
-                                                    <FaRobot className="w-5 h-5" />
-                                                    <span className="font-semibold">AI Chat</span>
-                                                </Link>
-                                                <Link href="#" className="flex items-center gap-3 p-3 rounded-xl bg-green-50 text-green-700">
-                                                    <FaSignature className="w-5 h-5" />
-                                                    <span className="font-semibold">Sign PDF</span>
-                                                </Link>
-                                            </div>
-                                        </div>
-
-                                        {/* Section 2 */}
-                                        <div className="space-y-4">
-                                            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Business</h3>
-                                            <div className="bg-slate-50 rounded-xl p-4">
-                                                <div className="flex items-start gap-4 mb-4">
-                                                    <div className="p-2 bg-red-100 rounded-lg text-red-600">
-                                                        <FaUserGroup className="w-5 h-5" />
-                                                    </div>
-                                                    <div>
-                                                        <div className="font-bold text-slate-900">For Teams</div>
-                                                        <div className="text-sm text-slate-500">Manage your squad</div>
-                                                    </div>
-                                                </div>
-                                                <Button size="sm" variant="outline" className="w-full text-red-600 border-red-200 bg-white">
-                                                    Check Plans
-                                                </Button>
-                                            </div>
-                                        </div>
-
-                                        {/* Section 3 */}
-                                        <div className="space-y-4">
-                                            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Apps</h3>
-                                            <div className="flex gap-4">
-                                                <Link href="/features/coming-soon" className="flex-1 flex flex-col items-center gap-2 p-4 rounded-xl border border-slate-100 text-slate-600 hover:border-blue-200 hover:text-blue-600">
-                                                    <FaDesktop className="w-6 h-6" />
-                                                    <span className="text-xs font-medium">Desktop</span>
-                                                </Link>
-                                                <Link href="/features/coming-soon" className="flex-1 flex flex-col items-center gap-2 p-4 rounded-xl border border-slate-100 text-slate-600 hover:border-blue-200 hover:text-blue-600">
-                                                    <FaMobile className="w-6 h-6" />
-                                                    <span className="text-xs font-medium">Mobile</span>
-                                                </Link>
-                                            </div>
+                                    <div className="space-y-2">
+                                        <Link href="/merge-pdf" onClick={() => setIsMobileMenuOpen(false)} className="block p-3 rounded-xl bg-slate-50 text-slate-700 font-medium hover:bg-blue-50 hover:text-blue-600 transition-colors">
+                                            Merge PDF
+                                        </Link>
+                                        <Link href="/split-pdf" onClick={() => setIsMobileMenuOpen(false)} className="block p-3 rounded-xl bg-slate-50 text-slate-700 font-medium hover:bg-blue-50 hover:text-blue-600 transition-colors">
+                                            Split PDF
+                                        </Link>
+                                        <Link href="/compress-pdf" onClick={() => setIsMobileMenuOpen(false)} className="block p-3 rounded-xl bg-slate-50 text-slate-700 font-medium hover:bg-blue-50 hover:text-blue-600 transition-colors">
+                                            Compress PDF
+                                        </Link>
+                                        <Link href="/tools" onClick={() => setIsMobileMenuOpen(false)} className="block p-3 rounded-xl bg-slate-50 text-slate-700 font-medium hover:bg-blue-50 hover:text-blue-600 transition-colors">
+                                            Convert PDF
+                                        </Link>
+                                        <div className="pt-4 border-t border-slate-100">
+                                            <Link href="/tools" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center justify-between p-3 rounded-xl text-slate-600 font-medium hover:bg-slate-50 hover:text-slate-900 transition-colors">
+                                                <span>All Tools</span>
+                                                <ArrowRight className="w-4 h-4" />
+                                            </Link>
                                         </div>
                                     </div>
                                 </div>
