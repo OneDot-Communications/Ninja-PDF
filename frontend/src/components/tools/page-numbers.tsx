@@ -2,53 +2,14 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { saveAs } from "file-saver";
-import FileUploadHero from "../ui/file-upload-hero"; // Hero uploader (big CTA, full-page drag overlay)
-import { Button } from "../ui/button";
-import { 
-    Hash, 
-    Type, 
-    FileText, 
-    ChevronLeft, 
-    ChevronRight, 
-    ZoomIn,
-    ZoomOut,
-    Maximize,
-    Grid3x3,
-    Settings,
-    Undo,
-    Redo,
+import FileUploadHero from "../ui/file-upload-hero";
+import {
+    Hash,
+    ChevronLeft,
+    ChevronRight,
     Download,
-    X,
-    Move,
-    Square as SquareIcon,
-    Monitor,
-    Smartphone,
-    Tablet,
     Sliders,
-    HelpCircle,
-    Sun,
-    Moon,
-    Layers,
-    History,
-    Scan,
-    Command,
     Palette,
-    AlignLeft,
-    AlignCenter,
-    AlignRight,
-    AlignJustify,
-    Bold,
-    Italic,
-    Underline,
-    RotateCw,
-    Copy,
-    Plus,
-    Check,
-    ChevronDown,
-    ArrowUp,
-    ArrowDown,
-    ArrowLeft,
-    ArrowRight
 } from "lucide-react";
 import { pdfStrategyManager, getPdfJs } from "@/lib/services/pdf-service";
 import { toast } from "@/lib/hooks/use-toast";
@@ -59,7 +20,7 @@ interface PageNumberElement {
     id: string;
     format: "n" | "page-n" | "n-of-m" | "page-n-of-m";
     startFrom: number;
-    pageRange: string; // e.g. "1-5, 8"
+    pageRange: string;
     fontFamily: string;
     fontSize: number;
     color: string;
@@ -74,32 +35,17 @@ interface PageNumberElement {
     horizontalAlignment: "left" | "center" | "right";
 }
 
-// History state for undo/redo
-interface HistoryState {
-    pageNumberElement: PageNumberElement | null;
-    currentPage: number;
-}
-
 export function PageNumbersTool() {
-    // File and PDF state
     const [file, setFile] = useState<File | null>(null);
     const [currentPage, setCurrentPage] = useState(1);
     const [numPages, setNumPages] = useState(0);
     const [isProcessing, setIsProcessing] = useState(false);
-    const [zoom, setZoom] = useState(100);
-    
-    // Page number element state
     const [pageNumberElement, setPageNumberElement] = useState<PageNumberElement | null>(null);
-    
-    // Canvas refs
     const canvasRefs = useRef<(HTMLCanvasElement | null)[]>([]);
-    const containerRef = useRef<HTMLDivElement>(null);
-    const scrollContainerRef = useRef<HTMLDivElement>(null);
-    
-    // Properties state
+
     const [format, setFormat] = useState<"n" | "page-n" | "n-of-m" | "page-n-of-m">("n-of-m");
     const [startFrom, setStartFrom] = useState(1);
-    const [pageRange, setPageRange] = useState(""); // e.g. "1-5, 8"
+    const [pageRange, setPageRange] = useState("");
     const [fontFamily, setFontFamily] = useState("Helvetica");
     const [fontSize, setFontSize] = useState(12);
     const [color, setColor] = useState("#000000");
@@ -112,66 +58,28 @@ export function PageNumbersTool() {
     const [rotation, setRotation] = useState(0);
     const [verticalAlignment, setVerticalAlignment] = useState<"top" | "middle" | "bottom">("bottom");
     const [horizontalAlignment, setHorizontalAlignment] = useState<"left" | "center" | "right">("center");
-    
-    // UI state
-    const [showToolbar, setShowToolbar] = useState(true);
-    const [showProperties, setShowProperties] = useState(true);
-    const [darkMode, setDarkMode] = useState(false);
-    const [viewMode, setViewMode] = useState<"desktop" | "tablet" | "mobile">("desktop");
-    const [showGrid, setShowGrid] = useState(false);
-    const [snapToGrid, setSnapToGrid] = useState(false);
-    const [gridSize, setGridSize] = useState(10);
-    
-    // History state for undo/redo
-    const [history, setHistory] = useState<HistoryState[]>([]);
-    const [historyIndex, setHistoryIndex] = useState(-1);
-    
-    // Font options
-    const fontOptions = [
-        "Helvetica", "Times New Roman", "Courier New", 
-        "Georgia", "Verdana", "Comic Sans MS", "Impact", 
-        "Lucida Console", "Tahoma", "Trebuchet MS", "Palatino"
-    ];
-    
-    // Color presets
-    const colorPresets = [
-        "#000000", "#FF0000", "#0000FF", "#00FF00", 
-        "#FFFF00", "#FF00FF", "#00FFFF", "#888888"
-    ];
-    
-    // Format options
-    const formatOptions = [
-        { id: "n", label: "1", example: "1" },
-        { id: "page-n", label: "Page 1", example: "Page 1" },
-        { id: "n-of-m", label: "1 of N", example: "1 of 5" },
-        { id: "page-n-of-m", label: "Page 1 of N", example: "Page 1 of 5" }
-    ];
-    
-    // Position options
+
     const positionOptions = [
-        { id: "top-left", icon: <ArrowUp className="h-3 w-3 mr-1" />, label: "Top Left" },
-        { id: "top-center", icon: <ArrowUp className="h-3 w-3 mx-auto" />, label: "Top Center" },
-        { id: "top-right", icon: <ArrowUp className="h-3 w-3 ml-auto" />, label: "Top Right" },
-        { id: "bottom-left", icon: <ArrowDown className="h-3 w-3 mr-1" />, label: "Bottom Left" },
-        { id: "bottom-center", icon: <ArrowDown className="h-3 w-3 mx-auto" />, label: "Bottom Center" },
-        { id: "bottom-right", icon: <ArrowDown className="h-3 w-3 ml-auto" />, label: "Bottom Right" }
+        { id: "top-left", label: "Top Left" },
+        { id: "top-center", label: "Top Center" },
+        { id: "top-right", label: "Top Right" },
+        { id: "bottom-left", label: "Bottom Left" },
+        { id: "bottom-center", label: "Bottom Center" },
+        { id: "bottom-right", label: "Bottom Right" }
     ];
 
     const handleFileSelected = async (files: File[]) => {
         if (files.length > 0) {
             setFile(files[0]);
             setCurrentPage(1);
-            
-            // Load PDF to get page count
+
             const pdfjsLib = await getPdfJs();
             const arrayBuffer = await files[0].arrayBuffer();
             const pdf = await (pdfjsLib as any).getDocument(new Uint8Array(arrayBuffer)).promise;
             setNumPages(pdf.numPages);
-            
-            // Initialize canvas refs
+
             canvasRefs.current = Array(pdf.numPages).fill(null);
-            
-            // Initialize page number element
+
             const newPageNumberElement: PageNumberElement = {
                 id: Math.random().toString(36).substr(2, 9),
                 format,
@@ -190,14 +98,15 @@ export function PageNumbersTool() {
                 verticalAlignment,
                 horizontalAlignment
             };
-            
+
             setPageNumberElement(newPageNumberElement);
-            setHistory([{
-                pageNumberElement: newPageNumberElement,
-                currentPage: 1
-            }]);
-            setHistoryIndex(0);
         }
+    };
+
+    const formatFileSize = (bytes: number) => {
+        if (bytes < 1024) return bytes + " B";
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+        return (bytes / (1024 * 1024)).toFixed(1) + " MB";
     };
 
     useEffect(() => {
@@ -207,160 +116,52 @@ export function PageNumbersTool() {
             const pdfjsLib = await getPdfJs();
             const arrayBuffer = await file.arrayBuffer();
             const pdf = await (pdfjsLib as any).getDocument(new Uint8Array(arrayBuffer)).promise;
-            
-            // Apply zoom
-            const scale = zoom / 100;
-            
-            // Render each page
+
+            // Render all pages
             for (let i = 1; i <= pdf.numPages; i++) {
                 const page = await pdf.getPage(i);
-                const viewport = page.getViewport({ scale });
-                
-                // Get or create canvas
+                const viewport = page.getViewport({ scale: 0.5 }); // Smaller scale for grid view
+
                 let canvas = canvasRefs.current[i - 1];
-                
                 if (!canvas) continue;
-                
+
                 const context = canvas.getContext("2d")!;
-                
                 canvas.height = viewport.height;
                 canvas.width = viewport.width;
-                
+
                 await page.render({
                     canvasContext: context,
                     viewport: viewport,
-                    canvas: canvas,
                 }).promise;
             }
         };
-        
+
         renderAllPages();
-    }, [file, zoom]);
+    }, [file]);
 
-    // Save current state to history
-    const saveToHistory = useCallback(() => {
-        if (!pageNumberElement) return;
-        
-        const newState = {
-            pageNumberElement: { ...pageNumberElement },
-            currentPage
-        };
-        
-        // Remove any states after the current index
-        const newHistory = history.slice(0, historyIndex + 1);
-        newHistory.push(newState);
-        
-        // Limit history to 20 states
-        if (newHistory.length > 20) {
-            newHistory.shift();
-        }
-        
-        setHistory(newHistory);
-        setHistoryIndex(newHistory.length - 1);
-    }, [pageNumberElement, currentPage, history, historyIndex]);
-
-    // Undo
-    const undo = useCallback(() => {
-        if (historyIndex > 0) {
-            const prevState = history[historyIndex - 1];
-            setPageNumberElement(prevState.pageNumberElement);
-            setCurrentPage(prevState.currentPage);
-            setHistoryIndex(historyIndex - 1);
-            
-            // Update local state
-            if (prevState.pageNumberElement) {
-                setFormat(prevState.pageNumberElement.format);
-                setStartFrom(prevState.pageNumberElement.startFrom);
-                setPageRange(prevState.pageNumberElement.pageRange);
-                setFontFamily(prevState.pageNumberElement.fontFamily);
-                setFontSize(prevState.pageNumberElement.fontSize);
-                setColor(prevState.pageNumberElement.color);
-                setMargin(prevState.pageNumberElement.margin);
-                setPosition(prevState.pageNumberElement.position);
-                setIsBold(prevState.pageNumberElement.fontWeight === 'bold');
-                setIsItalic(prevState.pageNumberElement.fontStyle === 'italic');
-                setIsUnderline(prevState.pageNumberElement.textDecoration === 'underline');
-                setOpacity(prevState.pageNumberElement.opacity);
-                setRotation(prevState.pageNumberElement.rotation);
-                setVerticalAlignment(prevState.pageNumberElement.verticalAlignment);
-                setHorizontalAlignment(prevState.pageNumberElement.horizontalAlignment);
-            }
-        }
-    }, [historyIndex, history]);
-
-    // Redo
-    const redo = useCallback(() => {
-        if (historyIndex < history.length - 1) {
-            const nextState = history[historyIndex + 1];
-            setPageNumberElement(nextState.pageNumberElement);
-            setCurrentPage(nextState.currentPage);
-            setHistoryIndex(historyIndex + 1);
-            
-            // Update local state
-            if (nextState.pageNumberElement) {
-                setFormat(nextState.pageNumberElement.format);
-                setStartFrom(nextState.pageNumberElement.startFrom);
-                setPageRange(nextState.pageNumberElement.pageRange);
-                setFontFamily(nextState.pageNumberElement.fontFamily);
-                setFontSize(nextState.pageNumberElement.fontSize);
-                setColor(nextState.pageNumberElement.color);
-                setMargin(nextState.pageNumberElement.margin);
-                setPosition(nextState.pageNumberElement.position);
-                setIsBold(nextState.pageNumberElement.fontWeight === 'bold');
-                setIsItalic(nextState.pageNumberElement.fontStyle === 'italic');
-                setIsUnderline(nextState.pageNumberElement.textDecoration === 'underline');
-                setOpacity(nextState.pageNumberElement.opacity);
-                setRotation(nextState.pageNumberElement.rotation);
-                setVerticalAlignment(nextState.pageNumberElement.verticalAlignment);
-                setHorizontalAlignment(nextState.pageNumberElement.horizontalAlignment);
-            }
-        }
-    }, [historyIndex, history]);
-
-    // Fit to page
-    const fitToPage = () => {
-        setZoom(100);
-    };
-
-    // Update page number element
-    const updatePageNumberElement = useCallback(() => {
-        if (!pageNumberElement) return;
-        
-        const updatedElement: PageNumberElement = {
-            ...pageNumberElement,
-            format,
-            startFrom,
-            pageRange,
-            fontFamily,
-            fontSize,
-            color,
-            margin,
-            position,
-            fontWeight: isBold ? 'bold' : 'normal',
-            fontStyle: isItalic ? 'italic' : 'normal',
-            textDecoration: isUnderline ? 'underline' : 'none',
-            opacity,
-            rotation,
-            verticalAlignment,
-            horizontalAlignment
-        };
-        
-        setPageNumberElement(updatedElement);
-        saveToHistory();
-    }, [pageNumberElement, format, startFrom, pageRange, fontFamily, fontSize, color, margin, position, isBold, isItalic, isUnderline, opacity, rotation, verticalAlignment, horizontalAlignment, saveToHistory]);
-
-    // Apply page numbers to PDF
     const applyPageNumbers = async () => {
         if (!file || !pageNumberElement) return;
         setIsProcessing(true);
 
         try {
+            // Format page range for backend (e.g., "1-5" or "1-12")
+            const toPage = pageRange ? parseInt(pageRange) : numPages;
+            const formattedPageRange = `${startFrom}-${toPage}`;
+
             const result = await pdfStrategyManager.execute('page-numbers', [file], {
-                ...pageNumberElement
+                ...pageNumberElement,
+                format,
+                startFrom: 1, // Always start numbering from 1
+                pageRange: formattedPageRange, // Send as "fromPage-toPage"
+                fontFamily,
+                fontSize,
+                color,
+                margin,
+                position
             });
 
             saveAs(result.blob, result.fileName || `numbered-${file.name}`);
-            
+
             toast.show({
                 title: "Success",
                 message: "Page numbers added successfully!",
@@ -368,18 +169,9 @@ export function PageNumbersTool() {
                 position: "top-right",
             });
         } catch (error: any) {
-            console.error("Error adding page numbers:", error);
-
-            let errorMessage = "Failed to add page numbers. Please try again.";
-            if (error.message?.includes('corrupted') || error.message?.includes('Invalid PDF structure')) {
-                errorMessage = "The PDF file appears to be corrupted. Try using the Repair PDF tool first.";
-            } else if (error.message?.includes('encrypted') || error.message?.includes('password')) {
-                errorMessage = "The PDF is encrypted. Please use the Unlock PDF tool first.";
-            }
-
             toast.show({
                 title: "Operation Failed",
-                message: errorMessage,
+                message: error.message || "Failed to add page numbers. Please try again.",
                 variant: "error",
                 position: "top-right",
             });
@@ -388,600 +180,336 @@ export function PageNumbersTool() {
         }
     };
 
-    // Generate page number text for display
+
+    const shouldShowPageNumber = (pageNum: number): boolean => {
+        // Calculate FROM and TO page range
+        const fromPage = startFrom;
+        const toPage = pageRange ? parseInt(pageRange) : numPages;
+
+
+        // Show page number if current page is within the range
+        return pageNum >= fromPage && pageNum <= toPage;
+    };
+
     const generatePageNumberText = (pageNum: number) => {
-        if (!pageNumberElement) return "";
-        
-        const { format, startFrom } = pageNumberElement;
-        const adjustedPageNum = pageNum - 1 + startFrom;
-        
+        // Calculate the actual number to display
+        // If we start from page 3, page 3 should show "1", page 4 shows "2", etc.
+        const displayNumber = pageNum - startFrom + 1;
+
         switch (format) {
             case "n":
-                return `${adjustedPageNum}`;
+                return `${displayNumber}`;
             case "page-n":
-                return `Page ${adjustedPageNum}`;
+                return `Page ${displayNumber}`;
             case "n-of-m":
-                return `${adjustedPageNum} of ${numPages}`;
+                const totalInRange = (pageRange ? parseInt(pageRange) : numPages) - startFrom + 1;
+                return `${displayNumber} of ${totalInRange}`;
             case "page-n-of-m":
-                return `Page ${adjustedPageNum} of ${numPages}`;
+                const totalPages = (pageRange ? parseInt(pageRange) : numPages) - startFrom + 1;
+                return `Page ${displayNumber} of ${totalPages}`;
             default:
-                return `${adjustedPageNum}`;
+                return `${displayNumber}`;
         }
     };
 
-    // If no file, show file upload
     if (!file) {
         return (
-            <div className="flex flex-col items-center justify-center h-[calc(100vh-64px)] bg-linear-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
-                <div className="max-w-md w-full p-8 bg-white dark:bg-gray-800 rounded-2xl shadow-xl">
-                    <div className="flex items-center justify-center mb-6">
-                        <div className="p-4 bg-blue-100 dark:bg-blue-900 rounded-full">
-                            <Hash className="h-12 w-12 text-blue-600 dark:text-blue-400" />
-                        </div>
-                    </div>
-                    <h1 className="text-2xl font-bold text-center mb-2 text-gray-900 dark:text-white">Add Page Numbers</h1>
-                    <p className="text-center text-gray-600 dark:text-gray-400 mb-6">Upload a PDF to add page numbers</p>
-                    <div className="min-h-[320px] flex items-center justify-center">
-                        <FileUploadHero
-                            title="Page Numbers"
-                            onFilesSelected={handleFileSelected}
-                            maxFiles={1}
-                            accept={{ "application/pdf": [".pdf"] }}
-                        />
-                    </div>
-                    <div className="mt-6 text-center">
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                            Add professional page numbers to your PDFs
-                        </p>
-                    </div>
-                </div>
+            <div className="min-h-[calc(100vh-120px)] flex items-center justify-center">
+                <FileUploadHero
+                    title="Add Page Numbers"
+                    onFilesSelected={handleFileSelected}
+                    maxFiles={1}
+                    accept={{ "application/pdf": [".pdf"] }}
+                />
             </div>
         );
     }
 
     return (
-        <div className={cn(
-            "flex flex-col h-[calc(100vh-64px)]",
-            darkMode ? "dark" : ""
-        )}>
-            {/* Floating Toolbar */}
-            <div className={cn(
-                "fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-2 transition-all duration-300",
-                showToolbar ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2 pointer-events-none"
-            )}>
-                <div className="flex items-center gap-1">
-                    {/* Navigation */}
-                    <div className="flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-1 mr-2">
-                        <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8" 
-                            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} 
-                            disabled={currentPage === 1}
-                        >
-                            <ChevronLeft className="h-4 w-4" />
-                        </Button>
-                        <span className="text-sm font-medium px-2 min-w-20 text-center text-gray-700 dark:text-gray-300">
-                            {currentPage} / {numPages}
-                        </span>
-                        <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8" 
-                            onClick={() => setCurrentPage(Math.min(numPages, currentPage + 1))} 
-                            disabled={currentPage === numPages}
-                        >
-                            <ChevronRight className="h-4 w-4" />
-                        </Button>
-                    </div>
-                    
-                    {/* Zoom Controls */}
-                    <div className="flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-1 mr-2">
-                        <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8" 
-                            onClick={() => setZoom(Math.max(25, zoom - 25))}
-                        >
-                            <ZoomOut className="h-4 w-4" />
-                        </Button>
-                        <span className="text-sm font-medium px-2 min-w-[60px] text-center text-gray-700 dark:text-gray-300">{zoom}%</span>
-                        <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8" 
-                            onClick={() => setZoom(Math.min(200, zoom + 25))}
-                        >
-                            <ZoomIn className="h-4 w-4" />
-                        </Button>
-                        <div className="w-px h-4 bg-gray-300 dark:bg-gray-600 mx-1" />
-                        <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8" 
-                            onClick={fitToPage} 
-                            title="Fit to Page"
-                        >
-                            <Maximize className="h-4 w-4" />
-                        </Button>
-                    </div>
-                    
-                    {/* Actions */}
-                    <div className="flex items-center gap-1 ml-2">
-                        <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8" 
-                            onClick={undo} 
-                            disabled={historyIndex <= 0}
-                            title="Undo"
-                        >
-                            <Undo className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8" 
-                            onClick={redo} 
-                            disabled={historyIndex >= history.length - 1}
-                            title="Redo"
-                        >
-                            <Redo className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                            onClick={applyPageNumbers} 
-                            disabled={isProcessing || !pageNumberElement} 
-                            className="h-8 px-3 bg-blue-600 hover:bg-blue-700 text-white"
-                        >
-                            {isProcessing ? "Processing..." : <><Download className="h-4 w-4 mr-1" /> Apply</>}
-                        </Button>
-                    </div>
-                </div>
-            </div>
-            
-            {/* Properties Panel */}
-            <div className={cn(
-                "fixed right-4 top-20 z-40 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-4 w-80 transition-all duration-300",
-                showProperties ? "opacity-100 translate-x-0" : "opacity-0 translate-x-2 pointer-events-none"
-            )}>
-                <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-semibold text-gray-900 dark:text-white">Page Number Properties</h3>
-                    <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-6 w-6" 
-                        onClick={() => setShowProperties(false)}
-                    >
-                        <X className="h-4 w-4" />
-                    </Button>
-                </div>
-                
-                {/* Format Options */}
-                <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Format</label>
-                    <div className="grid grid-cols-2 gap-2">
-                        {formatOptions.map((fmt) => (
-                            <Button
-                                key={fmt.id}
-                                variant={format === fmt.id ? "secondary" : "ghost"}
-                                size="sm"
-                                onClick={() => {
-                                    setFormat(fmt.id as any);
-                                    updatePageNumberElement();
-                                }}
-                                className="justify-start"
-                            >
-                                {fmt.label}
-                            </Button>
-                        ))}
-                    </div>
-                </div>
-                
-                {/* Start From and Page Range */}
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Start From</label>
-                        <input
-                            type="number"
-                            min="1"
-                            value={startFrom}
-                            onChange={(e) => {
-                                setStartFrom(parseInt(e.target.value) || 1);
-                                updatePageNumberElement();
-                            }}
-                            className="w-full h-10 rounded-md border border-gray-300 dark:border-gray-500 px-3 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Page Range</label>
-                        <input
-                            type="text"
-                            placeholder="e.g. 1-5, 8"
-                            value={pageRange}
-                            onChange={(e) => {
-                                setPageRange(e.target.value);
-                                updatePageNumberElement();
-                            }}
-                            className="w-full h-10 rounded-md border border-gray-300 dark:border-gray-500 px-3 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                        />
-                    </div>
-                </div>
-                
-                {/* Font Selection */}
-                <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Font Family</label>
-                    <select
-                        value={fontFamily}
-                        onChange={(e) => {
-                            setFontFamily(e.target.value);
-                            updatePageNumberElement();
-                        }}
-                        className="w-full h-10 rounded-md border border-gray-300 dark:border-gray-500 px-3 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                    >
-                        {fontOptions.map(font => (
-                            <option key={font} value={font}>{font}</option>
-                        ))}
-                    </select>
-                </div>
-                
-                {/* Text Style Controls */}
-                <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Text Style</label>
-                    <div className="flex items-center gap-2">
-                        <Button
-                            variant={isBold ? "secondary" : "ghost"}
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => {
-                                setIsBold(!isBold);
-                                updatePageNumberElement();
-                            }}
-                            title="Bold"
-                        >
-                            <Bold className="h-4 w-4" />
-                        </Button>
-                        <Button
-                            variant={isItalic ? "secondary" : "ghost"}
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => {
-                                setIsItalic(!isItalic);
-                                updatePageNumberElement();
-                            }}
-                            title="Italic"
-                        >
-                            <Italic className="h-4 w-4" />
-                        </Button>
-                        <Button
-                            variant={isUnderline ? "secondary" : "ghost"}
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => {
-                                setIsUnderline(!isUnderline);
-                                updatePageNumberElement();
-                            }}
-                            title="Underline"
-                        >
-                            <Underline className="h-4 w-4" />
-                        </Button>
-                    </div>
-                </div>
-                
-                {/* Font Size and Margin */}
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Font Size</label>
-                        <input
-                            type="number"
-                            min="6"
-                            max="72"
-                            value={fontSize}
-                            onChange={(e) => {
-                                setFontSize(parseInt(e.target.value) || 12);
-                                updatePageNumberElement();
-                            }}
-                            className="w-full h-10 rounded-md border border-gray-300 dark:border-gray-500 px-3 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Margin (px)</label>
-                        <input
-                            type="number"
-                            min="0"
-                            max="200"
-                            value={margin}
-                            onChange={(e) => {
-                                setMargin(parseInt(e.target.value) || 0);
-                                updatePageNumberElement();
-                            }}
-                            className="w-full h-10 rounded-md border border-gray-300 dark:border-gray-500 px-3 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                        />
-                    </div>
-                </div>
-                
-                {/* Color Picker */}
-                <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Color</label>
-                    <div className="flex items-center gap-2 flex-wrap">
-                        {colorPresets.map(c => (
-                            <button
-                                key={c}
-                                className={cn("w-6 h-6 rounded-full border-2 border-gray-300 dark:border-gray-600", color === c && "ring-2 ring-offset-2 ring-blue-500")}
-                                style={{ backgroundColor: c }}
-                                onClick={() => {
-                                    setColor(c);
-                                    updatePageNumberElement();
-                                }}
-                                title={c}
-                            />
-                        ))}
-                        <input
-                            type="color"
-                            value={color}
-                            onChange={(e) => {
-                                setColor(e.target.value);
-                                updatePageNumberElement();
-                            }}
-                            className="h-8 w-8 rounded border border-gray-300 dark:border-gray-500 cursor-pointer bg-transparent p-0"
-                            title="Custom Color"
-                        />
-                    </div>
-                </div>
-                
-                {/* Opacity */}
-                <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Opacity: {Math.round(opacity * 100)}%</label>
-                    <input
-                        type="range"
-                        min="0.1"
-                        max="1"
-                        step="0.1"
-                        value={opacity}
-                        onChange={(e) => {
-                            setOpacity(Number(e.target.value));
-                            updatePageNumberElement();
-                        }}
-                        className="w-full"
-                    />
-                </div>
-                
-                {/* Rotation */}
-                <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Rotation: {rotation}°</label>
-                    <input
-                        type="range"
-                        min="-180"
-                        max="180"
-                        step="5"
-                        value={rotation}
-                        onChange={(e) => {
-                            setRotation(Number(e.target.value));
-                            updatePageNumberElement();
-                        }}
-                        className="w-full"
-                    />
-                </div>
-                
-                {/* Position */}
-                <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Position</label>
-                    <div className="grid grid-cols-3 gap-2">
-                        {positionOptions.map((pos) => (
-                            <Button
-                                key={pos.id}
-                                variant={position === pos.id ? "secondary" : "ghost"}
-                                size="sm"
-                                onClick={() => {
-                                    setPosition(pos.id as any);
-                                    updatePageNumberElement();
-                                }}
-                                className="h-10 flex items-center justify-center"
-                            >
-                                {pos.icon}
-                                <span className="text-xs">{pos.label}</span>
-                            </Button>
-                        ))}
-                    </div>
-                </div>
-                
-                {/* Alignment */}
-                <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Alignment</label>
-                    <div className="grid grid-cols-3 gap-2">
-                        <Button
-                            variant={horizontalAlignment === "left" ? "secondary" : "ghost"}
-                            size="sm"
-                            onClick={() => {
-                                setHorizontalAlignment("left");
-                                updatePageNumberElement();
-                            }}
-                            className="h-10"
-                        >
-                            <AlignLeft className="h-4 w-4" />
-                        </Button>
-                        <Button
-                            variant={horizontalAlignment === "center" ? "secondary" : "ghost"}
-                            size="sm"
-                            onClick={() => {
-                                setHorizontalAlignment("center");
-                                updatePageNumberElement();
-                            }}
-                            className="h-10"
-                        >
-                            <AlignCenter className="h-4 w-4" />
-                        </Button>
-                        <Button
-                            variant={horizontalAlignment === "right" ? "secondary" : "ghost"}
-                            size="sm"
-                            onClick={() => {
-                                setHorizontalAlignment("right");
-                                updatePageNumberElement();
-                            }}
-                            className="h-10"
-                        >
-                            <AlignRight className="h-4 w-4" />
-                        </Button>
-                    </div>
-                </div>
-            </div>
-            
-            {/* Settings Panel */}
-            <div className="fixed bottom-4 left-4 z-40">
-                <div className="flex items-center gap-2 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-2">
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => setShowToolbar(!showToolbar)}
-                        title={showToolbar ? "Hide Toolbar" : "Show Toolbar"}
-                    >
-                        <Settings className="h-4 w-4" />
-                    </Button>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => setShowProperties(!showProperties)}
-                        title={showProperties ? "Hide Properties" : "Show Properties"}
-                    >
-                        <Sliders className="h-4 w-4" />
-                    </Button>
-                    <div className="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-1" />
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => setShowGrid(!showGrid)}
-                        title={showGrid ? "Hide Grid" : "Show Grid"}
-                    >
-                        <Grid3x3 className={cn("h-4 w-4", showGrid && "text-blue-600 dark:text-blue-400")} />
-                    </Button>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => setSnapToGrid(!snapToGrid)}
-                        title={snapToGrid ? "Disable Snap to Grid" : "Enable Snap to Grid"}
-                    >
-                        <Move className={cn("h-4 w-4", snapToGrid && "text-blue-600 dark:text-blue-400")} />
-                    </Button>
-                    <div className="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-1" />
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => setDarkMode(!darkMode)}
-                        title={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
-                    >
-                        {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-                    </Button>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => {
-                            if (viewMode === 'desktop') setViewMode('tablet');
-                            else if (viewMode === 'tablet') setViewMode('mobile');
-                            else setViewMode('desktop');
-                        }}
-                        title={`View Mode: ${viewMode}`}
-                    >
-                        {viewMode === 'desktop' && <Monitor className="h-4 w-4" />}
-                        {viewMode === 'tablet' && <Tablet className="h-4 w-4" />}
-                        {viewMode === 'mobile' && <Smartphone className="h-4 w-4" />}
-                    </Button>
-                </div>
-            </div>
-            
-            {/* Main Canvas Area */}
-            <div 
-                ref={scrollContainerRef}
-                className="flex-1 bg-gray-50 dark:bg-gray-900 overflow-auto p-8 relative"
-            >
-                <div className="flex flex-col items-center">
-                    {Array.from({ length: numPages }, (_, i) => (
-                        <div 
-                            key={i} 
-                            className="relative mb-8 shadow-2xl transition-transform duration-200 ease-out"
-                            style={{ 
-                                width: "fit-content", 
-                                height: "fit-content",
-                                transform: `scale(${zoom / 100})`
-                            }}
-                        >
-                            <canvas 
-                                ref={el => { canvasRefs.current[i] = el; }} 
-                                className="max-w-none block bg-white" 
-                            />
-                            
-                            {/* Grid Overlay */}
-                            {showGrid && (
-                                <div className="absolute inset-0 pointer-events-none">
-                                    <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
-                                        <defs>
-                                            <pattern id="grid" width={`${gridSize}%`} height={`${gridSize}%`} patternUnits="userSpaceOnUse">
-                                                <path d={`M ${gridSize}% 0 L 0 0 0 ${gridSize}%`} fill="none" stroke="rgba(0,0,0,0.1)" strokeWidth="0.5"/>
-                                            </pattern>
-                                        </defs>
-                                        <rect width="100%" height="100%" fill="url(#grid)" />
-                                    </svg>
+        <div className="bg-[#f8f9fa] min-h-screen pb-8">
+            <div className="max-w-[1800px] mx-auto px-4 py-4">
+                <div className="flex flex-col lg:flex-row gap-6">
+                    {/* Left Column - Page Grid */}
+                    <div className="flex-1 lg:max-w-[calc(100%-448px)]">
+                        {/* Control Bar */}
+                        <div className="bg-white/95 backdrop-blur-sm rounded-xl border border-gray-200 shadow-sm p-4 mb-6">
+                            <div className="flex items-center justify-between flex-wrap gap-4">
+                                <div className="flex items-center gap-2">
+                                    <h2 className="text-lg font-bold text-gray-900">{file.name}</h2>
+                                    <span className="text-sm text-gray-500">({formatFileSize(file.size)})</span>
                                 </div>
-                            )}
-                            
-                            {/* Page Number Overlay */}
-                            {pageNumberElement && (
-                                <div 
-                                    className="absolute p-2 font-bold whitespace-nowrap select-none transition-all duration-300"
-                                    style={{
-                                        fontFamily: pageNumberElement.fontFamily,
-                                        fontSize: `${pageNumberElement.fontSize * (zoom / 100)}px`,
-                                        color: pageNumberElement.color,
-                                        fontWeight: pageNumberElement.fontWeight,
-                                        fontStyle: pageNumberElement.fontStyle,
-                                        textDecoration: pageNumberElement.textDecoration,
-                                        opacity: pageNumberElement.opacity,
-                                        ...(
-                                            pageNumberElement.position === "bottom-center" ? { bottom: `${pageNumberElement.margin}px`, left: "50%", transform: `translateX(-50%) rotate(${pageNumberElement.rotation}deg)` } :
-                                            pageNumberElement.position === "bottom-right" ? { bottom: `${pageNumberElement.margin}px`, right: `${pageNumberElement.margin}px`, transform: `rotate(${pageNumberElement.rotation}deg)` } :
-                                            pageNumberElement.position === "bottom-left" ? { bottom: `${pageNumberElement.margin}px`, left: `${pageNumberElement.margin}px`, transform: `rotate(${pageNumberElement.rotation}deg)` } :
-                                            pageNumberElement.position === "top-center" ? { top: `${pageNumberElement.margin}px`, left: "50%", transform: `translateX(-50%) rotate(${pageNumberElement.rotation}deg)` } :
-                                            pageNumberElement.position === "top-right" ? { top: `${pageNumberElement.margin}px`, right: `${pageNumberElement.margin}px`, transform: `rotate(${pageNumberElement.rotation}deg)` } :
-                                            pageNumberElement.position === "top-left" ? { top: `${pageNumberElement.margin}px`, left: `${pageNumberElement.margin}px`, transform: `rotate(${pageNumberElement.rotation}deg)` } :
-                                            { transform: `rotate(${pageNumberElement.rotation}deg)` }
-                                        )
+                                <button
+                                    onClick={() => {
+                                        setFile(null);
+                                        setPageNumberElement(null);
                                     }}
+                                    className="flex items-center gap-2 text-gray-600 hover:text-red-600 transition-colors px-3 py-2 rounded-lg hover:bg-red-50"
                                 >
-                                    {generatePageNumberText(i + 1)}
-                                </div>
-                            )}
-                            
-                            {/* Page Number */}
-                            <div className="absolute bottom-4 right-4 bg-gray-800 bg-opacity-70 text-white px-2 py-1 rounded text-sm">
-                                Page {i + 1} of {numPages}
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                    <span className="text-sm font-bold">Remove File</span>
+                                </button>
                             </div>
                         </div>
-                    ))}
+
+                        {/* Grid of Pages */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {Array.from({ length: numPages }).map((_, index) => (
+                                <div
+                                    key={index}
+                                    className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden"
+                                >
+                                    {/* Preview Area */}
+                                    <div className="relative bg-gray-50 h-[300px] flex items-center justify-center overflow-hidden">
+                                        <div className="relative shadow-md max-w-full max-h-full">
+                                            <canvas
+                                                ref={(el) => {
+                                                    if (el) canvasRefs.current[index] = el;
+                                                }}
+                                                className="block max-w-full max-h-[280px] object-contain"
+                                            />
+                                            {/* Page number overlay preview */}
+                                            {shouldShowPageNumber(index + 1) && (
+                                                <div
+                                                    className="absolute text-sm font-medium pointer-events-none"
+                                                    style={{
+                                                        color,
+                                                        fontSize: `${fontSize * 0.5}px`, // Scale for preview
+                                                        fontFamily,
+                                                        fontWeight: isBold ? 'bold' : 'normal',
+                                                        fontStyle: isItalic ? 'italic' : 'normal',
+                                                        textDecoration: isUnderline ? 'underline' : 'none',
+                                                        opacity,
+                                                        ...(position.includes('bottom') ? { bottom: `${margin * 0.5}px` } : { top: `${margin * 0.5}px` }),
+                                                        ...(position.includes('left') ? { left: `${margin * 0.5}px` } :
+                                                            position.includes('right') ? { right: `${margin * 0.5}px` } :
+                                                                { left: '50%', transform: 'translateX(-50%)' })
+                                                    }}
+                                                >
+                                                    {generatePageNumberText(index + 1)}
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-sm rounded-full px-2 py-1 text-white text-xs font-bold">
+                                            Page {index + 1}
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Right Sidebar - Configuration */}
+                    <div className="lg:w-[424px] lg:fixed lg:right-4 lg:top-24">
+                        <div className="bg-white rounded-2xl shadow-lg p-6 w-full max-h-[calc(100vh-120px)] overflow-y-auto">
+                            {/* Header */}
+                            <div className="flex items-center justify-between mb-6">
+                                <h2 className="text-lg font-semibold text-gray-900">Page Number</h2>
+                                <button className="p-1 hover:bg-gray-100 rounded">
+                                    <Sliders className="h-5 w-5 text-gray-600" />
+                                </button>
+                            </div>
+
+                            {/* Pagination Logic Section */}
+                            <div className="mb-6">
+                                {/* <div className="flex items-center gap-2 mb-2">
+                            <div className="w-5 h-5 bg-blue-500 rounded flex items-center justify-center flex-shrink-0">
+                                <Hash className="h-3 w-3 text-white" />
+                            </div>
+                            <h3 className="font-semibold text-gray-900">Pagination Logic</h3>
+                        </div>
+                        <p className="text-xs text-gray-500 mb-4">Configure range, style, and placement</p> */}
+
+                                {/* Page Range */}
+                                <div className="mb-4">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <label className="text-sm font-medium text-gray-700">Page Range</label>
+                                        <button
+                                            onClick={() => {
+                                                setStartFrom(1);
+                                                setPageRange("");
+                                            }}
+                                            className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                                        >
+                                            Reset
+                                        </button>
+                                    </div>
+                                    <div className="text-xs text-gray-500 mb-2">(Which pages should have numbers?)</div>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label className="text-xs text-gray-600 block mb-1">From Page</label>
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                max={numPages}
+                                                value={startFrom}
+                                                onChange={(e) => setStartFrom(parseInt(e.target.value) || 1)}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="text-xs text-gray-600 block mb-1">To Page</label>
+                                            <input
+                                                type="number"
+                                                min={startFrom}
+                                                max={numPages}
+                                                placeholder={numPages.toString()}
+                                                value={pageRange}
+                                                onChange={(e) => setPageRange(e.target.value)}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Number Format */}
+                            <div className="mb-6">
+                                <label className="text-sm font-medium text-gray-700 block mb-2">Number Format</label>
+                                <select
+                                    value={format}
+                                    onChange={(e) => setFormat(e.target.value as any)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                                >
+                                    <option value="n">1</option>
+                                    <option value="page-n">Page 1</option>
+                                    <option value="n-of-m">1 of N</option>
+                                    <option value="page-n-of-m">Page 1 of N</option>
+                                </select>
+                                <p className="text-xs text-gray-500 mt-2">
+                                    Pro tip: "Page X of Y" is great for contracts. Roman numerals for prefaces.
+                                </p>
+                            </div>
+
+                            {/* Typography */}
+                            <div className="mb-6">
+                                <label className="text-sm font-medium text-gray-700 block mb-3">Typography</label>
+
+                                {/* Single Row: Font, Color, Size */}
+                                <div className="flex gap-3">
+                                    {/* Font Family Selector */}
+                                    <div className="flex-1 relative">
+                                        <select
+                                            value={fontFamily}
+                                            onChange={(e) => setFontFamily(e.target.value)}
+                                            className="w-full h-12 appearance-none rounded-xl border border-gray-300 pl-4 pr-8 bg-white text-gray-900 text-sm font-medium focus:border-blue-600 outline-none"
+                                        >
+                                            <option value="Helvetica">Helvetica</option>
+                                            <option value="Times-Roman">Times New Roman</option>
+                                            <option value="Courier">Courier</option>
+                                            <option value="Arial">Arial</option>
+                                        </select>
+                                        {/* Chevron Icon */}
+                                        <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500">
+                                            <svg width="10" height="6" viewBox="0 0 10 6" fill="none">
+                                                <path d="M1 1L5 5L9 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                                            </svg>
+                                        </div>
+                                    </div>
+
+                                    {/* Color Picker */}
+                                    <div className="relative">
+                                        <div className="w-12 h-12 rounded-xl border border-gray-300 bg-white flex items-center justify-center cursor-pointer hover:border-blue-600 transition-colors">
+                                            <div className="w-6 h-6 rounded-full border border-black/10 shadow-sm" style={{ backgroundColor: color }} />
+                                        </div>
+                                        <input
+                                            type="color"
+                                            value={color}
+                                            onChange={(e) => setColor(e.target.value)}
+                                            className="absolute inset-0 opacity-0 cursor-pointer"
+                                        />
+                                    </div>
+
+                                    {/* Font Size Input */}
+                                    <div className="w-20 relative">
+                                        <input
+                                            type="number"
+                                            value={fontSize}
+                                            onChange={(e) => setFontSize(Number(e.target.value))}
+                                            className="w-full h-12 rounded-xl border border-gray-300 pl-3 pr-8 bg-white text-gray-900 text-sm font-medium focus:border-blue-600 outline-none text-center"
+                                        />
+                                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs font-medium pointer-events-none">px</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Placement Section */}
+                            <div className="mb-8">
+                                <div className="flex items-center justify-between mb-4">
+                                    <h3 className="text-sm font-medium text-gray-700">Placement</h3>
+                                </div>
+
+                                <div className="bg-[#f8fafc] border border-gray-200 rounded-2xl p-4">
+                                    <div className="flex gap-6">
+                                        {/* 3x3 Grid */}
+                                        <div className="grid grid-cols-3 gap-2 w-[100px] flex-shrink-0">
+                                            {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((i) => {
+                                                const row = Math.floor(i / 3);
+                                                const col = i % 3;
+                                                const positionMap = [
+                                                    "top-left", "top-center", "top-right",
+                                                    "bottom-left", "bottom-center", "bottom-right",
+                                                    "bottom-left", "bottom-center", "bottom-right"
+                                                ];
+                                                const gridPosition = positionMap[i];
+
+                                                return (
+                                                    <button
+                                                        key={i}
+                                                        onClick={() => setPosition(gridPosition as any)}
+                                                        className={cn(
+                                                            "aspect-square rounded border transition-all flex items-center justify-center",
+                                                            position === gridPosition
+                                                                ? "bg-blue-600 border-blue-600 text-white"
+                                                                : "bg-white border-gray-300 hover:border-gray-400"
+                                                        )}
+                                                    >
+                                                        {position === gridPosition && (
+                                                            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                                                <path d="M7 2a1 1 0 00-.707 1.707L7 4.414v3.758a1 1 0 01-.293.707l-4 4C.817 14.769 2.156 18 4.828 18h10.343c2.673 0 4.012-3.231 2.122-5.121l-4-4A1 1 0 0113 8.172V4.414l.707-.707A1 1 0 0013 2H7zm2 6.172V4h2v4.172a3 3 0 00.879 2.12l1.027 1.028a4 4 0 00-2.171.102l-.47.156a4 4 0 01-2.53 0l-.563-.187a1.993 1.993 0 00-.114-.035l1.063-1.063A3 3 0 009 8.172z" />
+                                                            </svg>
+                                                        )}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+
+                                        {/* Info & Current Position */}
+                                        <div className="flex flex-col justify-between flex-1">
+                                            <p className="text-gray-600 text-xs leading-relaxed">
+                                                Click a grid cell to position the page number.
+                                            </p>
+                                            <div className="mt-2">
+                                                <div className="bg-white border border-gray-200 rounded-md px-2 py-1 text-xs font-medium text-gray-700 inline-block">
+                                                    {position.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Apply Button */}
+                            <button
+                                onClick={applyPageNumbers}
+                                disabled={isProcessing}
+                                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            >
+                                <Download className="h-5 w-5" />
+                                {isProcessing ? "Processing..." : "Apply Page Numbers"}
+                            </button>
+
+                            {/* Footer */}
+                            <div className="mt-4 flex items-center gap-2 text-xs text-gray-500">
+                                <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                                </svg>
+                                <span>File processed locally. We do not store your data.</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-            </div>
-            
-            {/* Help Button */}
-            <div className="fixed bottom-4 right-4 z-40">
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-10 w-10 rounded-full bg-white dark:bg-gray-800 shadow-lg border border-gray-200 dark:border-gray-700"
-                    onClick={() => {
-                        toast.show({
-                            title: "Page Numbers Help",
-                            message: "Customize page number format, position, and style using the properties panel.",
-                            variant: "success",
-                            position: "top-right",
-                        });
-                    }}
-                    title="Help"
-                >
-                    <HelpCircle className="h-5 w-5" />
-                </Button>
             </div>
         </div>
     );

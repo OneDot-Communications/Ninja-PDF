@@ -2,8 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { saveAs } from "file-saver";
-import FileUploadHero from "../ui/file-upload-hero"; // Hero uploader (big CTA, full-page drag overlay)
-import { Button } from "../ui/button";
+import FileUploadHero from "../ui/file-upload-hero";
 import {
     Crop,
     CheckSquare,
@@ -26,16 +25,8 @@ import {
     Monitor,
     Smartphone,
     Tablet,
-    Sliders,
-    HelpCircle,
-    Sun,
-    Moon,
-    Layers,
-    History,
-    Scan,
-    Command,
     FileText,
-    Crop as CropIcon
+    FolderOpen,
 } from "lucide-react";
 import { pdfStrategyManager, getPdfJs } from "@/lib/services/pdf-service";
 import { toast } from "@/lib/hooks/use-toast";
@@ -70,10 +61,6 @@ export function CropPdfTool() {
     const [dragHandle, setDragHandle] = useState<string | null>(null);
 
     // UI state
-    const [showToolbar, setShowToolbar] = useState(true);
-    const [showProperties, setShowProperties] = useState(true);
-    const [darkMode, setDarkMode] = useState(false);
-    const [viewMode, setViewMode] = useState<"desktop" | "tablet" | "mobile">("desktop");
     const [showGrid, setShowGrid] = useState(false);
     const [snapToGrid, setSnapToGrid] = useState(false);
     const [gridSize, setGridSize] = useState(5);
@@ -83,9 +70,8 @@ export function CropPdfTool() {
     const [historyIndex, setHistoryIndex] = useState(-1);
 
     // Canvas refs
-    const canvasRefs = useRef<(HTMLCanvasElement | null)[]>([]);
-    const containerRef = useRef<HTMLDivElement>(null);
-    const scrollContainerRef = useRef<HTMLDivElement>(null);
+    const canvasRef = useRef<HTMLCanvasElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Crop presets
     const cropPresets: CropPreset[] = [
@@ -116,7 +102,7 @@ export function CropPdfTool() {
     useEffect(() => {
         if (!file) return;
 
-        const renderAllPages = async () => {
+        const renderPage = async () => {
             const pdfjsLib = await getPdfJs();
             const arrayBuffer = await file.arrayBuffer();
             const pdf = await (pdfjsLib as any).getDocument(new Uint8Array(arrayBuffer)).promise;
@@ -124,39 +110,30 @@ export function CropPdfTool() {
             // Apply zoom
             const scale = zoom / 100;
 
-            // Render each page
-            for (let i = 1; i <= pdf.numPages; i++) {
-                const page = await pdf.getPage(i);
-                // PDF.js expects rotation in degrees (0, 90, 180, 270). Ensure we pass a normalized integer degree.
-                let rotationDeg = Math.round(rotation) || 0;
-                // Normalize to 0..359
-                rotationDeg = ((rotationDeg % 360) + 360) % 360;
-                // If rotation is not multiple of 90, snap to nearest 90 degree for rendering
-                if (rotationDeg % 90 !== 0) {
-                    rotationDeg = Math.round(rotationDeg / 90) * 90;
-                }
-                const viewport = page.getViewport({ scale, rotation: rotationDeg });
-
-                // Get or create canvas
-                let canvas = canvasRefs.current[i - 1];
-
-                if (!canvas) continue;
-
-                const context = canvas.getContext("2d")!;
-
-                canvas.height = viewport.height;
-                canvas.width = viewport.width;
-
-                await page.render({
-                    canvasContext: context,
-                    viewport: viewport,
-                    canvas: canvas,
-                }).promise;
+            const page = await pdf.getPage(currentPage);
+            let rotationDeg = Math.round(rotation) || 0;
+            rotationDeg = ((rotationDeg % 360) + 360) % 360;
+            if (rotationDeg % 90 !== 0) {
+                rotationDeg = Math.round(rotationDeg / 90) * 90;
             }
+            const viewport = page.getViewport({ scale, rotation: rotationDeg });
+
+            const canvas = canvasRef.current;
+            if (!canvas) return;
+
+            const context = canvas.getContext("2d")!;
+            canvas.height = viewport.height;
+            canvas.width = viewport.width;
+
+            await page.render({
+                canvasContext: context,
+                viewport: viewport,
+                canvas: canvas,
+            }).promise;
         };
 
-        renderAllPages();
-    }, [file, zoom, rotation]);
+        renderPage();
+    }, [file, zoom, rotation, currentPage]);
 
     // Save current crop state to history
     const saveToHistory = useCallback(() => {
@@ -165,11 +142,9 @@ export function CropPdfTool() {
             rotation
         };
 
-        // Remove any states after the current index
         const newHistory = cropHistory.slice(0, historyIndex + 1);
         newHistory.push(newState);
 
-        // Limit history to 20 states
         if (newHistory.length > 20) {
             newHistory.shift();
         }
@@ -209,8 +184,7 @@ export function CropPdfTool() {
             setMaintainAspectRatio(true);
             setAspectRatio(preset.aspectRatio);
 
-            // Adjust crop box to match aspect ratio
-            const canvas = canvasRefs.current[currentPage - 1];
+            const canvas = canvasRef.current;
             if (!canvas) return;
 
             const canvasWidth = canvas.width;
@@ -220,16 +194,13 @@ export function CropPdfTool() {
             let newWidth, newHeight;
 
             if (preset.aspectRatio > canvasAspectRatio) {
-                // Wider than canvas, match width
                 newWidth = cropBox.width;
                 newHeight = newWidth / preset.aspectRatio;
             } else {
-                // Taller than canvas, match height
                 newHeight = cropBox.height;
                 newWidth = newHeight * preset.aspectRatio;
             }
 
-            // Center the crop box
             const newX = cropBox.x + (cropBox.width - newWidth) / 2;
             const newY = cropBox.y + (cropBox.height - newHeight) / 2;
 
@@ -242,35 +213,27 @@ export function CropPdfTool() {
         }
     };
 
-    // Fit to page
-    const fitToPage = () => {
-        setZoom(100);
-    };
-
-    const handleMouseDown = (e: React.MouseEvent, pageIndex: number) => {
+    const handleMouseDown = (e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
 
-        const canvas = canvasRefs.current[pageIndex];
+        const canvas = canvasRef.current;
         if (!canvas) return;
 
         const rect = canvas.getBoundingClientRect();
         let x = ((e.clientX - rect.left) / rect.width) * 100;
         let y = ((e.clientY - rect.top) / rect.height) * 100;
 
-        // Snap to grid if enabled
         if (snapToGrid) {
             x = Math.round(x / gridSize) * gridSize;
             y = Math.round(y / gridSize) * gridSize;
         }
 
-        // Calculate relative position within the crop box
         const relativeX = (x - cropBox.x) / cropBox.width;
         const relativeY = (y - cropBox.y) / cropBox.height;
 
-        // Determine which handle to use based on position
         let detectedHandle: string = 'move';
-        const edgeThreshold = 0.25; // 25% from edge for resize handles
+        const edgeThreshold = 0.25;
 
         if (relativeX < edgeThreshold && relativeY < edgeThreshold) {
             detectedHandle = 'nw';
@@ -298,14 +261,13 @@ export function CropPdfTool() {
         const handleGlobalMouseMove = (e: MouseEvent) => {
             if (!isDragging) return;
 
-            const canvas = canvasRefs.current[currentPage - 1];
+            const canvas = canvasRef.current;
             if (!canvas) return;
 
             const rect = canvas.getBoundingClientRect();
             let x = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
             let y = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100));
 
-            // Snap to grid if enabled
             if (snapToGrid) {
                 x = Math.round(x / gridSize) * gridSize;
                 y = Math.round(y / gridSize) * gridSize;
@@ -315,7 +277,6 @@ export function CropPdfTool() {
                 let newBox = { ...prev };
 
                 if (dragHandle === 'move') {
-                    // Move the entire box
                     const deltaX = x - (prev.x + prev.width / 2);
                     const deltaY = y - (prev.y + prev.height / 2);
                     newBox.x = Math.max(0, Math.min(100 - prev.width, prev.x + deltaX));
@@ -325,7 +286,6 @@ export function CropPdfTool() {
                     let newHeight = prev.y + prev.height - y;
 
                     if (maintainAspectRatio && aspectRatio) {
-                        // Maintain aspect ratio
                         const aspectHeight = newWidth / aspectRatio;
                         if (aspectHeight <= newHeight) {
                             newHeight = aspectHeight;
@@ -345,7 +305,6 @@ export function CropPdfTool() {
                     let newHeight = prev.y + prev.height - y;
 
                     if (maintainAspectRatio && aspectRatio) {
-                        // Maintain aspect ratio
                         const aspectHeight = newWidth / aspectRatio;
                         if (aspectHeight <= newHeight) {
                             newHeight = aspectHeight;
@@ -364,7 +323,6 @@ export function CropPdfTool() {
                     let newHeight = y - prev.y;
 
                     if (maintainAspectRatio && aspectRatio) {
-                        // Maintain aspect ratio
                         const aspectHeight = newWidth / aspectRatio;
                         if (aspectHeight <= newHeight) {
                             newHeight = aspectHeight;
@@ -383,7 +341,6 @@ export function CropPdfTool() {
                     let newHeight = y - prev.y;
 
                     if (maintainAspectRatio && aspectRatio) {
-                        // Maintain aspect ratio
                         const aspectHeight = newWidth / aspectRatio;
                         if (aspectHeight <= newHeight) {
                             newHeight = aspectHeight;
@@ -420,7 +377,6 @@ export function CropPdfTool() {
                     }
                 }
 
-                // Ensure minimum size and bounds
                 newBox.width = Math.max(5, Math.min(100 - newBox.x, newBox.width));
                 newBox.height = Math.max(5, Math.min(100 - newBox.y, newBox.height));
 
@@ -445,7 +401,7 @@ export function CropPdfTool() {
             document.removeEventListener('mousemove', handleGlobalMouseMove);
             document.removeEventListener('mouseup', handleGlobalMouseUp);
         };
-    }, [isDragging, dragHandle, snapToGrid, gridSize, maintainAspectRatio, aspectRatio, currentPage, saveToHistory]);
+    }, [isDragging, dragHandle, snapToGrid, gridSize, maintainAspectRatio, aspectRatio, saveToHistory]);
 
     const cropPdf = async () => {
         if (!file) return;
@@ -467,6 +423,9 @@ export function CropPdfTool() {
                 variant: "success",
                 position: "top-right",
             });
+
+            // Clear file after successful crop
+            setFile(null);
         } catch (error: any) {
             console.error("Error cropping PDF:", error);
 
@@ -491,471 +450,422 @@ export function CropPdfTool() {
     // If no file, show file upload
     if (!file) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-[calc(100vh-120px)]">
+            <div className="min-h-[calc(100vh-120px)] flex items-center justify-center">
                 <FileUploadHero
                     title="Crop PDF"
                     onFilesSelected={handleFileSelected}
                     maxFiles={1}
                     accept={{ "application/pdf": [".pdf"] }}
                 />
+                <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".pdf"
+                    className="hidden"
+                    onChange={(e) => {
+                        if (e.target.files) {
+                            handleFileSelected(Array.from(e.target.files));
+                        }
+                    }}
+                />
             </div>
         );
     }
 
     return (
-        <div className={cn(
-            "flex flex-col h-[calc(100vh-64px)]",
-            darkMode ? "dark" : ""
-        )}>
-            {/* Floating Toolbar */}
-            <div className={cn(
-                "fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-2 transition-all duration-300",
-                showToolbar ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2 pointer-events-none"
-            )}>
-                <div className="flex items-center gap-1">
-                    {/* Navigation */}
-                    <div className="flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-1 mr-2">
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                            disabled={currentPage === 1}
-                        >
-                            <ChevronLeft className="h-4 w-4" />
-                        </Button>
-                        <span className="text-sm font-medium px-2 min-w-20 text-center text-gray-700 dark:text-gray-300">
-                            {currentPage} / {numPages}
-                        </span>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => setCurrentPage(Math.min(numPages, currentPage + 1))}
-                            disabled={currentPage === numPages}
-                        >
-                            <ChevronRight className="h-4 w-4" />
-                        </Button>
-                    </div>
+        <div className="bg-[#f6f7f8] min-h-screen pb-8">
+            <div className="max-w-[1800px] mx-auto px-4 py-4">
+                <div className="flex flex-col lg:flex-row gap-6">
+                    {/* Left Column - PDF Preview */}
+                    <div className="flex-1 lg:max-w-[calc(100%-448px)]">
+                        {/* Preview Card */}
+                        <div className="bg-white rounded-xl border border-[#e2e8f0] shadow-sm overflow-hidden">
+                            {/* Preview Header */}
+                            <div className="bg-[#f9fafb] border-b border-[#e2e8f0] p-4">
+                                <div className="flex items-center justify-between flex-wrap gap-4">
+                                    {/* Page Navigation */}
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                                            disabled={currentPage === 1}
+                                            className="p-2 rounded-lg bg-white border border-[#e2e8f0] hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                        >
+                                            <ChevronLeft className="h-4 w-4 text-[#617289]" />
+                                        </button>
+                                        <span className="text-sm font-bold text-[#111418] min-w-[80px] text-center">
+                                            Page {currentPage} / {numPages}
+                                        </span>
+                                        <button
+                                            onClick={() => setCurrentPage(Math.min(numPages, currentPage + 1))}
+                                            disabled={currentPage === numPages}
+                                            className="p-2 rounded-lg bg-white border border-[#e2e8f0] hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                        >
+                                            <ChevronRight className="h-4 w-4 text-[#617289]" />
+                                        </button>
+                                    </div>
 
-                    {/* Crop Tools */}
-                    <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-1 mr-2">
-                        {cropPresets.map((preset) => (
-                            <Button
-                                key={preset.name}
-                                variant={maintainAspectRatio && aspectRatio === preset.aspectRatio ? "secondary" : "ghost"}
-                                size="icon"
-                                className="h-8 w-8"
-                                onClick={() => applyPreset(preset)}
-                                title={preset.name}
-                            >
-                                {preset.icon}
-                            </Button>
-                        ))}
-                    </div>
+                                    {/* Zoom Controls */}
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            onClick={() => setZoom(Math.max(25, zoom - 25))}
+                                            className="p-2 rounded-lg bg-white border border-[#e2e8f0] hover:bg-gray-50 transition-colors"
+                                        >
+                                            <ZoomOut className="h-4 w-4 text-[#617289]" />
+                                        </button>
+                                        <span className="text-sm font-bold text-[#111418] min-w-[60px] text-center">{zoom}%</span>
+                                        <button
+                                            onClick={() => setZoom(Math.min(200, zoom + 25))}
+                                            className="p-2 rounded-lg bg-white border border-[#e2e8f0] hover:bg-gray-50 transition-colors"
+                                        >
+                                            <ZoomIn className="h-4 w-4 text-[#617289]" />
+                                        </button>
+                                        <button
+                                            onClick={() => setZoom(100)}
+                                            className="p-2 rounded-lg bg-white border border-[#e2e8f0] hover:bg-gray-50 transition-colors"
+                                            title="Fit to Page"
+                                        >
+                                            <Maximize className="h-4 w-4 text-[#617289]" />
+                                        </button>
+                                    </div>
 
-                    {/* Zoom Controls */}
-                    <div className="flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-1 mr-2">
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => setZoom(Math.max(25, zoom - 25))}
-                        >
-                            <ZoomOut className="h-4 w-4" />
-                        </Button>
-                        <span className="text-sm font-medium px-2 min-w-[60px] text-center text-gray-700 dark:text-gray-300">{zoom}%</span>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => setZoom(Math.min(200, zoom + 25))}
-                        >
-                            <ZoomIn className="h-4 w-4" />
-                        </Button>
-                        <div className="w-px h-4 bg-gray-300 dark:bg-gray-600 mx-1" />
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={fitToPage}
-                            title="Fit to Page"
-                        >
-                            <Maximize className="h-4 w-4" />
-                        </Button>
-                    </div>
+                                    {/* Rotation Controls */}
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            onClick={() => {
+                                                saveToHistory();
+                                                setRotation((prev) => ((prev - 90 + 360) % 360));
+                                            }}
+                                            className="p-2 rounded-lg bg-white border border-[#e2e8f0] hover:bg-gray-50 transition-colors"
+                                            title="Rotate Left"
+                                        >
+                                            <RotateCw className="h-4 w-4 text-[#617289] rotate-180" />
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                saveToHistory();
+                                                setRotation((prev) => ((prev + 90) % 360));
+                                            }}
+                                            className="p-2 rounded-lg bg-white border border-[#e2e8f0] hover:bg-gray-50 transition-colors"
+                                            title="Rotate Right"
+                                        >
+                                            <RotateCw className="h-4 w-4 text-[#617289]" />
+                                        </button>
+                                    </div>
 
-                    {/* Rotation */}
-                    <div className="flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-1 mr-2">
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => {
-                                saveToHistory();
-                                setRotation((prev) => ((prev - 90 + 360) % 360));
-                            }}
-                            title="Rotate Left"
-                        >
-                            <RotateCw className="h-4 w-4 rotate-180" />
-                        </Button>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => {
-                                saveToHistory();
-                                setRotation((prev) => ((prev + 90) % 360));
-                            }}
-                            title="Rotate Right"
-                        >
-                            <RotateCw className="h-4 w-4" />
-                        </Button>
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex items-center gap-1 ml-2">
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={undo}
-                            disabled={historyIndex <= 0}
-                            title="Undo"
-                        >
-                            <Undo className="h-4 w-4" />
-                        </Button>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={redo}
-                            disabled={historyIndex >= cropHistory.length - 1}
-                            title="Redo"
-                        >
-                            <Redo className="h-4 w-4" />
-                        </Button>
-                        <Button
-                            onClick={cropPdf}
-                            disabled={isProcessing}
-                            className="h-8 px-3 bg-blue-600 hover:bg-blue-700 text-white"
-                        >
-                            {isProcessing ? "Processing..." : <><Download className="h-4 w-4 mr-1" /> Crop</>}
-                        </Button>
-                    </div>
-                </div>
-            </div>
-
-            {/* Properties Panel */}
-            <div className={cn(
-                "fixed right-4 top-20 z-40 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-4 w-80 transition-all duration-300",
-                showProperties ? "opacity-100 translate-x-0" : "opacity-0 translate-x-2 pointer-events-none"
-            )}>
-                <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-semibold text-gray-900 dark:text-white">Crop Settings</h3>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6"
-                        onClick={() => setShowProperties(false)}
-                    >
-                        <X className="h-4 w-4" />
-                    </Button>
-                </div>
-
-                {/* Crop Options */}
-                <div className="mb-4 space-y-2">
-                    <div className="flex items-center justify-between">
-                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Apply to all pages</label>
-                        <Button
-                            variant={applyToAll ? "secondary" : "ghost"}
-                            size="sm"
-                            onClick={() => setApplyToAll(!applyToAll)}
-                        >
-                            {applyToAll ? <CheckSquare className="h-4 w-4" /> : <Square className="h-4 w-4" />}
-                        </Button>
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Show grid</label>
-                        <Button
-                            variant={showGrid ? "secondary" : "ghost"}
-                            size="sm"
-                            onClick={() => setShowGrid(!showGrid)}
-                        >
-                            {showGrid ? <CheckSquare className="h-4 w-4" /> : <Square className="h-4 w-4" />}
-                        </Button>
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Snap to grid</label>
-                        <Button
-                            variant={snapToGrid ? "secondary" : "ghost"}
-                            size="sm"
-                            onClick={() => setSnapToGrid(!snapToGrid)}
-                            disabled={!showGrid}
-                        >
-                            {snapToGrid ? <CheckSquare className="h-4 w-4" /> : <Square className="h-4 w-4" />}
-                        </Button>
-                    </div>
-
-                    {showGrid && (
-                        <div className="flex items-center gap-2">
-                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Grid size</label>
-                            <input
-                                type="range"
-                                min="2"
-                                max="20"
-                                value={gridSize}
-                                onChange={(e) => setGridSize(Number(e.target.value))}
-                                className="flex-1"
-                            />
-                            <span className="text-sm text-gray-600 dark:text-gray-400 w-8">{gridSize}%</span>
-                        </div>
-                    )}
-                </div>
-
-                {/* Crop Info */}
-                <div className="mb-4 p-3 bg-gray-100 dark:bg-gray-700 rounded-lg">
-                    <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                        <div>Position: {Math.round(cropBox.x)}%, {Math.round(cropBox.y)}%</div>
-                        <div>Size: {Math.round(cropBox.width)}% × {Math.round(cropBox.height)}%</div>
-                        <div>Rotation: {rotation}°</div>
-                    </div>
-                </div>
-
-                <div className="text-xs text-gray-500 dark:text-gray-400">
-                    Drag the edges or corners of the box on the preview to resize the crop area. Drag inside the box to move it.
-                </div>
-            </div>
-
-            {/* Settings Panel */}
-            <div className="fixed bottom-4 left-4 z-40">
-                <div className="flex items-center gap-2 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-2">
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => setShowToolbar(!showToolbar)}
-                        title={showToolbar ? "Hide Toolbar" : "Show Toolbar"}
-                    >
-                        <Settings className="h-4 w-4" />
-                    </Button>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => setShowProperties(!showProperties)}
-                        title={showProperties ? "Hide Properties" : "Show Properties"}
-                    >
-                        <Sliders className="h-4 w-4" />
-                    </Button>
-                    <div className="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-1" />
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => setShowGrid(!showGrid)}
-                        title={showGrid ? "Hide Grid" : "Show Grid"}
-                    >
-                        <Grid3x3 className={cn("h-4 w-4", showGrid && "text-blue-600 dark:text-blue-400")} />
-                    </Button>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => setSnapToGrid(!snapToGrid)}
-                        title={snapToGrid ? "Disable Snap to Grid" : "Enable Snap to Grid"}
-                    >
-                        <Move className={cn("h-4 w-4", snapToGrid && "text-blue-600 dark:text-blue-400")} />
-                    </Button>
-                    <div className="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-1" />
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => setDarkMode(!darkMode)}
-                        title={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
-                    >
-                        {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-                    </Button>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => {
-                            if (viewMode === 'desktop') setViewMode('tablet');
-                            else if (viewMode === 'tablet') setViewMode('mobile');
-                            else setViewMode('desktop');
-                        }}
-                        title={`View Mode: ${viewMode}`}
-                    >
-                        {viewMode === 'desktop' && <Monitor className="h-4 w-4" />}
-                        {viewMode === 'tablet' && <Tablet className="h-4 w-4" />}
-                        {viewMode === 'mobile' && <Smartphone className="h-4 w-4" />}
-                    </Button>
-                </div>
-            </div>
-
-            {/* Main Canvas Area */}
-            <div
-                ref={scrollContainerRef}
-                className="flex-1 bg-gray-50 dark:bg-gray-900 overflow-auto p-8 relative"
-            >
-                <div className="flex flex-col items-center">
-                    {Array.from({ length: numPages }, (_, i) => (
-                        <div
-                            key={i}
-                            className="relative mb-8 shadow-2xl transition-transform duration-200 ease-out"
-                            style={{
-                                width: "fit-content",
-                                height: "fit-content",
-                                transform: `scale(${zoom / 100})`
-                            }}
-                        >
-                            <canvas
-                                ref={el => { canvasRefs.current[i] = el; }}
-                                className="max-w-none block bg-white"
-                            />
-
-                            {/* Grid Overlay */}
-                            {showGrid && (
-                                <div className="absolute inset-0 pointer-events-none">
-                                    <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
-                                        <defs>
-                                            <pattern id="grid" width={`${gridSize}%`} height={`${gridSize}%`} patternUnits="userSpaceOnUse">
-                                                <path d={`M ${gridSize}% 0 L 0 0 0 ${gridSize}%`} fill="none" stroke="rgba(0,0,0,0.1)" strokeWidth="0.5" />
-                                            </pattern>
-                                        </defs>
-                                        <rect width="100%" height="100%" fill="url(#grid)" />
-                                    </svg>
+                                    {/* History Controls */}
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            onClick={undo}
+                                            disabled={historyIndex <= 0}
+                                            className="p-2 rounded-lg bg-white border border-[#e2e8f0] hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                            title="Undo"
+                                        >
+                                            <Undo className="h-4 w-4 text-[#617289]" />
+                                        </button>
+                                        <button
+                                            onClick={redo}
+                                            disabled={historyIndex >= cropHistory.length - 1}
+                                            className="p-2 rounded-lg bg-white border border-[#e2e8f0] hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                            title="Redo"
+                                        >
+                                            <Redo className="h-4 w-4 text-[#617289]" />
+                                        </button>
+                                    </div>
                                 </div>
-                            )}
+                            </div>
 
-                            {/* Crop Overlay */}
-                            {i === currentPage - 1 && (
-                                <div className="absolute inset-0 pointer-events-none">
-                                    {/* Top overlay */}
-                                    <div
-                                        className="absolute bg-black/50"
-                                        style={{
-                                            left: 0,
-                                            top: 0,
-                                            width: '100%',
-                                            height: `${cropBox.y}%`
-                                        }}
-                                    />
-                                    {/* Bottom overlay */}
-                                    <div
-                                        className="absolute bg-black/50"
-                                        style={{
-                                            left: 0,
-                                            top: `${cropBox.y + cropBox.height}%`,
-                                            width: '100%',
-                                            height: `${100 - cropBox.y - cropBox.height}%`
-                                        }}
-                                    />
-                                    {/* Left overlay */}
-                                    <div
-                                        className="absolute bg-black/50"
-                                        style={{
-                                            left: 0,
-                                            top: `${cropBox.y}%`,
-                                            width: `${cropBox.x}%`,
-                                            height: `${cropBox.height}%`
-                                        }}
-                                    />
-                                    {/* Right overlay */}
-                                    <div
-                                        className="absolute bg-black/50"
-                                        style={{
-                                            left: `${cropBox.x + cropBox.width}%`,
-                                            top: `${cropBox.y}%`,
-                                            width: `${100 - cropBox.x - cropBox.width}%`,
-                                            height: `${cropBox.height}%`
-                                        }}
+                            {/* Canvas Area */}
+                            <div className="relative bg-[#f1f5f9] min-h-[600px] flex items-center justify-center p-8 overflow-auto">
+                                <div className="relative" style={{ transform: `scale(${zoom / 100})`, transformOrigin: 'center' }}>
+                                    <canvas
+                                        ref={canvasRef}
+                                        className="max-w-none block bg-white shadow-2xl"
                                     />
 
-                                    {/* Crop box border */}
-                                    <div
-                                        className="absolute border-2 border-white cursor-move pointer-events-auto"
-                                        style={{
-                                            left: `${cropBox.x}%`,
-                                            top: `${cropBox.y}%`,
-                                            width: `${cropBox.width}%`,
-                                            height: `${cropBox.height}%`,
-                                        }}
-                                        onMouseDown={(e) => handleMouseDown(e, i)}
-                                    />
+                                    {/* Grid Overlay */}
+                                    {showGrid && (
+                                        <div className="absolute inset-0 pointer-events-none">
+                                            <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+                                                <defs>
+                                                    <pattern id="grid" width={`${gridSize}%`} height={`${gridSize}%`} patternUnits="userSpaceOnUse">
+                                                        <path d={`M ${gridSize}% 0 L 0 0 0 ${gridSize}%`} fill="none" stroke="rgba(0,0,0,0.1)" strokeWidth="0.5" />
+                                                    </pattern>
+                                                </defs>
+                                                <rect width="100%" height="100%" fill="url(#grid)" />
+                                            </svg>
+                                        </div>
+                                    )}
 
-                                    {/* Corner handles */}
-                                    <div
-                                        className="absolute w-3 h-3 bg-white border-2 border-blue-500 rounded-full pointer-events-auto cursor-nw-resize"
-                                        style={{
-                                            left: `${cropBox.x}%`,
-                                            top: `${cropBox.y}%`,
-                                            transform: 'translate(-50%, -50%)'
-                                        }}
-                                        onMouseDown={(e) => handleMouseDown(e, i)}
-                                    />
-                                    <div
-                                        className="absolute w-3 h-3 bg-white border-2 border-blue-500 rounded-full pointer-events-auto cursor-ne-resize"
-                                        style={{
-                                            left: `${cropBox.x + cropBox.width}%`,
-                                            top: `${cropBox.y}%`,
-                                            transform: 'translate(-50%, -50%)'
-                                        }}
-                                        onMouseDown={(e) => handleMouseDown(e, i)}
-                                    />
-                                    <div
-                                        className="absolute w-3 h-3 bg-white border-2 border-blue-500 rounded-full pointer-events-auto cursor-sw-resize"
-                                        style={{
-                                            left: `${cropBox.x}%`,
-                                            top: `${cropBox.y + cropBox.height}%`,
-                                            transform: 'translate(-50%, -50%)'
-                                        }}
-                                        onMouseDown={(e) => handleMouseDown(e, i)}
-                                    />
-                                    <div
-                                        className="absolute w-3 h-3 bg-white border-2 border-blue-500 rounded-full pointer-events-auto cursor-se-resize"
-                                        style={{
-                                            left: `${cropBox.x + cropBox.width}%`,
-                                            top: `${cropBox.y + cropBox.height}%`,
-                                            transform: 'translate(-50%, -50%)'
-                                        }}
-                                        onMouseDown={(e) => handleMouseDown(e, i)}
-                                    />
+                                    {/* Crop Overlay */}
+                                    <div className="absolute inset-0 pointer-events-none">
+                                        {/* Top overlay */}
+                                        <div
+                                            className="absolute bg-black/50"
+                                            style={{
+                                                left: 0,
+                                                top: 0,
+                                                width: '100%',
+                                                height: `${cropBox.y}%`
+                                            }}
+                                        />
+                                        {/* Bottom overlay */}
+                                        <div
+                                            className="absolute bg-black/50"
+                                            style={{
+                                                left: 0,
+                                                top: `${cropBox.y + cropBox.height}%`,
+                                                width: '100%',
+                                                height: `${100 - cropBox.y - cropBox.height}%`
+                                            }}
+                                        />
+                                        {/* Left overlay */}
+                                        <div
+                                            className="absolute bg-black/50"
+                                            style={{
+                                                left: 0,
+                                                top: `${cropBox.y}%`,
+                                                width: `${cropBox.x}%`,
+                                                height: `${cropBox.height}%`
+                                            }}
+                                        />
+                                        {/* Right overlay */}
+                                        <div
+                                            className="absolute bg-black/50"
+                                            style={{
+                                                left: `${cropBox.x + cropBox.width}%`,
+                                                top: `${cropBox.y}%`,
+                                                width: `${100 - cropBox.x - cropBox.width}%`,
+                                                height: `${cropBox.height}%`
+                                            }}
+                                        />
+
+                                        {/* Crop box border */}
+                                        <div
+                                            className="absolute border-2 border-[#136dec] cursor-move pointer-events-auto"
+                                            style={{
+                                                left: `${cropBox.x}%`,
+                                                top: `${cropBox.y}%`,
+                                                width: `${cropBox.width}%`,
+                                                height: `${cropBox.height}%`,
+                                            }}
+                                            onMouseDown={handleMouseDown}
+                                        />
+
+                                        {/* Corner handles */}
+                                        <div
+                                            className="absolute w-3 h-3 bg-white border-2 border-[#136dec] rounded-full pointer-events-auto cursor-nw-resize"
+                                            style={{
+                                                left: `${cropBox.x}%`,
+                                                top: `${cropBox.y}%`,
+                                                transform: 'translate(-50%, -50%)'
+                                            }}
+                                            onMouseDown={handleMouseDown}
+                                        />
+                                        <div
+                                            className="absolute w-3 h-3 bg-white border-2 border-[#136dec] rounded-full pointer-events-auto cursor-ne-resize"
+                                            style={{
+                                                left: `${cropBox.x + cropBox.width}%`,
+                                                top: `${cropBox.y}%`,
+                                                transform: 'translate(-50%, -50%)'
+                                            }}
+                                            onMouseDown={handleMouseDown}
+                                        />
+                                        <div
+                                            className="absolute w-3 h-3 bg-white border-2 border-[#136dec] rounded-full pointer-events-auto cursor-sw-resize"
+                                            style={{
+                                                left: `${cropBox.x}%`,
+                                                top: `${cropBox.y + cropBox.height}%`,
+                                                transform: 'translate(-50%, -50%)'
+                                            }}
+                                            onMouseDown={handleMouseDown}
+                                        />
+                                        <div
+                                            className="absolute w-3 h-3 bg-white border-2 border-[#136dec] rounded-full pointer-events-auto cursor-se-resize"
+                                            style={{
+                                                left: `${cropBox.x + cropBox.width}%`,
+                                                top: `${cropBox.y + cropBox.height}%`,
+                                                transform: 'translate(-50%, -50%)'
+                                            }}
+                                            onMouseDown={handleMouseDown}
+                                        />
+                                    </div>
                                 </div>
-                            )}
-
-                            {/* Page Number */}
-                            <div className="absolute bottom-4 right-4 bg-gray-800 bg-opacity-70 text-white px-2 py-1 rounded text-sm">
-                                Page {i + 1} of {numPages}
                             </div>
                         </div>
-                    ))}
+                    </div>
+
+                    {/* Right Sidebar - Configuration */}
+                    <div className="lg:w-[424px]">
+                        <div className="bg-white rounded-3xl border border-[#e2e8f0] p-6 shadow-xl lg:sticky lg:top-24 max-h-[calc(100vh-120px)] overflow-y-auto">
+                            {/* File Summary */}
+                            <div className="mb-6">
+                                <div className="flex items-center gap-2 mb-4">
+                                    <FolderOpen className="h-6 w-6 text-[#136dec]" />
+                                    <h2 className="text-[#111418] font-bold text-lg leading-7">Crop Settings</h2>
+                                </div>
+
+                                {/* File Info Card */}
+                                <div className="bg-[#f9fafb] rounded-lg border border-[#f3f4f6] p-3 mb-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className="bg-[#dbeafe] rounded w-10 h-10 flex items-center justify-center flex-shrink-0">
+                                            <FileText className="h-6 w-6 text-[#136dec]" />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="text-[#111418] text-sm font-bold leading-5 truncate">
+                                                {file.name}
+                                            </div>
+                                            <div className="text-[#6b7280] text-xs leading-4">
+                                                {numPages} page{numPages > 1 ? 's' : ''}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Crop Info */}
+                                <div className="border-t border-[#f3f4f6] pt-4 space-y-3">
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-[#6b7280] text-sm">Position</span>
+                                        <span className="text-[#111418] text-sm font-bold">
+                                            {Math.round(cropBox.x)}%, {Math.round(cropBox.y)}%
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-[#6b7280] text-sm">Size</span>
+                                        <span className="text-[#111418] text-sm font-bold">
+                                            {Math.round(cropBox.width)}% × {Math.round(cropBox.height)}%
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-[#6b7280] text-sm">Rotation</span>
+                                        <span className="text-[#111418] text-sm font-bold">{rotation}°</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Aspect Ratio Presets */}
+                            <div className="mb-6">
+                                <div className="flex items-center gap-2 mb-4">
+                                    <Settings className="h-5 w-5 text-[#9ca3af]" />
+                                    <h3 className="text-[#111418] font-bold text-base">Aspect Ratio</h3>
+                                </div>
+
+                                <div className="grid grid-cols-3 gap-2">
+                                    {cropPresets.map((preset) => (
+                                        <button
+                                            key={preset.name}
+                                            onClick={() => applyPreset(preset)}
+                                            className={cn(
+                                                "flex flex-col items-center justify-center gap-2 p-3 rounded-lg border-2 transition-all",
+                                                maintainAspectRatio && aspectRatio === preset.aspectRatio
+                                                    ? "border-[#136dec] bg-[#eff6ff] text-[#136dec]"
+                                                    : "border-[#e2e8f0] bg-white text-[#617289] hover:border-[#136dec]/30"
+                                            )}
+                                        >
+                                            {preset.icon}
+                                            <span className="text-xs font-bold">{preset.name}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Options */}
+                            <div className="mb-6">
+                                <div className="space-y-3">
+                                    <div className="flex items-center justify-between p-3 bg-[#f9fafb] rounded-lg">
+                                        <label className="text-sm font-medium text-[#111418]">Apply to all pages</label>
+                                        <button
+                                            onClick={() => setApplyToAll(!applyToAll)}
+                                            className={cn(
+                                                "p-1 rounded transition-colors",
+                                                applyToAll ? "text-[#136dec]" : "text-[#9ca3af]"
+                                            )}
+                                        >
+                                            {applyToAll ? <CheckSquare className="h-5 w-5" /> : <Square className="h-5 w-5" />}
+                                        </button>
+                                    </div>
+
+                                    <div className="flex items-center justify-between p-3 bg-[#f9fafb] rounded-lg">
+                                        <label className="text-sm font-medium text-[#111418]">Show grid</label>
+                                        <button
+                                            onClick={() => setShowGrid(!showGrid)}
+                                            className={cn(
+                                                "p-1 rounded transition-colors",
+                                                showGrid ? "text-[#136dec]" : "text-[#9ca3af]"
+                                            )}
+                                        >
+                                            {showGrid ? <CheckSquare className="h-5 w-5" /> : <Square className="h-5 w-5" />}
+                                        </button>
+                                    </div>
+
+                                    <div className="flex items-center justify-between p-3 bg-[#f9fafb] rounded-lg">
+                                        <label className="text-sm font-medium text-[#111418]">Snap to grid</label>
+                                        <button
+                                            onClick={() => setSnapToGrid(!snapToGrid)}
+                                            disabled={!showGrid}
+                                            className={cn(
+                                                "p-1 rounded transition-colors",
+                                                snapToGrid ? "text-[#136dec]" : "text-[#9ca3af]",
+                                                !showGrid && "opacity-50 cursor-not-allowed"
+                                            )}
+                                        >
+                                            {snapToGrid ? <CheckSquare className="h-5 w-5" /> : <Square className="h-5 w-5" />}
+                                        </button>
+                                    </div>
+
+                                    {showGrid && (
+                                        <div className="p-3 bg-[#f9fafb] rounded-lg">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <label className="text-sm font-medium text-[#111418]">Grid size</label>
+                                                <span className="text-sm text-[#6b7280] font-bold">{gridSize}%</span>
+                                            </div>
+                                            <input
+                                                type="range"
+                                                min="2"
+                                                max="20"
+                                                value={gridSize}
+                                                onChange={(e) => setGridSize(Number(e.target.value))}
+                                                className="w-full h-2 bg-[#e5e7eb] rounded-full appearance-none cursor-pointer"
+                                                style={{
+                                                    background: `linear-gradient(to right, #136dec 0%, #136dec ${(gridSize - 2) / 18 * 100}%, #e5e7eb ${(gridSize - 2) / 18 * 100}%, #e5e7eb 100%)`
+                                                }}
+                                            />
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Crop Button */}
+                            <button
+                                onClick={cropPdf}
+                                disabled={isProcessing}
+                                className="w-full bg-[#136dec] hover:bg-blue-700 text-white rounded-xl h-[60px] flex items-center justify-center gap-3 font-bold text-lg shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                            >
+                                <Crop className="h-6 w-6" />
+                                <span>
+                                    {isProcessing ? "Processing..." : "CROP & DOWNLOAD"}
+                                </span>
+                            </button>
+
+                            {/* Footer Text */}
+                            <p className="text-[#617289] text-xs leading-relaxed text-center mt-4 italic">
+                                &quot;Trimming the fat off your PDF, one pixel at a time.&quot;
+                            </p>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            {/* Help Button */}
-            <div className="fixed bottom-4 right-4 z-40">
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-10 w-10 rounded-full bg-white dark:bg-gray-800 shadow-lg border border-gray-200 dark:border-gray-700"
-                    onClick={() => {
-                        toast.show({
-                            title: "Crop PDF Help",
-                            message: "Drag the edges or corners of the box to resize. Drag inside to move. Use the toolbar to adjust aspect ratio and other options.",
-                            variant: "default",
-                            position: "top-right",
-                        });
-                    }}
-                    title="Help"
-                >
-                    <HelpCircle className="h-5 w-5" />
-                </Button>
-            </div>
-        </div>
+            <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf"
+                className="hidden"
+                onChange={(e) => {
+                    if (e.target.files) {
+                        handleFileSelected(Array.from(e.target.files));
+                    }
+                }}
+            />
+        </div >
     );
 }

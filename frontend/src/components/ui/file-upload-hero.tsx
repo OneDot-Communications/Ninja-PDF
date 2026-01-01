@@ -75,7 +75,7 @@ export const FileUploadHero = ({
 
   return (
     <div className="w-full min-h-screen flex flex-col items-center pt-4 md:pt-8">
-      <div className="w-full max-w-3xl text-center px-4">
+      <div className="w-full text-center px-4">
         {/* Large bold title at top - centered */}
         <h1 className="text-3xl md:text-5xl lg:text-6xl font-extrabold text-slate-900 mb-4 md:mb-6">{title}</h1>
 
