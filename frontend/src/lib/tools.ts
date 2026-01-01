@@ -295,5 +295,6 @@ export const tools = [
         href: "/extract-images",
         category: "Convert from PDF",
         color: toolColors.image,
+        comingSoon: true,
     },
 ];
