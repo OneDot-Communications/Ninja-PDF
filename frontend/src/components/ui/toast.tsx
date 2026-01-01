@@ -49,15 +49,19 @@ const Toast = ({ toast, onClose }: { toast: ToastData; onClose: (id: string) => 
   }, [toast.duration, toast.id, onClose]);
 
   const getIcon = () => {
+    // Custom minimalist icons
+    const iconClass = "h-5 w-5 fill-black text-white";
+
     switch (toast.variant) {
       case 'success':
-        return <CheckCircle className="h-5 w-5 text-green-500" />;
+        return <CheckCircle className={iconClass} />;
       case 'error':
-        return <AlertCircle className="h-5 w-5 text-red-500" />;
+        return <AlertCircle className={iconClass} />;
       case 'warning':
-        return <AlertTriangle className="h-5 w-5 text-yellow-500" />;
+        return <AlertTriangle className={iconClass} />;
       default:
-        return <Info className="h-5 w-5 text-blue-500" />;
+        // Default is usually Info, using AlertCircle for general notifications as per user image vibe
+        return <AlertCircle className={iconClass} />;
     }
   };
 
@@ -83,44 +87,32 @@ const Toast = ({ toast, onClose }: { toast: ToastData; onClose: (id: string) => 
   return (
     <div
       className={cn(
-        'fixed z-50 max-w-sm w-full bg-card border border-border rounded-lg shadow-lg p-4 transition-all duration-300',
+        'fixed z-50 max-w-sm w-auto min-w-[300px] bg-white border border-slate-100 rounded-xl shadow-[0_4px_12px_rgba(0,0,0,0.08)] p-3 transition-all duration-300 flex items-center gap-3',
         getPositionClasses(),
         isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
       )}
     >
-      <div className="flex items-start gap-3">
+      <div className="flex-shrink-0">
         {getIcon()}
-        <div className="flex-1 min-w-0">
-          <h4 className={cn('text-sm font-semibold', toast.highlightTitle && 'text-primary')}>
-            {toast.title}
-          </h4>
-          {toast.message && (
-            <p className="text-sm text-muted-foreground mt-1">{toast.message}</p>
-          )}
-          {toast.actions && (
-            <button
-              onClick={toast.actions.onClick}
-              className={cn(
-                'mt-2 text-xs px-2 py-1 rounded',
-                toast.actions.variant === 'outline'
-                  ? 'border border-border hover:bg-muted'
-                  : 'bg-primary text-primary-foreground hover:bg-primary/90'
-              )}
-            >
-              {toast.actions.label}
-            </button>
-          )}
-        </div>
-        <button
-          onClick={() => {
-            setIsVisible(false);
-            setTimeout(() => onClose(toast.id), 300);
-          }}
-          className="text-muted-foreground hover:text-foreground"
-        >
-          <X className="h-4 w-4" />
-        </button>
       </div>
+      <div className="flex-1 min-w-0 flex flex-col justify-center">
+        <h4 className={cn('text-sm font-medium text-slate-800', toast.highlightTitle && 'text-primary')}>
+          {toast.title}
+        </h4>
+        {toast.message && (
+          <p className="text-[13px] text-slate-500 leading-tight mt-0.5">{toast.message}</p>
+        )}
+      </div>
+
+      <button
+        onClick={() => {
+          setIsVisible(false);
+          setTimeout(() => onClose(toast.id), 300);
+        }}
+        className="flex-shrink-0 text-slate-400 hover:text-slate-600 transition-colors ml-2"
+      >
+        <X className="h-4 w-4" />
+      </button>
     </div>
   );
 };
@@ -131,10 +123,10 @@ const Toaster = forwardRef<ToasterRef>((props, ref) => {
   useImperativeHandle(ref, () => ({
     show: (data: Omit<ToastData, 'id'>) => {
       const id = Math.random().toString(36).substr(2, 9);
-      const toast: ToastData = { 
-        ...data, 
+      const toast: ToastData = {
+        ...data,
         duration: data.duration || 3000, // Default to 3000ms if not provided or 0
-        id 
+        id
       };
       setToasts((prev) => [...prev, toast]);
     },
