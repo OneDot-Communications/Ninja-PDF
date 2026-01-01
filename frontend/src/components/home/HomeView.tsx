@@ -12,6 +12,7 @@ import { motion, useInView } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useRef, useState } from "react";
 import { useTools } from "@/lib/hooks/useTools";
+import { toast } from "@/lib/hooks/use-toast";
 
 // Scroll-triggered animation component - optimized
 const ScrollReveal = ({
@@ -182,13 +183,14 @@ const getSplitDescription = (toolTitle: string, fullDescription: string) => {
 };
 
 // Tool Card Component - Moved outside
-const ToolCard = ({ tool, index }: { tool: any; index: number }) => {
+const ToolCard = ({ tool, index, onToolClick }: { tool: any; index: number; onToolClick: (e: React.MouseEvent, tool: any) => void }) => {
     const wittyDescription = toolOverrides[tool.title] || tool.description;
     const splitDesc = getSplitDescription(tool.title, wittyDescription);
     const [isLiked, setIsLiked] = useState(false);
 
     const handleLike = (e: React.MouseEvent) => {
         e.preventDefault(); // Prevent navigation
+        e.stopPropagation(); // Prevent dialog opening
         setIsLiked(!isLiked);
     };
 
@@ -196,7 +198,11 @@ const ToolCard = ({ tool, index }: { tool: any; index: number }) => {
         <div
             className="w-[311.12px] h-[190.4px] flex-shrink-0"
         >
-            <Link href={tool.href} className="block group w-full h-full">
+            <Link
+                href={tool.href}
+                className="block group w-full h-full"
+                onClick={(e) => onToolClick(e, tool)}
+            >
                 <div className="bg-white rounded-2xl border border-slate-200 p-6 flex flex-col h-full relative overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
                     {/* Like button at top right */}
                     <button
@@ -348,10 +354,22 @@ export function HomeView({
     const heroRef = useRef(null);
     const [showCompetitors, setShowCompetitors] = useState(false);
 
-    // Effective highlight settings (can be controlled from super-admin)
     const effectiveHighlightHeight = typeof highlightHeight === 'number' ? highlightHeight : 1.05; // em
     const highlightFill = primaryColor || '#AEEBFF';
     const highlightShadow = primaryColor || '#01B0F1';
+
+    const handleToolClick = (e: React.MouseEvent, tool: any) => {
+        if (tool.comingSoon) {
+            e.preventDefault();
+            toast.show({
+                title: "Coming Soon",
+                message: `We're working hard to bring ${tool.title} to life. Stay tuned!`,
+                variant: "default",
+                position: "bottom-right",
+                duration: 3000
+            });
+        }
+    };
 
     return (
         <div className="flex min-h-screen flex-col bg-white font-sans text-slate-900">
@@ -494,7 +512,12 @@ export function HomeView({
                                             ))
                                         ) : (
                                             dashboardTools.map((tool, index) => (
-                                                <ToolCard key={tool.title} tool={tool} index={index} />
+                                                <ToolCard
+                                                    key={tool.title}
+                                                    tool={tool}
+                                                    index={index}
+                                                    onToolClick={handleToolClick}
+                                                />
                                             ))
                                         )}
                                     </div>
@@ -513,6 +536,9 @@ export function HomeView({
                         </div>
                     </div>
                 </section>
+
+                {/* Coming Soon Dialog */}
+
 
                 {/* Level Up section removed per design request */}
 

@@ -8,6 +8,7 @@ import { motion } from "framer-motion";
 import { ArrowRight, Search } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
+import { toast } from "@/lib/hooks/use-toast";
 
 export default function ToolsPage() {
   const { tools } = useTools();
@@ -58,6 +59,18 @@ export default function ToolsPage() {
         className="group focus:outline-none flex flex-col items-center transition-all hover:-translate-y-1"
         tabIndex={0}
         title={tool.title}
+        onClick={(e) => {
+          if (tool.comingSoon) {
+            e.preventDefault();
+            toast.show({
+              title: "Coming Soon",
+              message: `We're working hard to bring ${tool.title} to life. Stay tuned!`,
+              variant: "default",
+              position: "bottom-right",
+              duration: 3000
+            });
+          }
+        }}
         onKeyDown={(e: any) => {
           if (e.key === "Enter") {
             // support keyboard navigation
@@ -120,6 +133,8 @@ export default function ToolsPage() {
       </Link>
     );
   };
+
+
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-50 font-sans text-slate-900">
@@ -223,6 +238,8 @@ export default function ToolsPage() {
                 })
             )}
           </div>
+
+
 
         </div>
       </main>

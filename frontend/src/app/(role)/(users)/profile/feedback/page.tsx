@@ -146,7 +146,7 @@ export default function FeedbackPage() {
                                 <SelectContent>
                                     <SelectItem value="bug">Bug</SelectItem>
                                     <SelectItem value="functionality">Add functionality</SelectItem>
-                                    <SelectItem value="ui">Change UI</SelectItem>
+                                    <SelectItem value="ui">UI</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>

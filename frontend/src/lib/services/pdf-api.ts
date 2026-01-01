@@ -37,7 +37,7 @@ const withFallback = async (
             throw backendError;
         }
 
-        console.warn("Backend API failed, falling back to client-side:", backendError);
+        console.warn(`Backend API failed (${backendError.message}), falling back to client-side.`);
 
         try {
             // Fallback to client-side processing
@@ -130,17 +130,13 @@ export const pdfApi = {
         }
     },
     pdfToExcel: async (file: File, options?: { mergeSheets?: boolean; outputFormat?: 'xlsx' | 'csv' }): Promise<ProcessingResult> => {
-        const outputExt = options?.outputFormat === 'csv' ? '.csv' : '.xlsx';
-        return withFallback(
-            () => api.pdfToExcel(file, options),
-            async () => {
-                const processor = await getClientProcessor();
-                return processor.execute("pdf-to-excel", [file], options);
-            },
-            file.name.replace(/\.[^/.]+$/, "") + outputExt
-        );
+        const processor = await getClientProcessor();
+        return processor.execute("pdf-to-excel", [file], options);
     },
-    pdfToPowerpoint: createStandardConverter(api.pdfToPowerpoint, "pdf-to-powerpoint", ".pptx"),
+    pdfToPowerpoint: async (file: File, options?: any): Promise<ProcessingResult> => {
+        const processor = await getClientProcessor();
+        return processor.execute("pdf-to-powerpoint", [file], options);
+    },
 
     pdfToJpg: async (file: File, options?: any): Promise<ProcessingResult> => {
         return withFallback(
@@ -159,11 +155,10 @@ export const pdfApi = {
     // ─────────────────────────────────────────────────────────────────────────────
     // OTHER FORMATS TO PDF
     // ─────────────────────────────────────────────────────────────────────────────
-    wordToPdf: createNoFallbackConverter(
-        api.wordToPdf,
-        "Word to PDF conversion requires server processing. Please check your connection and try again.",
-        (name) => name.replace(/\.(docx?|doc)$/i, ".pdf")
-    ),
+    wordToPdf: async (file: File, options?: any): Promise<ProcessingResult> => {
+        const processor = await getClientProcessor();
+        return processor.execute("word-to-pdf", [file], options);
+    },
     excelToPdf: createNoFallbackConverter(
         api.excelToPdf,
         "Excel to PDF conversion requires server processing. Please check your connection and try again.",
