@@ -84,6 +84,8 @@ export const pdfStrategyManager = {
                 return await pdfToPowerpoint(files[0], options);
             case 'clean-metadata':
                 return await cleanMetadata(files[0], options);
+            case 'word-to-pdf':
+                return await wordToPdf(files, options);
             default:
                 throw new Error(`Strategy ${strategy} not implemented`);
         }
@@ -811,7 +813,83 @@ async function pdfToPdfa(file: File, options: any): Promise<StrategyResult> {
 }
 
 async function pdfToExcel(files: File[], options: any): Promise<StrategyResult> {
-    throw new Error('PDF to Excel conversion requires server-side processing.');
+    const file = files[0];
+    const arrayBuffer = await file.arrayBuffer();
+    const pdfjsLib = await getPdfJs();
+    const pdf = await (pdfjsLib as any).getDocument({
+        data: new Uint8Array(arrayBuffer),
+        verbosity: 0
+    }).promise;
+
+    const XLSX = await import("xlsx");
+    const workbook = XLSX.utils.book_new();
+    const mergeSheets = options.mergeSheets;
+
+    let allRows: any[][] = [];
+
+    for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        const viewport = page.getViewport({ scale: 1.0 });
+
+        // Group text items by Y coordinate (row)
+        // PDF coordinates: Y increases from bottom to top usually, but pdf.js viewport can vary. 
+        // We utilize transform[5] for Y (inverted) and transform[4] for X.
+        const rows: { [key: number]: { x: number, text: string }[] } = {};
+
+        for (const item of textContent.items as any[]) {
+            // Round Y to group roughly aligned items
+            const y = Math.round(item.transform[5]);
+            if (!rows[y]) rows[y] = [];
+            rows[y].push({ x: item.transform[4], text: item.str });
+        }
+
+        // Sort rows by Y (Top to Bottom -> Descending Y for PDF coordinates)
+        const sortedY = Object.keys(rows).map(Number).sort((a, b) => b - a);
+
+        const pageRows: any[][] = [];
+        for (const y of sortedY) {
+            // Sort items in row by X (Left to Right -> Ascending)
+            const rowItems = rows[y].sort((a, b) => a.x - b.x);
+            pageRows.push(rowItems.map(item => item.text));
+        }
+
+        if (mergeSheets) {
+            allRows = allRows.concat(pageRows);
+            // Add an empty row between pages
+            allRows.push([]);
+        } else {
+            const worksheet = XLSX.utils.aoa_to_sheet(pageRows);
+            XLSX.utils.book_append_sheet(workbook, worksheet, `Page ${i}`);
+        }
+    }
+
+    if (mergeSheets) {
+        const worksheet = XLSX.utils.aoa_to_sheet(allRows);
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Merged Data");
+    }
+
+    const outputFormat = options.outputFormat || 'xlsx';
+
+    if (outputFormat === 'csv') {
+        // For CSV, we typically just want the first sheet or the merged data
+        const firstSheetName = workbook.SheetNames[0];
+        const csv = XLSX.utils.sheet_to_csv(workbook.Sheets[firstSheetName]);
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        return {
+            blob,
+            fileName: `${file.name.replace(/\.[^/.]+$/, "")}.csv`,
+            extension: 'csv'
+        };
+    } else {
+        const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+        const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        return {
+            blob,
+            fileName: `${file.name.replace(/\.[^/.]+$/, "")}.xlsx`,
+            extension: 'xlsx'
+        };
+    }
 }
 
 async function addPageNumbers(file: File, options: any): Promise<StrategyResult> {
@@ -946,7 +1024,75 @@ async function pdfToWord(file: File, options: any): Promise<StrategyResult> {
 }
 
 async function pdfToPowerpoint(file: File, options: any): Promise<StrategyResult> {
-    throw new Error('PDF to PowerPoint requires server-side processing.');
+    const pdfjsLib = await getPdfJs();
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await (pdfjsLib as any).getDocument({
+        data: new Uint8Array(arrayBuffer),
+        verbosity: 0
+    }).promise;
+
+    // Dynamically import pptxgenjs to avoid large bundle size on initial load
+    const PptxGenJS = (await import("pptxgenjs")).default;
+    const pres = new PptxGenJS();
+
+    const scale = 1.0; // Base scale
+
+    for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const viewport = page.getViewport({ scale: scale });
+        const slide = pres.addSlide();
+
+        // 1. Text Extraction
+        const textContent = await page.getTextContent();
+
+        // Simple heuristic to group text items into lines/blocks could happen here,
+        // but for high fidelity "editability", placing individual text items might be safer 
+        // initially, though it makes editing harder. 
+        // Let's try to pass individual items for maximum visual accuracy.
+
+        for (const item of textContent.items) {
+            // item.transform is [scaleX, skewY, skewX, scaleY, x, y]
+            // PDF origin is bottom-left. PPTX origin is top-left.
+            const tx = item.transform;
+            let x = tx[4];
+            let y = tx[5];
+
+            // Convert PDF point coordinates (Origin: Bottom-Left) to PPTX Inches (Origin: Top-Left)
+            // Page height in points: viewport.height
+            // Y in top-down: viewport.height - y
+            const pdfY = viewport.height - y;
+
+            // Convert points to inches (72 points = 1 inch)
+            const xIn = x / 72;
+            const yIn = pdfY / 72;
+
+            // Font size calculation (approximate)
+            // item.height might be available or calculated from transform
+            // tx[0] is usually horizontal scaling (font size if unscaled)
+            // tx[3] is vertical scaling
+            const fontSize = Math.sqrt(tx[0] * tx[0] + tx[1] * tx[1]);
+
+            // Safety check for empty text
+            if (!item.str || item.str.trim().length === 0) continue;
+
+            slide.addText(item.str, {
+                x: xIn,
+                y: yIn,
+                fontSize: Math.max(fontSize, 8), // Min font size
+                fontFace: 'Arial', // Fallback font
+                color: '000000' // Default black (could extract color if we parse styles, complex)
+            });
+        }
+    }
+
+    // Generate output
+    const blob = await pres.write({ outputType: "blob" }) as Blob;
+
+    return {
+        blob,
+        fileName: file.name.replace(/\.[^/.]+$/, "") + ".pptx",
+        extension: 'pptx'
+    };
 }
 
 async function convertToPdf(files: File[], options: any): Promise<StrategyResult> {
@@ -988,4 +1134,87 @@ async function cleanMetadata(file: File, options: any): Promise<StrategyResult> 
     const pdfBytes = await pdfDoc.save();
     const blob = new Blob([pdfBytes as any], { type: 'application/pdf' });
     return { blob, fileName: `clean-${file.name}`, extension: 'pdf' };
+}
+
+async function wordToPdf(files: File[], options: any): Promise<StrategyResult> {
+    const file = files[0];
+    const arrayBuffer = await file.arrayBuffer();
+
+    // 1. Convert DOCX to HTML using Mammoth
+    const mammoth = await import("mammoth");
+    const result = await mammoth.convertToHtml({ arrayBuffer: arrayBuffer });
+    const htmlContent = result.value;
+
+    if (!htmlContent) {
+        throw new Error("Could not extract content from Word document.");
+    }
+
+    // 2. Create a temporary container for the HTML
+    // IMPORTANT: precise styling is needed for html2canvas to capture it correctly.
+    // It must be 'visible' in the DOM, even if obscured.
+    const container = document.createElement('div');
+    container.innerHTML = `
+        <div style="font-family: Arial, sans-serif; font-size: 11pt; line-height: 1.5; color: #000; background: white; padding: 40px; min-height: 842px;">
+            <style>
+                p { margin-bottom: 10pt; }
+                h1, h2, h3 { margin-top: 20pt; margin-bottom: 10pt; font-weight: bold; }
+                table { border-collapse: collapse; width: 100%; border: 1px solid #ccc; margin-bottom: 15px; }
+                td, th { border: 1px solid #ccc; padding: 5px; }
+            </style>
+            ${htmlContent}
+        </div>
+    `;
+    container.style.width = '595pt'; // A4 width in points
+    container.style.position = 'fixed'; // Fixed to ensure it renders
+    container.style.top = '0';
+    container.style.left = '0';
+    container.style.zIndex = '-1000'; // Behind everything
+    container.style.backgroundColor = 'white'; // Ensure background is white
+    document.body.appendChild(container);
+
+    try {
+        // 3. Convert HTML to PDF using jsPDF
+        const { jsPDF } = await import("jspdf");
+        const doc = new jsPDF({
+            format: 'a4',
+            unit: 'pt',
+            orientation: 'portrait'
+        });
+
+        // Use a longer timeout or await proper rendering
+        await new Promise<void>((resolve, reject) => {
+            doc.html(container, {
+                callback: (doc) => {
+                    resolve();
+                },
+                x: 0,
+                y: 0,
+                autoPaging: 'text',
+                width: 595, // Match container width
+                windowWidth: 800, // Ensure window width is sufficient
+                margin: [0, 0, 0, 0],
+                html2canvas: {
+                    scale: 0.75, // Adjust scale if needed (96dpi vs 72pt approx)
+                    logging: false,
+                    useCORS: true
+                }
+            });
+        });
+
+        const blob = doc.output('blob');
+        return {
+            blob,
+            fileName: file.name.replace(/\.[^/.]+$/, "") + ".pdf",
+            extension: 'pdf'
+        };
+
+    } catch (e) {
+        console.error("Word to PDF generation failed:", e);
+        throw e;
+    } finally {
+        // Clean up
+        if (document.body.contains(container)) {
+            document.body.removeChild(container);
+        }
+    }
 }
