@@ -364,7 +364,7 @@ export default function ProfilePage() {
                     </div>
 
                     {/* Content Area */}
-                    <div className="px-[30px] pb-[30px]">
+                    <div className="px-[30px] pt-8 pb-[30px]">
                         {activeTab === 'edit' && (
                             <>
                                 {/* First Row with Avatar */}
