@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/services/api";
 import { HomeView } from "@/components/home/HomeView";
+import { FeedbackPromoter } from "@/components/ui/feedback-promoter";
 
 // Force re-compile to fix hydration mismatch
 export default function Home() {
@@ -43,13 +44,16 @@ export default function Home() {
   }, []);
 
   return (
-    <HomeView
-      heroTitle={settings.heroTitle}
-      heroSubtitle={settings.heroSubtitle}
-      platformName={settings.platformName}
-      primaryColor={settings.primaryColor}
-      highlightHeight={settings.highlightHeight}
-      loading={loading}
-    />
+    <>
+      <FeedbackPromoter />
+      <HomeView
+        heroTitle={settings.heroTitle}
+        heroSubtitle={settings.heroSubtitle}
+        platformName={settings.platformName}
+        primaryColor={settings.primaryColor}
+        highlightHeight={settings.highlightHeight}
+        loading={loading}
+      />
+    </>
   );
 }
