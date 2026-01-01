@@ -9,6 +9,12 @@ ALLOWED_HOSTS = [
     'ninja-pdf.onrender.com',
     'ninjapdf.com',
     'www.ninjapdf.com',
+    '18pluspdf.com',
+    'www.18pluspdf.com',
+    '18pluspdf.in',
+    'www.18pluspdf.in',
+    'octopus-app-4mzsp.ondigitalocean.app',
+    '.ondigitalocean.app',
 ]
 
 DATABASES = {
@@ -32,6 +38,11 @@ CORS_ALLOWED_ORIGINS = [
     "https://ninja-pdf.onrender.com",
     "https://ninjapdf.com",
     "https://www.ninjapdf.com",
+    "https://18pluspdf.com",
+    "https://www.18pluspdf.com",
+    "https://18pluspdf.in",
+    "https://www.18pluspdf.in",
+    "https://octopus-app-4mzsp.ondigitalocean.app",
 ]
 CORS_ALLOW_CREDENTIALS = True
 
@@ -39,6 +50,11 @@ CSRF_TRUSTED_ORIGINS = [
     'https://ninja-pdf.onrender.com',
     'https://ninjapdf.com',
     'https://www.ninjapdf.com',
+    "https://18pluspdf.com",
+    "https://www.18pluspdf.com",
+    "https://18pluspdf.in",
+    "https://www.18pluspdf.in",
+    "https://octopus-app-4mzsp.ondigitalocean.app",
 ]
 
 CSRF_COOKIE_SECURE = os.getenv('CSRF_COOKIE_SECURE', 'true').lower() == 'true'
