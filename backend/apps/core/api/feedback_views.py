@@ -5,7 +5,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from .feedback_serializers import FeedbackSerializer
 from apps.core.services.google_sheets_service import get_sheets_service
-from apps.core.services.email_service import EmailService
+from core.services.email_service import EmailService
 from apps.core.models import Feedback
 import logging
 
