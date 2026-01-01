@@ -67,8 +67,8 @@ export default function UserDashboardLayout({
                 </div>
 
                 {/* Main content on the right, offset by sidebar width */}
-                <main className="flex-1 md:ml-64 p-8 overflow-y-auto">
-                    <div className="max-w-6xl mx-auto space-y-8 pb-20">
+                <main className="flex-1 md:ml-64 p-4 overflow-y-auto">
+                    <div className="w-full mx-auto space-y-8 pb-20">
                         {children}
                     </div>
                 </main>
