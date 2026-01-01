@@ -48,7 +48,7 @@
         "pdfjs-dist": "^5.4.449",
         "pixelmatch": "^7.1.0",
         "pptxgenjs": "^4.0.1",
-        "react": "19.2.1",
+        "react": "19.2.3",
         "react-color": "^2.19.3",
         "react-dom": "19.2.1",
         "react-dropzone": "^14.3.8",
