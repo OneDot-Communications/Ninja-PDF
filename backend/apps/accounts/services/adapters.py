@@ -22,7 +22,7 @@ class CustomAccountAdapter(DefaultAccountAdapter):
         token = EmailVerificationToken.create_for_user(emailconfirmation.email_address.user)
         
         # Build verification URL
-        frontend_url = os.getenv('FRONTEND_HOST', 'http://127.0.0.1:3000')
+        frontend_url = getattr(settings, 'FRONTEND_URL', 'http://127.0.0.1:3000')
         verification_url = f"{frontend_url}/auth/verify-email/{token.token}"
         
         # Send email
@@ -37,7 +37,7 @@ class CustomAccountAdapter(DefaultAccountAdapter):
         """
         from apps.accounts.models import EmailVerificationToken
         token = EmailVerificationToken.create_for_user(emailconfirmation.email_address.user)
-        frontend_url = os.getenv('FRONTEND_HOST', 'http://127.0.0.1:3000')
+        frontend_url = getattr(settings, 'FRONTEND_URL', 'http://127.0.0.1:3000')
         return f"{frontend_url}/auth/verify-email/{token.token}"
 
     def send_mail(self, template_prefix, email, context):

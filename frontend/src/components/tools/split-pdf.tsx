@@ -204,7 +204,8 @@ export function SplitPdfTool() {
                     selectedPages: selectedPages,
                     splitMode: "separate"
                 });
-                saveAs(result.blob, result.fileName || `split-${originalFile.name}`);
+                // For explode mode, backend returns a ZIP file
+                saveAs(result.blob, result.fileName || `split_pages.zip`);
             } else if (splitMode === "visual") {
                 // Visual mode: use deleted pages logic (keep remaining pages)
                 selectedPages = pagePreviews
@@ -331,16 +332,16 @@ export function SplitPdfTool() {
                         </div>
 
                         {/* PDF Pages Preview Area */}
-                        <div className="bg-white rounded-xl border border-[#e2e8f0] shadow-sm p-4 min-h-[600px] max-h-[calc(100vh-240px)] overflow-y-auto">
+                        <div className="bg-white rounded-xl border border-[#e2e8f0] shadow-sm p-4 min-h-[400px] max-h-[calc(100vh-280px)] overflow-y-auto">
                             {loadingPreview ? (
                                 <div className="flex flex-col items-center gap-4 p-8">
                                     <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
                                     <p className="text-[#617289] font-medium">Loading PDF pages...</p>
                                 </div>
                             ) : pagePreviews.length > 0 ? (
-                                <div className="space-y-4" style={{transform: `scale(${zoom / 100})`, transformOrigin: 'top center', transition: 'transform 0.2s ease'}}>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" style={{transform: `scale(${zoom / 100})`, transformOrigin: 'top center', transition: 'transform 0.2s ease'}}>
                                     {pagePreviews.map((page) => (
-                                        <div 
+                                        <div
                                             key={page.pageNumber}
                                             className={cn(
                                                 "relative group rounded-lg border-2 transition-all",
@@ -351,10 +352,10 @@ export function SplitPdfTool() {
                                         >
                                             <div className="p-2">
                                                 {/* Page Number Badge */}
-                                                <div className="absolute top-4 left-4 z-10">
-                                                    <div className="bg-white rounded-full border border-[#e2e8f0] shadow-sm px-3 py-1">
+                                                <div className="absolute top-2 left-2 z-10">
+                                                    <div className="bg-white rounded-full border border-[#e2e8f0] shadow-sm px-2 py-1">
                                                         <span className="text-[#334155] font-bold text-xs">
-                                                            Page {page.pageNumber}
+                                                            {page.pageNumber}
                                                         </span>
                                                     </div>
                                                 </div>
@@ -363,17 +364,17 @@ export function SplitPdfTool() {
                                                 {!deletedPages.has(page.pageNumber) && (
                                                     <button
                                                         onClick={() => handleDeletePage(page.pageNumber)}
-                                                        className="absolute top-4 right-4 z-10 bg-red-500 hover:bg-red-600 text-white rounded-full p-2 shadow-lg transition-all"
+                                                        className="absolute top-2 right-2 z-10 bg-red-500 hover:bg-red-600 text-white rounded-full p-1.5 shadow-lg transition-all opacity-0 group-hover:opacity-100"
                                                         aria-label="Delete Page"
                                                     >
-                                                        <Trash2 className="h-5 w-5" />
+                                                        <Trash2 className="h-4 w-4" />
                                                     </button>
                                                 )}
 
                                                 {/* Deleted Badge */}
                                                 {deletedPages.has(page.pageNumber) && (
-                                                    <div className="absolute top-4 right-4 z-10">
-                                                        <div className="bg-red-500 rounded-full border border-red-600 shadow-sm px-3 py-1">
+                                                    <div className="absolute top-2 right-2 z-10">
+                                                        <div className="bg-red-500 rounded-full border border-red-600 shadow-sm px-2 py-1">
                                                             <span className="text-white font-bold text-xs">
                                                                 Deleted
                                                             </span>
@@ -382,10 +383,11 @@ export function SplitPdfTool() {
                                                 )}
 
                                                 {/* Page Image */}
-                                                <img 
-                                                    src={page.image} 
+                                                <img
+                                                    src={page.image}
                                                     alt={`Page ${page.pageNumber}`}
-                                                    className="w-full h-auto rounded-lg"
+                                                    className="w-full h-auto rounded-lg shadow-sm"
+                                                    style={{ maxHeight: '200px', objectFit: 'contain' }}
                                                 />
                                             </div>
                                         </div>
@@ -448,24 +450,25 @@ export function SplitPdfTool() {
                                 </div>
                             </div>
 
-                            {/* Page Ranges */}
-                            <div className="mb-6">
-                                <h3 className="text-[#0f172a] font-bold text-base mb-3">Page Ranges</h3>
-                                <div className="relative">
-                                    <input
-                                        type="text"
-                                        value={pageRanges}
-                                        onChange={(e) => setPageRanges(e.target.value)}
-                                        placeholder="e.g., 1-5, 8, 11-15"
-                                        disabled={splitMode === "visual"}
-                                        className="bg-white rounded-xl border border-[#cbd5e1] w-full h-12 px-4 pr-10 text-sm text-[#0f172a] placeholder:text-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-[#136dec] focus:border-transparent disabled:bg-[#f1f5f9] disabled:text-[#94a3b8] transition-all"
-                                    />
-                                    <Edit className="absolute right-3 top-3 h-6 w-6 text-[#94a3b8] pointer-events-none" />
+                            {/* Page Ranges - Only show in Fixed Range mode */}
+                            {splitMode === "fixed" && (
+                                <div className="mb-6">
+                                    <h3 className="text-[#0f172a] font-bold text-base mb-3">Page Ranges</h3>
+                                    <div className="relative">
+                                        <input
+                                            type="text"
+                                            value={pageRanges}
+                                            onChange={(e) => setPageRanges(e.target.value)}
+                                            placeholder="e.g., 1-5, 8, 11-15"
+                                            className="bg-white rounded-xl border border-[#cbd5e1] w-full h-12 px-4 pr-10 text-sm text-[#0f172a] placeholder:text-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-[#136dec] focus:border-transparent transition-all"
+                                        />
+                                        <Edit className="absolute right-3 top-3 h-6 w-6 text-[#94a3b8] pointer-events-none" />
+                                    </div>
+                                    <p className="mt-2 text-xs text-[#64748b] leading-relaxed">
+                                        Use commas to separate ranges. E.g., <span className="text-[#0f172a] font-medium">1-5, 8, 11-15</span>. We'll do the math.
+                                    </p>
                                 </div>
-                                <p className="mt-2 text-xs text-[#64748b] leading-relaxed">
-                                    Use commas to separate ranges. E.g., <span className="text-[#0f172a] font-medium">1-5, 8, 11-15</span>. We'll do the math.
-                                </p>
-                            </div>
+                            )}
 
                             {/* Explode PDF Option */}
                             <div className="mb-6">
