@@ -11,7 +11,7 @@ interface PdfPreviewProps {
     className?: string;
     onLoadSuccess?: (numPages: number) => void;
     children?: React.ReactNode;
-    contentRef?: React.RefObject<HTMLDivElement>;
+    contentRef?: React.RefObject<HTMLDivElement | null>;
 }
 
 export function PdfPreview({
