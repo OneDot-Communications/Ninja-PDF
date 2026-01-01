@@ -279,7 +279,7 @@ export function ConversionLayout({
 
                             return (
                                 <div key={index} className={cn(
-                                    "bg-white rounded-xl shadow-sm border border-transparent hover:border-[#136dec]/20 transition-all group relative",
+                                    "bg-white rounded-xl shadow-sm border border-transparent hover:border-[#4383BF]/20 transition-all group relative",
                                     viewMode === "file" ? "p-4" : "p-2"
                                 )}>
                                     <div className={cn(
@@ -344,13 +344,13 @@ export function ConversionLayout({
                         {/* Add More Card */}
                         <div
                             onClick={() => fileInputRef.current?.click()}
-                            className="bg-[#136dec]/5 border-2 border-dashed border-[#136dec]/40 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:bg-[#136dec]/10 transition-all min-h-[280px]"
+                            className="bg-[#4383BF]/5 border-2 border-dashed border-[#4383BF]/40 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:bg-[#4383BF]/10 transition-all min-h-[280px]"
                         >
-                            <div className="bg-[#136dec]/10 rounded-full p-3 mb-4">
-                                <PlusCircle className="w-8 h-8 text-[#136dec]" />
+                            <div className="bg-[#4383BF]/10 rounded-full p-3 mb-4">
+                                <PlusCircle className="w-8 h-8 text-[#4383BF]" />
                             </div>
-                            <span className="text-[#136dec] font-bold text-sm mb-1">Add more files</span>
-                            <span className="text-[#136dec]/70 text-xs">or drag & drop here</span>
+                            <span className="text-[#4383BF] font-bold text-sm mb-1">Add more files</span>
+                            <span className="text-[#4383BF]/70 text-xs">or drag & drop here</span>
                             <input
                                 ref={fileInputRef}
                                 type="file"
@@ -427,7 +427,7 @@ export function ConversionLayout({
                                         <div className="bg-white border border-slate-300 w-8 h-10 relative rounded-sm">
                                             <div className="absolute inset-[2px] border border-slate-300 rounded-[1px]"></div>
                                         </div>
-                                        <span className={cn("text-xs font-medium", options?.margin === "small" ? "text-[#136dec]" : "text-[#617289]")}>Small</span>
+                                        <span className={cn("text-xs font-medium", options?.margin === "small" ? "text-[#4383BF]" : "text-[#617289]")}>Small</span>
                                     </button>
 
                                     <button

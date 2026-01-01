@@ -190,7 +190,7 @@ export function CompressPdfTool() {
                                         onClick={() => setViewMode("file")}
                                         className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${
                                             viewMode === "file"
-                                                ? "bg-white text-[#136dec] shadow"
+                                                ? "bg-white text-[#4383BF] shadow"
                                                 : "text-[#617289]"
                                         }`}
                                     >
@@ -200,7 +200,7 @@ export function CompressPdfTool() {
                                         onClick={() => setViewMode("page")}
                                         className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${
                                             viewMode === "page"
-                                                ? "bg-white text-[#136dec] shadow"
+                                                ? "bg-white text-[#4383BF] shadow"
                                                 : "text-[#617289]"
                                         }`}
                                     >
@@ -270,10 +270,10 @@ export function CompressPdfTool() {
                                 className="bg-[rgba(19,109,236,0.05)] border-2 border-dashed border-[rgba(19,109,236,0.40)] rounded-xl h-[273px] flex flex-col items-center justify-center gap-4 hover:bg-[rgba(19,109,236,0.10)] transition-colors"
                             >
                                 <div className="bg-[rgba(19,109,236,0.10)] rounded-full w-12 h-12 flex items-center justify-center">
-                                    <Plus className="h-7 w-7 text-[#136dec]" />
+                                    <Plus className="h-7 w-7 text-[#4383BF]" />
                                 </div>
                                 <div className="text-center">
-                                    <div className="text-[#136dec] text-sm font-bold leading-5">
+                                    <div className="text-[#4383BF] text-sm font-bold leading-5">
                                         Add more files
                                     </div>
                                     <div className="text-[rgba(19,109,236,0.70)] text-xs leading-4">
@@ -290,7 +290,7 @@ export function CompressPdfTool() {
                             {/* File Summary */}
                             <div className="mb-6">
                                 <div className="flex items-center gap-2 mb-4">
-                                    <FolderOpen className="h-6 w-6 text-[#136dec]" />
+                                    <FolderOpen className="h-6 w-6 text-[#4383BF]" />
                                     <h2 className="text-[#111418] font-bold text-lg leading-7">File Summary</h2>
                                 </div>
 
@@ -341,7 +341,7 @@ export function CompressPdfTool() {
 
                                 <div className="flex justify-between items-center mb-4">
                                     <span className="text-[#6b7280] text-sm">Size Goal</span>
-                                    <span className="bg-[#eff6ff] text-[#136dec] text-sm font-bold px-3 py-1 rounded-md">
+                                    <span className="bg-[#eff6ff] text-[#4383BF] text-sm font-bold px-3 py-1 rounded-md">
                                         Under 2MB
                                     </span>
                                 </div>
@@ -356,7 +356,7 @@ export function CompressPdfTool() {
                                         onChange={(e) => setTargetSize(Number(e.target.value))}
                                         className="w-full h-2 bg-[#e5e7eb] rounded-full appearance-none cursor-pointer"
                                         style={{
-                                            background: `linear-gradient(to right, #136dec 0%, #136dec ${targetSize}%, #e5e7eb ${targetSize}%, #e5e7eb 100%)`
+                                            background: `linear-gradient(to right, #4383BF 0%, #4383BF ${targetSize}%, #e5e7eb ${targetSize}%, #e5e7eb 100%)`
                                         }}
                                     />
                                 </div>
@@ -372,7 +372,7 @@ export function CompressPdfTool() {
                                     onClick={() => setCompressionLevel("extreme")}
                                     className={`flex-1 py-2 rounded-md text-sm font-bold transition-all ${
                                         compressionLevel === "extreme"
-                                            ? "bg-white text-[#136dec] shadow"
+                                            ? "bg-white text-[#4383BF] shadow"
                                             : "text-[#64748b]"
                                     }`}
                                 >
@@ -382,7 +382,7 @@ export function CompressPdfTool() {
                                     onClick={() => setCompressionLevel("recommended")}
                                     className={`flex-1 py-2 rounded-md text-sm font-medium transition-all ${
                                         compressionLevel === "recommended"
-                                            ? "bg-white text-[#136dec] shadow"
+                                            ? "bg-white text-[#4383BF] shadow"
                                             : "text-[#64748b]"
                                     }`}
                                 >
@@ -394,7 +394,7 @@ export function CompressPdfTool() {
                             <button
                                 onClick={compressPdf}
                                 disabled={isProcessing || files.length === 0}
-                                className="w-full bg-[#136dec] hover:bg-blue-700 text-white rounded-xl h-[60px] flex items-center justify-center gap-3 font-bold text-lg shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                                className="w-full bg-[#4383BF] hover:bg-[#3470A0] text-white rounded-xl h-[60px] flex items-center justify-center gap-3 font-bold text-lg shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                             >
                                 <Archive className="h-6 w-6" />
                                 <span>

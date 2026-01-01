@@ -50,9 +50,9 @@ export function AdminSidebar({ className }: AdminSidebarProps) {
             <div className="space-y-4 py-4">
                 <div className="px-3 py-2">
                     <Link href="/admin/dashboard" className="flex items-center pl-2 mb-9">
-                        <Shield className="h-8 w-8 text-[#01B0F1] mr-2" />
+                        <Shield className="h-8 w-8 text-[#4383BF] mr-2" />
                         <h1 className="text-xl font-bold text-slate-900">
-                            Admin<span className="text-[#01B0F1]">Panel</span>
+                            Admin<span className="text-[#4383BF]">Panel</span>
                         </h1>
                     </Link>
                     <div className="space-y-1">
@@ -61,12 +61,12 @@ export function AdminSidebar({ className }: AdminSidebarProps) {
                                 key={route.href}
                                 href={route.href}
                                 className={cn(
-                                    "text-sm group flex p-3 w-full justify-start font-medium cursor-pointer hover:text-[#01B0F1] hover:bg-slate-50 rounded-lg transition",
-                                    route.active ? "text-[#01B0F1] bg-blue-50" : "text-slate-500"
+                                    "text-sm group flex p-3 w-full justify-start font-medium cursor-pointer hover:text-[#4383BF] hover:bg-slate-50 rounded-lg transition",
+                                    route.active ? "text-[#4383BF] bg-blue-50" : "text-slate-500"
                                 )}
                             >
                                 <div className="flex items-center flex-1">
-                                    <route.icon className={cn("h-5 w-5 mr-3", route.active ? "text-[#01B0F1]" : "text-slate-400")} />
+                                    <route.icon className={cn("h-5 w-5 mr-3", route.active ? "text-[#4383BF]" : "text-slate-400")} />
                                     {route.label}
                                 </div>
                             </Link>

@@ -59,7 +59,7 @@ export default function DesktopPage() {
     ];
 
     return (
-        <div className="min-h-screen bg-white font-sans text-slate-900 selection:bg-[#01B0F1]/20">
+        <div className="min-h-screen bg-white font-sans text-slate-900 selection:bg-[#4383BF]/20">
             <Header />
 
             <main className="relative overflow-hidden">
@@ -76,13 +76,13 @@ export default function DesktopPage() {
                             animate="visible"
                             className="max-w-4xl mx-auto text-center space-y-8"
                         >
-                            <motion.div variants={itemVariants} className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-50 border border-blue-100 text-[#01B0F1] font-medium text-sm">
+                            <motion.div variants={itemVariants} className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-50 border border-blue-100 text-[#4383BF] font-medium text-sm">
                                 <Zap className="w-4 h-4 fill-current" />
                                 <span>v2.4.0 is now available</span>
                             </motion.div>
 
                             <motion.h1 variants={itemVariants} className="text-5xl md:text-7xl font-bold font-caveat tracking-tight leading-none text-slate-900">
-                                The <span className="text-[#01B0F1]">Powerhouse</span> <br />
+                                The <span className="text-[#4383BF]">Powerhouse</span> <br />
                                 on your Desktop.
                             </motion.h1>
 
@@ -93,7 +93,7 @@ export default function DesktopPage() {
                             </motion.p>
 
                             <motion.div variants={itemVariants} className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
-                                <Button className="h-14 px-8 text-lg bg-[#01B0F1] hover:bg-[#0091d4] text-white shadow-xl shadow-blue-200/50 transition-all hover:-translate-y-1">
+                                <Button className="h-14 px-8 text-lg bg-[#4383BF] hover:bg-[#3470A0] text-white shadow-xl shadow-blue-200/50 transition-all hover:-translate-y-1">
                                     <Download className="w-5 h-5 mr-2" />
                                     Download for macOS
                                 </Button>
@@ -157,8 +157,8 @@ export default function DesktopPage() {
                                     {/* Main Area */}
                                     <div className="flex-1 p-8 bg-white relative">
                                         {/* Drop Zone */}
-                                        <div className="absolute inset-8 border-2 border-dashed border-blue-200 rounded-xl bg-blue-50/20 flex flex-col items-center justify-center gap-4 group-hover:bg-blue-50/50 group-hover:border-[#01B0F1] transition-colors duration-300">
-                                            <div className="w-20 h-20 rounded-2xl bg-white shadow-lg flex items-center justify-center text-[#01B0F1] group-hover:scale-110 transition-transform duration-300">
+                                        <div className="absolute inset-8 border-2 border-dashed border-blue-200 rounded-xl bg-blue-50/20 flex flex-col items-center justify-center gap-4 group-hover:bg-blue-50/50 group-hover:border-[#4383BF] transition-colors duration-300">
+                                            <div className="w-20 h-20 rounded-2xl bg-white shadow-lg flex items-center justify-center text-[#4383BF] group-hover:scale-110 transition-transform duration-300">
                                                 <Layers className="w-10 h-10" />
                                             </div>
                                             <div className="text-center">
@@ -189,7 +189,7 @@ export default function DesktopPage() {
                                         </motion.div>
 
                                         <motion.div
-                                            className="absolute bottom-12 left-12 bg-[#01B0F1] text-white p-4 rounded-xl shadow-xl shadow-blue-500/20 z-10 flex items-center gap-3"
+                                            className="absolute bottom-12 left-12 bg-[#4383BF] text-white p-4 rounded-xl shadow-xl shadow-blue-500/20 z-10 flex items-center gap-3"
                                             initial={{ y: 20, opacity: 0 }}
                                             whileInView={{ y: 0, opacity: 1 }}
                                             transition={{ delay: 0.7 }}
@@ -279,7 +279,7 @@ export default function DesktopPage() {
                     <div className="container mx-auto px-4">
                         <h2 className="text-4xl md:text-5xl font-bold font-caveat text-slate-900 mb-8">Ready to supercharge?</h2>
                         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                            <Button size="lg" className="h-14 px-10 text-lg bg-[#01B0F1] hover:bg-[#0091d4] text-white rounded-full">
+                            <Button size="lg" className="h-14 px-10 text-lg bg-[#4383BF] hover:bg-[#3470A0] text-white rounded-full">
                                 Download Now
                             </Button>
                             <Button size="lg" variant="ghost" className="h-14 px-10 text-lg text-slate-600 hover:text-slate-900">

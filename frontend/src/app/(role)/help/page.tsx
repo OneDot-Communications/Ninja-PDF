@@ -88,7 +88,7 @@ export default function HelpCenterPage() {
                     {categories.map((category) => (
                         <Card key={category.title} className="hover:shadow-lg transition-shadow cursor-pointer">
                             <CardHeader>
-                                <div className="w-12 h-12 bg-[#01B0F1]/10 text-[#01B0F1] rounded-xl flex items-center justify-center mb-4">
+                                <div className="w-12 h-12 bg-[#4383BF]/10 text-[#4383BF] rounded-xl flex items-center justify-center mb-4">
                                     <category.icon className="w-6 h-6" />
                                 </div>
                                 <CardTitle>{category.title}</CardTitle>
@@ -98,7 +98,7 @@ export default function HelpCenterPage() {
                                 <ul className="space-y-2">
                                     {category.articles.map((article) => (
                                         <li key={article}>
-                                            <Link href="#" className="text-sm text-slate-600 hover:text-[#01B0F1] flex items-center gap-2">
+                                            <Link href="#" className="text-sm text-slate-600 hover:text-[#4383BF] flex items-center gap-2">
                                                 <ChevronRight className="w-4 h-4" />
                                                 {article}
                                             </Link>
@@ -140,14 +140,14 @@ export default function HelpCenterPage() {
             {/* Contact Section */}
             <section className="container mx-auto px-4 py-16">
                 <div className="bg-slate-900 rounded-2xl p-8 md:p-12 text-center text-white">
-                    <Mail className="w-12 h-12 text-[#01B0F1] mx-auto mb-4" />
+                    <Mail className="w-12 h-12 text-[#4383BF] mx-auto mb-4" />
                     <h2 className="text-3xl font-bold mb-4">Still Need Help?</h2>
                     <p className="text-slate-300 max-w-lg mx-auto mb-8">
                         Our support team is here to help. Reach out and we'll get back to you within 24 hours.
                     </p>
                     <div className="flex justify-center gap-4">
                         <a href="mailto:support@ninjapdf.com">
-                            <Button size="lg" className="bg-[#01B0F1] hover:bg-[#0091d4] gap-2">
+                            <Button size="lg" className="bg-[#4383BF] hover:bg-[#3470A0] gap-2">
                                 <Mail className="w-4 h-4" />
                                 Email Support
                             </Button>

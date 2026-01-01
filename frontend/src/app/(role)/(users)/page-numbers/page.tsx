@@ -3,14 +3,14 @@ import { PageNumbersTool } from "@/components/tools/page-numbers";
 
 export const metadata = {
     title: "Page Numbers - 18+ PDF",
-    description: "Add page numbers into PDFs with ease. Choose your positions, dimensions, typography.",
+    description: "Add professional page numbering to PDF documents. Customize position, style, format, and appearance to create perfectly organized and navigable documents.",
 };
 
 export default function PageNumbersPage() {
     return (
         <ToolShell
             title="Page Numbers"
-            description="Add page numbers into PDFs with ease. Choose your positions, dimensions, typography."
+            description="Add professional page numbering to PDF documents. Customize position, style, format, and appearance to create perfectly organized and navigable documents."
             variant="editor"
         >
             <PageNumbersTool />

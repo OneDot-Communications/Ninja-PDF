@@ -3,14 +3,14 @@ import { OrganizePdfTool } from "@/components/tools/organize-pdf";
 
 export const metadata = {
     title: "Organize PDF - 18+ PDF",
-    description: "Sort pages of your PDF file however you like. Delete PDF pages or add PDF pages to your document at your convenience.",
+    description: "Reorganize PDF pages with drag-and-drop simplicity. Rearrange page order, delete unwanted pages, duplicate important sections, and create the perfect document structure.",
 };
 
 export default function OrganizePdfPage() {
     return (
         <ToolShell
             title="Organize PDF"
-            description="Sort pages of your PDF file however you like. Delete PDF pages or add PDF pages to your document at your convenience."
+            description="Reorganize PDF pages with drag-and-drop simplicity. Rearrange page order, delete unwanted pages, duplicate important sections, and create the perfect document structure."
             variant="editor"
         >
             <OrganizePdfTool />

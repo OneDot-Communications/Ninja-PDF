@@ -252,7 +252,7 @@ export default function SecurityPage() {
                                                 {twoFactorSetup.backup_codes.map((c: string) => (
                                                     <div key={c} className="text-xs font-mono bg-slate-100 px-2 py-1 rounded flex items-center justify-between">
                                                         <span>{c}</span>
-                                                        <button onClick={() => navigator.clipboard?.writeText(c)} className="text-xs text-[#01B0F1] ml-2">Copy</button>
+                                                        <button onClick={() => navigator.clipboard?.writeText(c)} className="text-xs text-[#4383BF] ml-2">Copy</button>
                                                     </div>
                                                 ))}
                                             </div>

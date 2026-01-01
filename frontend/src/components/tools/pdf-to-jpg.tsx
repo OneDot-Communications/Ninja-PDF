@@ -312,7 +312,7 @@ export function PdfToJpgTool() {
                                         onClick={() => setViewMode("file")}
                                         className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${
                                             viewMode === "file"
-                                                ? "bg-white text-[#136dec] shadow-sm"
+                                                ? "bg-white text-[#4383BF] shadow-sm"
                                                 : "text-[#617289]"
                                         }`}
                                     >
@@ -322,7 +322,7 @@ export function PdfToJpgTool() {
                                         onClick={() => setViewMode("page")}
                                         className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${
                                             viewMode === "page"
-                                                ? "bg-white text-[#136dec] shadow-sm"
+                                                ? "bg-white text-[#4383BF] shadow-sm"
                                                 : "text-[#617289]"
                                         }`}
                                     >
@@ -420,10 +420,10 @@ export function PdfToJpgTool() {
                                 className="bg-[rgba(19,109,236,0.05)] rounded-xl border-2 border-dashed border-[rgba(19,109,236,0.40)] w-full max-w-[204.8px] mx-auto aspect-[204.8/273.08] flex flex-col items-center justify-center cursor-pointer hover:bg-[rgba(19,109,236,0.10)] transition-colors"
                             >
                                 <div className="bg-[rgba(19,109,236,0.10)] rounded-full w-12 h-12 flex items-center justify-center mb-4">
-                                    <Plus className="h-7 w-7 text-[#136dec]" />
+                                    <Plus className="h-7 w-7 text-[#4383BF]" />
                                 </div>
                                 <div className="text-center px-4">
-                                    <div className="text-[#136dec] font-bold text-sm mb-1">Add more files</div>
+                                    <div className="text-[#4383BF] font-bold text-sm mb-1">Add more files</div>
                                     <div className="text-[rgba(19,109,236,0.70)] text-xs">or drag & drop here</div>
                                 </div>
                             </div>
@@ -453,7 +453,7 @@ export function PdfToJpgTool() {
                                             onClick={() => setFormat("jpeg")}
                                             className={`flex-1 px-4 py-3 rounded-lg font-bold text-sm transition-all ${
                                                 format === "jpeg"
-                                                    ? "bg-[#136dec] text-white shadow-md"
+                                                    ? "bg-[#4383BF] text-white shadow-md"
                                                     : "bg-[#f0f2f4] text-[#617289] hover:bg-[#e2e8f0]"
                                             }`}
                                         >
@@ -463,7 +463,7 @@ export function PdfToJpgTool() {
                                             onClick={() => setFormat("png")}
                                             className={`flex-1 px-4 py-3 rounded-lg font-bold text-sm transition-all ${
                                                 format === "png"
-                                                    ? "bg-[#136dec] text-white shadow-md"
+                                                    ? "bg-[#4383BF] text-white shadow-md"
                                                     : "bg-[#f0f2f4] text-[#617289] hover:bg-[#e2e8f0]"
                                             }`}
                                         >

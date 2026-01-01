@@ -11,6 +11,7 @@ import { useAuth } from '@/lib/context/AuthContext';
 import { FaUser } from 'react-icons/fa6';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
+import { usePathname } from "next/navigation";
 
 export function Header() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -22,6 +23,10 @@ export function Header() {
     useEffect(() => {
         setMounted(true);
     }, []);
+
+    // current path for active nav styling
+    const pathname = usePathname();
+    const isActive = (p: string) => pathname && pathname.startsWith(p);
 
     // Close menu when clicking outside
     useEffect(() => {
@@ -49,29 +54,31 @@ export function Header() {
             style={{ backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)" }}
         >
             {/* Main Header Container */}
-            <div className="w-full flex h-16 items-center justify-between px-6 relative max-w-[1536px] mx-auto">
-                <Link href="/" className="flex items-center">
-                    <img src="/pages/auth/18+logo.png" alt="18+ PDF" className="h-12 w-auto" />
-                </Link>
+            <div className="w-full flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8 relative max-w-full mx-0">
+                <div className="flex items-center gap-4">
+                    <Link href="/" className="flex items-center">
+                        <img src="/pages/auth/18+christmas_logo.png" alt="18+ PDF" className="h-12 w-auto" />
+                        <span className="ml-3 inline-block bg-[#FF5252] text-white text-[10px] font-bold px-2 py-0.5 rounded-md">ALPHA</span>
+                    </Link>
 
-                {/* Navigation Menu - Desktop */}
-                <div className="hidden md:flex items-center gap-6 mx-8">
-                    <Link href="/merge-pdf" className="text-[#111418] font-bold text-sm hover:text-blue-600 transition-colors">
-                        Merge PDF
-                    </Link>
-                    <Link href="/split-pdf" className="text-[#617289] font-medium text-sm hover:text-blue-600 transition-colors">
-                        Split PDF
-                    </Link>
-                    <Link href="/compress-pdf" className="text-[#617289] font-medium text-sm hover:text-blue-600 transition-colors">
-                        Compress PDF
-                    </Link>
-                    <Link href="/tools" className="text-[#617289] font-medium text-sm hover:text-blue-600 transition-colors">
-                        Convert PDF
-                    </Link>
-                    <Link href="/tools" className="text-[#617289] font-medium text-sm hover:text-blue-600 transition-colors">
-                        <span className="font-medium text-sm">All Tools</span>
-                        <span className="text-lg ml-1">▼</span>
-                    </Link>
+                    {/* Navigation Menu - Desktop (moved directly next to logo) */}
+                    <div className="hidden md:flex items-center gap-6 ml-4">
+                        <Link href="/merge-pdf" className={`${isActive('/merge-pdf') ? 'text-[#111418] font-bold' : 'text-[#617289] font-medium'} text-sm md:text-base hover:text-[#4383BF] transition-colors`}>
+                            Merge PDF
+                        </Link>
+                        <Link href="/split-pdf" className={`${isActive('/split-pdf') ? 'text-[#111418] font-bold' : 'text-[#617289] font-medium'} text-sm md:text-base hover:text-[#4383BF] transition-colors`}>
+                            Split PDF
+                        </Link>
+                        <Link href="/compress-pdf" className={`${isActive('/compress-pdf') ? 'text-[#111418] font-bold' : 'text-[#617289] font-medium'} text-sm md:text-base hover:text-[#4383BF] transition-colors`}>
+                            Compress PDF
+                        </Link>
+                        <Link href="/tools" className={`${isActive('/tools') ? 'text-[#111418] font-bold' : 'text-[#617289] font-medium'} text-sm md:text-base hover:text-[#4383BF] transition-colors`}>
+                            Convert PDF
+                        </Link>
+                        <Link href="/tools" className={`text-[#617289] font-medium text-base md:text-lg hover:text-[#4383BF] transition-colors`}>
+                            <span className="font-medium text-base md:text-lg">All Tools</span>
+                        </Link>
+                    </div>
                 </div>
 
                 {/* Desktop Actions */}
@@ -100,7 +107,7 @@ export function Header() {
                             </Link>
                         </>
                     ) : (
-                        <div className="flex items-center gap-3 mr-2">
+                        <div className="flex items-center gap-3">
                             <span className="text-sm font-medium text-slate-700 hidden lg:inline-block">
                                 Hello, {user.first_name || user.email?.split('@')[0] || 'User'}
                             </span>
@@ -121,12 +128,14 @@ export function Header() {
                         </div>
                     )}
                     <div ref={menuRef} className="relative">
+                        {/*
                         <button
                             onClick={() => setIsMenuOpen(!isMenuOpen)}
                             className="p-2 text-slate-600 hover:bg-slate-100 rounded-full transition-colors"
                         >
                             <Grip className="w-6 h-6" />
                         </button>
+                        */}
 
                         <AnimatePresence>
                             {isMenuOpen && (
@@ -287,7 +296,7 @@ export function Header() {
                                         ) : (
                                             <div className="col-span-2 flex items-center justify-between bg-slate-50 p-3 rounded-lg">
                                                 <div className="flex items-center gap-3">
-                                                    <div className="w-10 h-10 rounded-full bg-[#01B0F1]/10 flex items-center justify-center text-[#01B0F1]">
+                                                    <div className="w-10 h-10 rounded-full bg-[#4383BF]/10 flex items-center justify-center text-[#4383BF]">
                                                         <FaUser className="w-5 h-5" />
                                                     </div>
                                                     <div className="flex flex-col">

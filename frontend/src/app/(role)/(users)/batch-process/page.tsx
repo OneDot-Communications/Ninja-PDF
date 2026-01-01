@@ -198,7 +198,7 @@ export default function BatchProcessingPage() {
                             <p className="text-primary font-medium">Drop files here...</p>
                         ) : (
                             <div>
-                                <p className="font-medium">Drag & drop PDF files here</p>
+                                <p className="font-medium">Drag & drop your PDF's here</p>
                                 <p className="text-sm text-muted-foreground">or click to browse (max 50 files)</p>
                             </div>
                         )}

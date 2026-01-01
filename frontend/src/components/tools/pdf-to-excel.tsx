@@ -224,7 +224,7 @@ export function PdfToExcelTool() {
                                     <div className="flex items-start gap-3">
                                         <div className={cn(
                                             "mt-1 w-5 h-5 rounded-full border flex items-center justify-center",
-                                            sheetOrganization === 'merge' ? "border-[#136dec]" : "border-[#cbd5e1]"
+                                            sheetOrganization === 'merge' ? "border-[#4383BF]" : "border-[#cbd5e1]"
                                         )}>
                                             {sheetOrganization === 'merge' && <div className="w-2.5 h-2.5 rounded-full bg-[#136dec]" />}
                                         </div>
@@ -236,7 +236,7 @@ export function PdfToExcelTool() {
                                         </div>
                                     </div>
                                     {sheetOrganization === 'merge' && (
-                                        <div className="absolute top-2 right-2 bg-[#136dec] text-white text-[10px] font-bold px-2 py-0.5 rounded">
+                                        <div className="absolute top-2 right-2 bg-[#4383BF] text-white text-[10px] font-bold px-2 py-0.5 rounded">
                                             RECOMMENDED
                                         </div>
                                     )}

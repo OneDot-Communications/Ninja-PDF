@@ -216,6 +216,7 @@ export function MergePdfTool() {
             <div className="min-h-[calc(100vh-120px)] flex items-center justify-center">
                 <FileUploadHero
                     title="Merge PDF"
+                    description="Drag & drop your PDF's here"
                     onFilesSelected={handleFilesSelected}
                     maxFiles={20}
                     accept={{ "application/pdf": [".pdf"] }}
@@ -322,10 +323,10 @@ export function MergePdfTool() {
                                                 className="bg-blue-50 rounded-xl border-2 border-blue-200 border-dashed flex-shrink-0 w-[204.8px] h-[273.08px] flex flex-col items-center justify-center cursor-pointer hover:bg-blue-100 transition-colors"
                                             >
                                                 <div className="bg-blue-100 rounded-full w-12 h-12 flex items-center justify-center mb-4">
-                                                    <Plus className="h-6 w-6 text-[#136dec]" />
+                                                    <Plus className="h-6 w-6 text-[#4383BF]" />
                                                 </div>
                                                 <div className="text-center">
-                                                    <div className="text-[#136dec] font-bold text-sm mb-1">Add more files</div>
+                                                    <div className="text-[#4383BF] font-bold text-sm mb-1">Add more files</div>
                                                     <div className="text-blue-600 text-xs">or drag & drop here</div>
                                                 </div>
                                             </div>
@@ -343,7 +344,7 @@ export function MergePdfTool() {
                         <Button
                             onClick={mergePdfs}
                             disabled={isProcessing || files.length < 2}
-                            className="w-full h-14 bg-[#136dec] hover:bg-blue-700 text-white rounded-xl flex items-center justify-center gap-2 font-bold text-sm shadow-lg disabled:opacity-50"
+                            className="w-full h-14 bg-[#4383BF] hover:bg-[#3470A0] text-white rounded-xl flex items-center justify-center gap-2 font-bold text-sm shadow-lg disabled:opacity-50"
                         >
                             <GitMerge className="h-5 w-5" />
                             <span>{isProcessing ? 'Merging...' : 'Merge Files'}</span>
@@ -484,7 +485,7 @@ export function MergePdfTool() {
                                 <Button
                                     onClick={mergePdfs}
                                     disabled={isProcessing || files.length < 2}
-                                    className="w-full lg:w-[374px] h-[50px] lg:h-[60px] bg-[#136dec] hover:bg-blue-700 text-white rounded-xl flex items-center justify-center gap-2 font-bold text-base lg:text-lg shadow-lg disabled:opacity-50"
+                                    className="w-full lg:w-[374px] h-[50px] lg:h-[60px] bg-[#4383BF] hover:bg-[#3470A0] text-white rounded-xl flex items-center justify-center gap-2 font-bold text-base lg:text-lg shadow-lg disabled:opacity-50"
                                 >
                                     <GitMerge className="h-6 w-6" />
                                     <span>{isProcessing ? "Merging..." : "Merge Files"}</span>
