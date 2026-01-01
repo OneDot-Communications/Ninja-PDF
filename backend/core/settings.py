@@ -346,17 +346,18 @@ SOCIALACCOUNT_LOGIN_ON_GET = True
 SOCIALACCOUNT_AUTO_SIGNUP = True
 
 # CORS - Both localhost (development) and deployed URL (production)
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "https://ninja-pdf.onrender.com",
-    "https://octopus-app-4mzsp.ondigitalocean.app",
-    "https://ninjapdf.com",
-    "https://18pluspdf.com",
-    "https://www.18pluspdf.com",
-    "https://18pluspdf.in",
-    "https://www.18pluspdf.in",
-]
+CORS_ORIGIN_ALLOW_ALL = True
+# CORS_ALLOWED_ORIGINS = [
+#     "http://localhost:3000",
+#     "http://127.0.0.1:3000",
+#     "https://ninja-pdf.onrender.com",
+#     "https://octopus-app-4mzsp.ondigitalocean.app",
+#     "https://ninjapdf.com",
+#     "https://18pluspdf.com",
+#     "https://www.18pluspdf.com",
+#     "https://18pluspdf.in",
+#     "https://www.18pluspdf.in",
+# ]
 CORS_ALLOW_CREDENTIALS = True
 
 ALLOWED_HOSTS = [

@@ -34,16 +34,18 @@ DATABASES = {
 
 EMAIL_BACKEND = 'core.email_backend.ZeptoEmailBackend'
 
-CORS_ALLOWED_ORIGINS = [
-    "https://ninja-pdf.onrender.com",
-    "https://ninjapdf.com",
-    "https://www.ninjapdf.com",
-    "https://18pluspdf.com",
-    "https://www.18pluspdf.com",
-    "https://18pluspdf.in",
-    "https://www.18pluspdf.in",
-    "https://octopus-app-4mzsp.ondigitalocean.app",
-]
+# WARNING: CORS_ORIGIN_ALLOW_ALL is set to True. This allows any origin to make requests.
+CORS_ORIGIN_ALLOW_ALL = True
+# CORS_ALLOWED_ORIGINS = [
+#     "https://ninja-pdf.onrender.com",
+#     "https://ninjapdf.com",
+#     "https://www.ninjapdf.com",
+#     "https://18pluspdf.com",
+#     "https://www.18pluspdf.com",
+#     "https://18pluspdf.in",
+#     "https://www.18pluspdf.in",
+#     "https://octopus-app-4mzsp.ondigitalocean.app",
+# ]
 CORS_ALLOW_CREDENTIALS = True
 
 CSRF_TRUSTED_ORIGINS = [

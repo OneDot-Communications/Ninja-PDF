@@ -287,6 +287,7 @@ export const tools = [
         category: "PDF Security",
         isNew: true,
         color: toolColors.security,
+        comingSoon: true,
     },
     {
         title: "Extract Images",
