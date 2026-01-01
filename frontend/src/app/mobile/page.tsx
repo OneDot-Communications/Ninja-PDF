@@ -23,7 +23,7 @@ export default function MobilePage() {
                 {/* Hero Section */}
                 <section className="pt-20 pb-16 md:pt-32 md:pb-32 px-4 relative">
                     {/* Background Blobs */}
-                    <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-[#01B0F1]/10 rounded-full blur-[100px] -z-10" />
+                    <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-[#4383BF]/10 rounded-full blur-[100px] -z-10" />
                     <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-[#089949]/10 rounded-full blur-[100px] -z-10" />
 
                     <div className="container mx-auto flex flex-col md:flex-row items-center gap-12 md:gap-24">
@@ -119,7 +119,7 @@ export default function MobilePage() {
                                         ))}
 
                                         {/* Fab */}
-                                        <div className="absolute bottom-6 right-6 w-14 h-14 bg-[#01B0F1] rounded-full shadow-lg shadow-blue-500/30 flex items-center justify-center text-white">
+                                        <div className="absolute bottom-6 right-6 w-14 h-14 bg-[#4383BF] rounded-full shadow-lg shadow-blue-500/30 flex items-center justify-center text-white">
                                             <PenTool className="w-6 h-6" />
                                         </div>
                                     </div>

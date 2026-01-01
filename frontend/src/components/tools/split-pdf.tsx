@@ -406,7 +406,7 @@ export function SplitPdfTool() {
                         <Button
                             onClick={splitPdf}
                             disabled={isProcessing}
-                            className="w-full h-14 bg-[#136dec] hover:bg-blue-700 text-white rounded-xl flex items-center justify-center gap-2 font-bold text-sm shadow-lg disabled:opacity-50"
+                            className="w-full h-14 bg-[#4383BF] hover:bg-[#3470A0] text-white rounded-xl flex items-center justify-center gap-2 font-bold text-sm shadow-lg disabled:opacity-50"
                         >
                             <span>{isProcessing ? 'Splitting...' : 'Split PDF'}</span>
                             <ArrowRight className="h-5 w-5" />
@@ -460,7 +460,7 @@ export function SplitPdfTool() {
                                             value={pageRanges}
                                             onChange={(e) => setPageRanges(e.target.value)}
                                             placeholder="e.g., 1-5, 8, 11-15"
-                                            className="bg-white rounded-xl border border-[#cbd5e1] w-full h-12 px-4 pr-10 text-sm text-[#0f172a] placeholder:text-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-[#136dec] focus:border-transparent transition-all"
+                                            className="bg-white rounded-xl border border-[#cbd5e1] w-full h-12 px-4 pr-10 text-sm text-[#0f172a] placeholder:text-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-[#4383BF] focus:border-transparent transition-all"
                                         />
                                         <Edit className="absolute right-3 top-3 h-6 w-6 text-[#94a3b8] pointer-events-none" />
                                     </div>
@@ -479,7 +479,7 @@ export function SplitPdfTool() {
                                             id="explode"
                                             checked={explodeMode}
                                             onChange={(e) => setExplodeMode(e.target.checked)}
-                                            className="mt-0.5 w-5 h-5 rounded border-[#cbd5e1] text-[#136dec] focus:ring-2 focus:ring-[#136dec] cursor-pointer"
+                                            className="mt-0.5 w-5 h-5 rounded border-[#cbd5e1] text-[#4383BF] focus:ring-2 focus:ring-[#4383BF] cursor-pointer"
                                         />
                                         <div className="flex-1">
                                             <label htmlFor="explode" className="text-[#0f172a] font-bold text-sm block cursor-pointer mb-1">
@@ -510,7 +510,7 @@ export function SplitPdfTool() {
                                         </div>
                                         <div className="flex justify-between items-center">
                                             <span className="text-[#475569] text-sm">Output Files:</span>
-                                            <span className="text-[#136dec] font-bold text-base">
+                                            <span className="text-[#4383BF] font-bold text-base">
                                                 {calculateOutputFiles()} PDF{calculateOutputFiles() !== 1 ? 's' : ''}
                                             </span>
                                         </div>
@@ -529,7 +529,7 @@ export function SplitPdfTool() {
                                 <Button
                                     onClick={splitPdf}
                                     disabled={isProcessing}
-                                    className="w-full h-14 bg-[#136dec] hover:bg-blue-700 text-white rounded-xl flex items-center justify-center gap-2 font-bold text-base shadow-lg disabled:opacity-50 transition-all"
+                                    className="w-full h-14 bg-[#4383BF] hover:bg-[#3470A0] text-white rounded-xl flex items-center justify-center gap-2 font-bold text-base shadow-lg disabled:opacity-50 transition-all"
                                 >
                                     <span>{isProcessing ? "Splitting PDF..." : "Split PDF"}</span>
                                     <ArrowRight className="h-5 w-5" />

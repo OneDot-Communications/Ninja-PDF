@@ -641,7 +641,7 @@ export function CropPdfTool() {
 
                                         {/* Crop box border */}
                                         <div
-                                            className="absolute border-2 border-[#136dec] cursor-move pointer-events-auto"
+                                            className="absolute border-2 border-[#4383BF] cursor-move pointer-events-auto"
                                             style={{
                                                 left: `${cropBox.x}%`,
                                                 top: `${cropBox.y}%`,
@@ -653,7 +653,7 @@ export function CropPdfTool() {
 
                                         {/* Corner handles */}
                                         <div
-                                            className="absolute w-3 h-3 bg-white border-2 border-[#136dec] rounded-full pointer-events-auto cursor-nw-resize"
+                                            className="absolute w-3 h-3 bg-white border-2 border-[#4383BF] rounded-full pointer-events-auto cursor-nw-resize"
                                             style={{
                                                 left: `${cropBox.x}%`,
                                                 top: `${cropBox.y}%`,
@@ -662,7 +662,7 @@ export function CropPdfTool() {
                                             onMouseDown={handleMouseDown}
                                         />
                                         <div
-                                            className="absolute w-3 h-3 bg-white border-2 border-[#136dec] rounded-full pointer-events-auto cursor-ne-resize"
+                                            className="absolute w-3 h-3 bg-white border-2 border-[#4383BF] rounded-full pointer-events-auto cursor-ne-resize"
                                             style={{
                                                 left: `${cropBox.x + cropBox.width}%`,
                                                 top: `${cropBox.y}%`,
@@ -671,7 +671,7 @@ export function CropPdfTool() {
                                             onMouseDown={handleMouseDown}
                                         />
                                         <div
-                                            className="absolute w-3 h-3 bg-white border-2 border-[#136dec] rounded-full pointer-events-auto cursor-sw-resize"
+                                            className="absolute w-3 h-3 bg-white border-2 border-[#4383BF] rounded-full pointer-events-auto cursor-sw-resize"
                                             style={{
                                                 left: `${cropBox.x}%`,
                                                 top: `${cropBox.y + cropBox.height}%`,
@@ -680,7 +680,7 @@ export function CropPdfTool() {
                                             onMouseDown={handleMouseDown}
                                         />
                                         <div
-                                            className="absolute w-3 h-3 bg-white border-2 border-[#136dec] rounded-full pointer-events-auto cursor-se-resize"
+                                            className="absolute w-3 h-3 bg-white border-2 border-[#4383BF] rounded-full pointer-events-auto cursor-se-resize"
                                             style={{
                                                 left: `${cropBox.x + cropBox.width}%`,
                                                 top: `${cropBox.y + cropBox.height}%`,
@@ -700,7 +700,7 @@ export function CropPdfTool() {
                             {/* File Summary */}
                             <div className="mb-6">
                                 <div className="flex items-center gap-2 mb-4">
-                                    <FolderOpen className="h-6 w-6 text-[#136dec]" />
+                                    <FolderOpen className="h-6 w-6 text-[#4383BF]" />
                                     <h2 className="text-[#111418] font-bold text-lg leading-7">Crop Settings</h2>
                                 </div>
 
@@ -708,7 +708,7 @@ export function CropPdfTool() {
                                 <div className="bg-[#f9fafb] rounded-lg border border-[#f3f4f6] p-3 mb-4">
                                     <div className="flex items-center gap-3">
                                         <div className="bg-[#dbeafe] rounded w-10 h-10 flex items-center justify-center flex-shrink-0">
-                                            <FileText className="h-6 w-6 text-[#136dec]" />
+                                            <FileText className="h-6 w-6 text-[#4383BF]" />
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <div className="text-[#111418] text-sm font-bold leading-5 truncate">
@@ -757,8 +757,8 @@ export function CropPdfTool() {
                                             className={cn(
                                                 "flex flex-col items-center justify-center gap-2 p-3 rounded-lg border-2 transition-all",
                                                 maintainAspectRatio && aspectRatio === preset.aspectRatio
-                                                    ? "border-[#136dec] bg-[#eff6ff] text-[#136dec]"
-                                                    : "border-[#e2e8f0] bg-white text-[#617289] hover:border-[#136dec]/30"
+                                                    ? "border-[#4383BF] bg-[#eff6ff] text-[#4383BF]"
+                                                    : "border-[#e2e8f0] bg-white text-[#617289] hover:border-[#4383BF]/30"
                                             )}
                                         >
                                             {preset.icon}
@@ -777,7 +777,7 @@ export function CropPdfTool() {
                                             onClick={() => setApplyToAll(!applyToAll)}
                                             className={cn(
                                                 "p-1 rounded transition-colors",
-                                                applyToAll ? "text-[#136dec]" : "text-[#9ca3af]"
+                                                applyToAll ? "text-[#4383BF]" : "text-[#9ca3af]"
                                             )}
                                         >
                                             {applyToAll ? <CheckSquare className="h-5 w-5" /> : <Square className="h-5 w-5" />}
@@ -790,7 +790,7 @@ export function CropPdfTool() {
                                             onClick={() => setShowGrid(!showGrid)}
                                             className={cn(
                                                 "p-1 rounded transition-colors",
-                                                showGrid ? "text-[#136dec]" : "text-[#9ca3af]"
+                                                showGrid ? "text-[#4383BF]" : "text-[#9ca3af]"
                                             )}
                                         >
                                             {showGrid ? <CheckSquare className="h-5 w-5" /> : <Square className="h-5 w-5" />}
@@ -804,7 +804,7 @@ export function CropPdfTool() {
                                             disabled={!showGrid}
                                             className={cn(
                                                 "p-1 rounded transition-colors",
-                                                snapToGrid ? "text-[#136dec]" : "text-[#9ca3af]",
+                                                snapToGrid ? "text-[#4383BF]" : "text-[#9ca3af]",
                                                 !showGrid && "opacity-50 cursor-not-allowed"
                                             )}
                                         >
@@ -826,7 +826,7 @@ export function CropPdfTool() {
                                                 onChange={(e) => setGridSize(Number(e.target.value))}
                                                 className="w-full h-2 bg-[#e5e7eb] rounded-full appearance-none cursor-pointer"
                                                 style={{
-                                                    background: `linear-gradient(to right, #136dec 0%, #136dec ${(gridSize - 2) / 18 * 100}%, #e5e7eb ${(gridSize - 2) / 18 * 100}%, #e5e7eb 100%)`
+                                                    background: `linear-gradient(to right, #4383BF 0%, #4383BF ${(gridSize - 2) / 18 * 100}%, #e5e7eb ${(gridSize - 2) / 18 * 100}%, #e5e7eb 100%)`
                                                 }}
                                             />
                                         </div>
@@ -838,7 +838,7 @@ export function CropPdfTool() {
                             <button
                                 onClick={cropPdf}
                                 disabled={isProcessing}
-                                className="w-full bg-[#136dec] hover:bg-blue-700 text-white rounded-xl h-[60px] flex items-center justify-center gap-3 font-bold text-lg shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                                className="w-full bg-[#4383BF] hover:bg-[#3470A0] text-white rounded-xl h-[60px] flex items-center justify-center gap-3 font-bold text-lg shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                             >
                                 <Crop className="h-6 w-6" />
                                 <span>

@@ -536,7 +536,7 @@ export function HomeView({
                                     <span className="relative inline-block">
                                         <span className="text-[#01B0F1]">happy</span>
                                         <motion.div
-                                            className="absolute bottom-1 left-0 w-full h-[0.15em] bg-[#01B0F1] -z-10 opacity-60 transform -rotate-1"
+                                            className="absolute bottom-1 left-0 w-full h-[0.15em] bg-[#4383BF] -z-10 opacity-60 transform -rotate-1"
                                             initial={{ scaleX: 0 }}
                                             whileInView={{ scaleX: 1 }}
                                             transition={{ duration: 0.8 }}
@@ -574,15 +574,15 @@ export function HomeView({
                             {/* Brand Column */}
                             <div className="col-span-1 md:col-span-1">
                                 <Link href="/" className="flex items-center mb-6">
-                                    <img src="/pages/auth/18+logo.png" alt="18+ PDF" className="h-20 w-auto" />
-                                </Link>
+                                    <img src="/pages/auth/18+christmas_logo.png" alt="18+ PDF" className="h-20 w-auto" />
+                                </Link> 
                                 <p className="text-slate-500 mb-6 leading-relaxed">
                                     Just finish work, and chill. No tension.
                                 </p>
                                 <div className="flex gap-4">
                                     {[Twitter, Linkedin].map((Icon, i) => (
                                         <motion.div key={i} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
-                                            <Link href="#" className="text-slate-400 hover:text-[#01B0F1] transition-colors">
+                                            <Link href="#" className="text-slate-400 hover:text-[#4383BF] transition-colors">
                                                 <Icon className="w-5 h-5" />
                                             </Link>
                                         </motion.div>
@@ -593,7 +593,7 @@ export function HomeView({
                             {/* Links Columns */}
                             <div className="col-span-1 md:col-span-3 grid grid-cols-1 sm:grid-cols-3 gap-8">
                                 <div>
-                                    <h3 className="font-bold text-lg mb-6 text-[#01B0F1]">Company</h3>
+                                    <h3 className="font-bold text-lg mb-6 text-[#4383BF]">Company</h3>
                                     <ul className="space-y-4 text-slate-600">
                                         {["About", "Contact", "Privacy Policy", "Terms"].map((link) => (
                                             <li key={link}>

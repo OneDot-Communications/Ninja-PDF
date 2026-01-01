@@ -7,7 +7,7 @@ import Image from "next/image";
 
 export const FileUploadHero = ({
   title = "Upload Files",
-  description = "Drag & drop PDF files here",
+  description = "Drag & drop your PDF's here",
   onFilesSelected,
   accept = { "application/pdf": [".pdf"] },
   maxFiles = 20,
@@ -99,12 +99,12 @@ export const FileUploadHero = ({
 
 
 
-          {/* Normal content (button + icons + subtitle) */}
-          <div className="relative inline-flex items-center">
+          {/* Normal content (button centered; icons positioned to the right) */}
+          <div className="relative w-full flex justify-center items-center">
             <Button
               type="button"
               onClick={open}
-              className={`h-14 md:h-16 lg:h-18 px-8 md:px-10 lg:px-12 text-xl md:text-2xl font-semibold rounded-xl transition-all shadow-[0_12px_30px_rgba(19,109,236,0.16)] bg-[#136dec] hover:bg-[#0e56c6] text-white flex items-center justify-center`}
+              className={`h-16 md:h-20 lg:h-24 px-10 md:px-12 lg:px-16 text-xl md:text-2xl lg:text-3xl font-semibold rounded-xl transition-all shadow-[0_12px_30px_rgba(19,109,236,0.16)] bg-[#4383BF] hover:bg-[#3470A0] text-white flex items-center justify-center mx-auto`}
             >
               <span className="flex items-center gap-2 md:gap-3">
                 <UploadCloud className="w-5 h-5 md:w-6 md:h-6" />
@@ -112,38 +112,45 @@ export const FileUploadHero = ({
               </span>
             </Button>
 
-            {/* Vertical icons to the right of the button, centered */}
-            <div className="absolute right-[-56px] md:right-[-64px] top-1/2 -translate-y-1/2 flex flex-col gap-2 md:gap-3">
-              <button
-                type="button"
-                className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-white border border-slate-200 shadow flex items-center justify-center"
-                onClick={(e) => { e.stopPropagation(); alert('Upload from Google Drive coming soon'); }}
-                title="Google Drive"
-              >
-                <img src="/merge/drive.png" alt="Google Drive" className="w-4 h-4 md:w-5 md:h-5 object-contain" />
-              </button>
-              <button
-                type="button"
-                className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-white border border-slate-200 shadow flex items-center justify-center"
-                onClick={(e) => { e.stopPropagation(); alert('Upload from Dropbox coming soon'); }}
-                title="Dropbox"
-              >
-                <img src="/merge/dropbox.png" alt="Dropbox" className="w-4 h-4 md:w-5 md:h-5 object-contain" />
-              </button>
-              <button
-                type="button"
-                className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-white border border-slate-200 shadow flex items-center justify-center"
-                onClick={(e) => { e.stopPropagation(); alert('Upload from URL coming soon'); }}
-                title="From link"
-              >
-                <img src="/merge/link.png" alt="From link" className="w-4 h-4 md:w-5 md:h-5 object-contain" />
-              </button>
+            {/* Icons positioned to the right of center so they don't shift the button */}
+            <div className="absolute left-1/2 translate-x-[110px] md:translate-x-[160px] lg:translate-x-[210px] top-1/2 -translate-y-1/2 flex flex-col items-start gap-2 md:gap-3">
+              <div className="flex gap-2 md:gap-3">
+                <button
+                  type="button"
+                  aria-label="Upload from Google Drive"
+                  className="w-8 h-8 md:w-9 md:h-9 rounded-full bg-white border border-slate-200 shadow flex items-center justify-center"
+                  onClick={(e) => { e.stopPropagation(); alert('Upload from Google Drive coming soon'); }}
+                  title="Google Drive"
+                >
+                  <img src="/merge/drive.png" alt="Google Drive" className="w-4 h-4 md:w-5 md:h-5 object-contain" />
+                </button>
+                <button
+                  type="button"
+                  aria-label="Upload from Dropbox"
+                  className="w-8 h-8 md:w-9 md:h-9 rounded-full bg-white border border-slate-200 shadow flex items-center justify-center"
+                  onClick={(e) => { e.stopPropagation(); alert('Upload from Dropbox coming soon'); }}
+                  title="Dropbox"
+                >
+                  <img src="/merge/dropbox.png" alt="Dropbox" className="w-4 h-4 md:w-5 md:h-5 object-contain" />
+                </button>
+              </div>
+              <div className="mt-1">
+                <button
+                  type="button"
+                  aria-label="Upload from URL"
+                  className="w-8 h-8 md:w-9 md:h-9 rounded-full bg-white border border-slate-200 shadow flex items-center justify-center"
+                  onClick={(e) => { e.stopPropagation(); alert('Upload from URL coming soon'); }}
+                  title="From link"
+                >
+                  <img src="/merge/link.png" alt="From link" className="w-4 h-4 md:w-5 md:h-5 object-contain" />
+                </button>
+              </div>
             </div>
           </div>
 
           {/* Prominent subtitle and helper text - styled to #585858 */}
           <p className="mt-6 md:mt-8 text-xl md:text-2xl lg:text-3xl font-extrabold text-[#585858]">{description}</p>
-          <div className="text-sm md:text-base text-slate-400 mt-2">or click to select from your local drive</div>
+          <div className="text-sm md:text-base text-slate-400 mt-2">or click to pick from your ancient file explorer — we’ll pretend we didn’t notice.</div>
 
           {/* Drag state hint (subtle) */}
           <div className="mt-6 text-slate-600 h-6">

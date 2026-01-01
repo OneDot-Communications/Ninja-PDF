@@ -506,7 +506,7 @@ export function WatermarkPdfTool() {
                                 </div>
                                 <button
                                     onClick={resetSettings}
-                                    className="flex items-center gap-1.5 text-[#617289] text-xs font-bold hover:text-[#136dec] transition-colors"
+                                    className="flex items-center gap-1.5 text-[#617289] text-xs font-bold hover:text-[#4383BF] transition-colors"
                                 >
                                     <RotateCw className="w-3.5 h-3.5" />
                                     Reset
@@ -520,7 +520,7 @@ export function WatermarkPdfTool() {
                                     className={cn(
                                         "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold transition-all",
                                         activeTab === "text"
-                                            ? "bg-white text-[#136dec] shadow-sm"
+                                            ? "bg-white text-[#4383BF] shadow-sm"
                                             : "text-[#64748b] hover:text-[#111418]"
                                     )}
                                 >
@@ -532,7 +532,7 @@ export function WatermarkPdfTool() {
                                     className={cn(
                                         "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold transition-all",
                                         activeTab === "image"
-                                            ? "bg-white text-[#136dec] shadow-sm"
+                                            ? "bg-white text-[#4383BF] shadow-sm"
                                             : "text-[#64748b] hover:text-[#111418]"
                                     )}
                                 >
@@ -548,13 +548,13 @@ export function WatermarkPdfTool() {
                                     <div>
                                         <div className="flex justify-between items-center mb-2">
                                             <label className="text-xs font-bold text-[#617289] uppercase tracking-wider">Watermark Text</label>
-                                            <button className="text-[#136dec] text-xs font-bold hover:underline">Insert Variable</button>
+                                            <button className="text-[#4383BF] text-xs font-bold hover:underline">Insert Variable</button>
                                         </div>
                                         <input
                                             type="text"
                                             value={text}
                                             onChange={(e) => setText(e.target.value)}
-                                            className="w-full h-14 rounded-xl border border-[#e2e8f0] px-4 bg-[#f8fafc] text-[#111418] font-bold text-lg focus:border-[#136dec] focus:ring-2 focus:ring-[#136dec]/20 transition-all outline-none"
+                                            className="w-full h-14 rounded-xl border border-[#e2e8f0] px-4 bg-[#f8fafc] text-[#111418] font-bold text-lg focus:border-[#4383BF] focus:ring-2 focus:ring-[#4383BF]/20 transition-all outline-none"
                                             placeholder="CONFIDENTIAL"
                                         />
                                     </div>
@@ -565,7 +565,7 @@ export function WatermarkPdfTool() {
                                             <select
                                                 value={fontFamily}
                                                 onChange={(e) => setFontFamily(e.target.value)}
-                                                className="w-full h-12 appearance-none rounded-xl border border-[#e2e8f0] pl-4 pr-8 bg-white text-[#111418] text-sm font-medium focus:border-[#136dec] outline-none"
+                                                className="w-full h-12 appearance-none rounded-xl border border-[#e2e8f0] pl-4 pr-8 bg-white text-[#111418] text-sm font-medium focus:border-[#4383BF] outline-none"
                                             >
                                                 {fontOptions.map(f => <option key={f} value={f}>{f}</option>)}
                                             </select>
@@ -579,7 +579,7 @@ export function WatermarkPdfTool() {
 
                                         {/* Color Picker Button */}
                                         <div className="relative group">
-                                            <div className="w-12 h-12 rounded-xl border border-[#e2e8f0] bg-white flex items-center justify-center cursor-pointer hover:border-[#136dec] transition-colors">
+                                            <div className="w-12 h-12 rounded-xl border border-[#e2e8f0] bg-white flex items-center justify-center cursor-pointer hover:border-[#4383BF] transition-colors">
                                                 <div className="w-6 h-6 rounded-full border border-black/10 shadow-sm" style={{ backgroundColor: color }} />
                                             </div>
                                             <input
@@ -596,7 +596,7 @@ export function WatermarkPdfTool() {
                                                 type="number"
                                                 value={fontSize}
                                                 onChange={(e) => setFontSize(Number(e.target.value))}
-                                                className="w-full h-12 rounded-xl border border-[#e2e8f0] pl-3 pr-8 bg-white text-[#111418] text-sm font-medium focus:border-[#136dec] outline-none text-center"
+                                                className="w-full h-12 rounded-xl border border-[#e2e8f0] pl-3 pr-8 bg-white text-[#111418] text-sm font-medium focus:border-[#4383BF] outline-none text-center"
                                             />
                                             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94a3b8] text-xs font-medium pointer-events-none">px</span>
                                         </div>
@@ -676,7 +676,7 @@ export function WatermarkPdfTool() {
                                             onClick={() => setMosaicMode(!mosaicMode)}
                                             className={cn(
                                                 "w-10 h-6 rounded-full transition-colors relative",
-                                                mosaicMode ? "bg-[#136dec]" : "bg-[#e2e8f0]"
+                                                mosaicMode ? "bg-[#4383BF]" : "bg-[#e2e8f0]"
                                             )}
                                         >
                                             <div className={cn(
@@ -698,7 +698,7 @@ export function WatermarkPdfTool() {
                                                     className={cn(
                                                         "aspect-square rounded border transition-all flex items-center justify-center",
                                                         selectedGrid === i
-                                                            ? "bg-[#136dec] border-[#136dec] text-white"
+                                                            ? "bg-[#4383BF] border-[#4383BF] text-white"
                                                             : "bg-white border-[#e2e8f0] hover:border-[#94a3b8]"
                                                     )}
                                                 >
@@ -736,7 +736,7 @@ export function WatermarkPdfTool() {
                                         className={cn(
                                             "h-16 rounded-xl border-2 flex flex-col items-center justify-center gap-1 transition-all",
                                             layer === "over"
-                                                ? "bg-[#eff6ff] border-[#136dec] text-[#136dec]"
+                                                ? "bg-[#eff6ff] border-[#4383BF] text-[#4383BF]"
                                                 : "bg-white border-[#e2e8f0] text-[#64748b] hover:border-[#cbd5e1]"
                                         )}
                                     >
@@ -748,7 +748,7 @@ export function WatermarkPdfTool() {
                                         className={cn(
                                             "h-16 rounded-xl border-2 flex flex-col items-center justify-center gap-1 transition-all",
                                             layer === "under"
-                                                ? "bg-[#eff6ff] border-[#136dec] text-[#136dec]"
+                                                ? "bg-[#eff6ff] border-[#4383BF] text-[#4383BF]"
                                                 : "bg-white border-[#e2e8f0] text-[#64748b] hover:border-[#cbd5e1]"
                                         )}
                                     >
@@ -806,7 +806,7 @@ export function WatermarkPdfTool() {
                                                 <button
                                                     key={deg}
                                                     onClick={() => setRotation(deg)}
-                                                    className="text-[10px] font-bold text-[#94a3b8] hover:text-[#136dec]"
+                                                    className="text-[10px] font-bold text-[#94a3b8] hover:text-[#4383BF]"
                                                 >
                                                     {deg}°
                                                 </button>
@@ -822,7 +822,7 @@ export function WatermarkPdfTool() {
                             <button
                                 onClick={applyWatermarks}
                                 disabled={isProcessing}
-                                className="w-full bg-[#136dec] hover:bg-blue-700 text-white rounded-xl h-[56px] flex items-center justify-center gap-3 font-bold text-base shadow-lg shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all transform active:scale-[0.99]"
+                                className="w-full bg-[#4383BF] hover:bg-[#3470A0] text-white rounded-xl h-[56px] flex items-center justify-center gap-3 font-bold text-base shadow-lg shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all transform active:scale-[0.99]"
                             >
                                 <span>Stamp Document</span>
                                 {isProcessing ? (

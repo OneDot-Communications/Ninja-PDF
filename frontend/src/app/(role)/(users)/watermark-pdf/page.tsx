@@ -3,14 +3,14 @@ import { WatermarkPdfTool } from "@/components/tools/watermark-pdf";
 
 export const metadata = {
     title: "Watermark PDF - 18+ PDF",
-    description: "Stamp an image or text over your PDF in seconds. Choose the typography, transparency and position.",
+    description: "Add professional watermarks to protect your PDF documents. Choose from text or image watermarks with customizable opacity, position, size, and rotation for brand protection.",
 };
 
 export default function WatermarkPdfPage() {
     return (
         <ToolShell
             title="Watermark PDF"
-            description="Stamp an image or text over your PDF in seconds. Choose the typography, transparency and position."
+            description="Add professional watermarks to protect your PDF documents. Choose from text or image watermarks with customizable opacity, position, size, and rotation for brand protection."
             variant="editor"
         >
             <WatermarkPdfTool />
