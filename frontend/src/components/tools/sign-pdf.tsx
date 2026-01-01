@@ -216,7 +216,7 @@ export function SignPdfTool() {
                                 {/* Signature Overlay Children */}
                                 {signatureImage && (
                                     <div
-                                        className="absolute border-2 border-[#136dec] bg-white/20 hover:bg-white/40 group cursor-move touch-none"
+                                        className="absolute border-2 border-[#4383BF] bg-white/20 hover:bg-white/40 group cursor-move touch-none"
                                         style={{
                                             left: `${position.x}%`,
                                             top: `${position.y}%`,
@@ -234,7 +234,7 @@ export function SignPdfTool() {
 
                                         {/* Resize Handle */}
                                         <div
-                                            className="absolute bottom-0 right-0 w-6 h-6 bg-[#136dec] rounded-tl-lg cursor-se-resize flex items-center justify-center text-white"
+                                            className="absolute bottom-0 right-0 w-6 h-6 bg-[#4383BF] rounded-tl-lg cursor-se-resize flex items-center justify-center text-white"
                                             onMouseDown={handleResizeMouseDown}
                                         >
                                             <Expand className="w-3 h-3" />
@@ -270,7 +270,7 @@ export function SignPdfTool() {
                             {/* Signature Section */}
                             <div className="mb-6">
                                 <div className="flex items-center gap-2 mb-4">
-                                    <PenTool className="h-6 w-6 text-[#136dec]" />
+                                    <PenTool className="h-6 w-6 text-[#4383BF]" />
                                     <h2 className="text-[#111418] font-bold text-lg leading-7">Your Signature</h2>
                                 </div>
 
@@ -303,7 +303,7 @@ export function SignPdfTool() {
                                             <p className="text-gray-500 mb-4 text-sm">No signature created yet.</p>
                                             <Button
                                                 onClick={() => setIsModalOpen(true)}
-                                                className="bg-[#136dec] hover:bg-blue-700 text-white"
+                                                className="bg-[#4383BF] hover:bg-[#3470A0] text-white"
                                             >
                                                 Create Signature
                                             </Button>
@@ -335,7 +335,7 @@ export function SignPdfTool() {
                                                     className={cn(
                                                         "flex-1 py-1.5 rounded text-xs font-medium transition-all capitalize",
                                                         pageOption === opt
-                                                            ? "bg-white text-[#136dec] shadow"
+                                                            ? "bg-white text-[#4383BF] shadow"
                                                             : "text-[#64748b]"
                                                     )}
                                                 >
@@ -351,7 +351,7 @@ export function SignPdfTool() {
                             <button
                                 onClick={signPdf}
                                 disabled={isProcessing || !signatureImage}
-                                className="w-full bg-[#136dec] hover:bg-blue-700 text-white rounded-xl h-[60px] flex items-center justify-center gap-3 font-bold text-lg shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                                className="w-full bg-[#4383BF] hover:bg-[#3470A0] text-white rounded-xl h-[60px] flex items-center justify-center gap-3 font-bold text-lg shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                             >
                                 <PenTool className="h-6 w-6" />
                                 <span>

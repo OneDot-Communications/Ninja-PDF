@@ -414,7 +414,7 @@ export function ComparePdfTool() {
                     {compareMode === "overlay" && (<div className="bg-gray-50 border border-gray-100 rounded-lg p-3 text-sm text-gray-600 mb-6">Highlight visual pixel differences.</div>)}
                     <div className="relative mb-6">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                        <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-9 bg-white border-gray-200 focus:border-[#136dec] focus:ring-[#136dec]/20 h-10 rounded-lg" placeholder="Search text" />
+                        <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-9 bg-white border-gray-200 focus:border-[#4383BF] focus:ring-[#4383BF]/20 h-10 rounded-lg" placeholder="Search text" />
                     </div>
                 </div>
 

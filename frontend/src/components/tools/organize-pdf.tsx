@@ -553,12 +553,12 @@ export function OrganizePdfTool() {
                                         {/* Add Pages Button as last item (not sortable, but visually in grid) */}
                                         <button
                                             onClick={() => fileInputRef.current?.click()}
-                                            className="bg-[#f8fbff] border-2 border-dashed border-[#136dec] rounded-2xl flex flex-col items-center justify-center gap-3 hover:bg-[#f0f7ff] transition-all min-h-[300px] w-full sm:w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)] xl:w-[calc(25%-18px)]"
-                                        >
-                                            <div className="bg-[#136dec]/10 p-3 rounded-full">
-                                                <Plus className="h-6 w-6 text-[#136dec]" />
+className="bg-[#f8fbff] border-2 border-dashed border-[#4383BF] rounded-2xl flex flex-col items-center justify-center gap-3 hover:bg-[#f0f7ff] transition-all min-h-[300px] w-full sm:w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)] xl:w-[calc(25%-18px)]"
+                                            >
+                                            <div className="bg-[#4383BF]/10 p-3 rounded-full">
+                                                <Plus className="h-6 w-6 text-[#4383BF]" />
                                             </div>
-                                            <span className="text-[#136dec] text-sm font-bold">Add Pages</span>
+                                            <span className="text-[#4383BF] text-sm font-bold">Add Pages</span>
                                         </button>
                                     </div>
                                 </SortableContext>
@@ -573,7 +573,7 @@ export function OrganizePdfTool() {
                                 <h2 className="text-[#111418] font-black text-xl tracking-tight">Organize Settings</h2>
                                 <button
                                     onClick={resetChanges}
-                                    className="flex items-center gap-2 text-[#64748b] hover:text-[#136dec] text-sm font-bold transition-colors"
+                                    className="flex items-center gap-2 text-[#64748b] hover:text-[#4383BF] text-sm font-bold transition-colors"
                                 >
                                     <RefreshCcw className="w-4 h-4" />
                                     Reset
@@ -583,7 +583,7 @@ export function OrganizePdfTool() {
                             <div className="flex-1">
                                 {selectedPages.size > 0 ? (
                                     <div className="p-6 bg-blue-50 rounded-2xl border border-blue-100">
-                                        <h3 className="text-[#136dec] font-bold mb-2">{selectedPages.size} Page{selectedPages.size > 1 ? 's' : ''} Selected</h3>
+                                        <h3 className="text-[#4383BF] font-bold mb-2">{selectedPages.size} Page{selectedPages.size > 1 ? 's' : ''} Selected</h3>
                                         <p className="text-sm text-blue-700/80 mb-4">
                                             You can rotate, delete, or clone these pages using the toolbar above.
                                         </p>
@@ -599,7 +599,7 @@ export function OrganizePdfTool() {
                                 <button
                                     onClick={savePdf}
                                     disabled={isProcessing || pages.length === 0}
-                                    className="w-full bg-[#136dec] hover:bg-[#0e5bc7] text-white rounded-2xl h-[64px] flex items-center justify-center gap-3 font-bold text-lg shadow-xl shadow-[#136dec]/20 disabled:opacity-50 transition-all active:scale-[0.98]"
+                                    className="w-full bg-[#4383BF] hover:bg-[#3470A0] text-white rounded-2xl h-[64px] flex items-center justify-center gap-3 font-bold text-lg shadow-xl shadow-[#4383BF]/20 disabled:opacity-50 transition-all active:scale-[0.98]"
                                 >
                                     <span>Download Document</span>
                                     <Download className="h-5 w-5 stroke-[3]" />
@@ -638,12 +638,12 @@ function ToolbarButton({ onClick, icon, label, disabled = false, active = false 
             className={cn(
                 "flex flex-col items-center justify-center gap-1 min-w-[60px] p-2 rounded-xl transition-all",
                 disabled ? "opacity-30 cursor-not-allowed" : "hover:bg-gray-50 active:bg-gray-100",
-                active ? "text-[#136dec]" : "text-[#64748b]"
+                active ? "text-[#4383BF]" : "text-[#64748b]"
             )}
         >
             <div className={cn(
                 "w-8 h-8 flex items-center justify-center rounded-lg transition-colors",
-                active ? "bg-[#136dec]/10" : "bg-transparent"
+                active ? "bg-[#4383BF]/10" : "bg-transparent"
             )}>
                 {icon}
             </div>
@@ -701,7 +701,7 @@ function SortablePageCard({
             {/* Card */}
             <div className={cn(
                 "bg-white rounded-2xl border overflow-hidden transition-all hover:shadow-md h-full",
-                isSelected ? "border-[#136dec] ring-4 ring-[#136dec]/10" : "border-gray-200",
+                isSelected ? "border-[#4383BF] ring-4 ring-[#4383BF]/10" : "border-gray-200",
                 isDragging && "shadow-2xl ring-4 ring-[#136dec]/30"
             )}>
                 <div className="bg-[#f8fafc] h-[240px] flex items-center justify-center p-4">

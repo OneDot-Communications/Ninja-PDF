@@ -10,7 +10,7 @@ export default function Home() {
     heroTitle: "",
     heroSubtitle: "",
     platformName: "",
-    primaryColor: "#01B0F1",
+    primaryColor: "#4383BF",
     highlightHeight: 1.05
   });
   const [loading, setLoading] = useState(true);
@@ -28,7 +28,7 @@ export default function Home() {
             heroTitle: response.hero_title || "",
             heroSubtitle: response.hero_subtitle || "",
             platformName: response.platform_name || "",
-            primaryColor: response.primary_color || "#01B0F1",
+            primaryColor: response.primary_color || "#4383BF",
             highlightHeight: response.highlight_height || 1.05
           });
         }

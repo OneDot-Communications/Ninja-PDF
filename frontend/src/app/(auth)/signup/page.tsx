@@ -119,7 +119,7 @@ const SignupContent = () => {
                 {/* Logo */}
                 <div className="mb-6 flex justify-center">
                     <Image
-                        src="/pages/auth/18+logo.png"
+                        src="/pages/auth/18+christmas_logo.png"
                         alt="Logo"
                         width={120}
                         height={60}

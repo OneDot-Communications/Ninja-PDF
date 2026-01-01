@@ -3,7 +3,7 @@
 import { Header } from "../layout/header"; // Adjusted import path
 import {
     ArrowRight, Check, Star, Zap, Shield, Users, User, Heart, Globe, Layout, FileText, Settings,
-    ChevronRight, Twitter, Linkedin
+    ChevronRight, Instagram, Facebook
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "../ui/button"; // Adjusted import path
@@ -536,7 +536,7 @@ export function HomeView({
                                     <span className="relative inline-block">
                                         <span className="text-[#01B0F1]">happy</span>
                                         <motion.div
-                                            className="absolute bottom-1 left-0 w-full h-[0.15em] bg-[#01B0F1] -z-10 opacity-60 transform -rotate-1"
+                                            className="absolute bottom-1 left-0 w-full h-[0.15em] bg-[#4383BF] -z-10 opacity-60 transform -rotate-1"
                                             initial={{ scaleX: 0 }}
                                             whileInView={{ scaleX: 1 }}
                                             transition={{ duration: 0.8 }}
@@ -573,27 +573,33 @@ export function HomeView({
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
                             {/* Brand Column */}
                             <div className="col-span-1 md:col-span-1">
-                                <Link href="/" className="flex items-center mb-6">
-                                    <img src="/pages/auth/18+logo.png" alt="18+ PDF" className="h-20 w-auto" />
-                                </Link>
+                                <div className="flex items-center mb-6 gap-3">
+                                    <Link href="/" className="flex items-center">
+                                        <img src="/pages/auth/18+christmas_logo.png" alt="18+ PDF" className="h-20 w-auto" />
+                                    </Link>
+                                    <span className="ml-2 inline-block bg-[#FF5252] text-white text-xs font-bold px-2 py-0.5 rounded-md">ALPHA</span>
+                                </div> 
                                 <p className="text-slate-500 mb-6 leading-relaxed">
                                     Just finish work, and chill. No tension.
                                 </p>
-                                <div className="flex gap-4">
-                                    {[Twitter, Linkedin].map((Icon, i) => (
-                                        <motion.div key={i} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
-                                            <Link href="#" className="text-slate-400 hover:text-[#01B0F1] transition-colors">
-                                                <Icon className="w-5 h-5" />
-                                            </Link>
-                                        </motion.div>
-                                    ))}
+                                <div className="flex gap-4 items-center">
+                                    <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
+                                        <a href="https://www.instagram.com/p/DS8B0LJGKtD/?utm_source=ig_web_copy_link&igsh=MzRlODBiNWFlZA==" target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="text-slate-400 hover:text-[#4383BF] transition-colors">
+                                            <Instagram className="w-5 h-5" />
+                                        </a>
+                                    </motion.div>
+                                    <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
+                                        <a href="https://www.facebook.com/share/p/1Dank93EJx/" target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="text-slate-400 hover:text-[#4383BF] transition-colors">
+                                            <Facebook className="w-5 h-5" />
+                                        </a>
+                                    </motion.div>
                                 </div>
                             </div>
 
                             {/* Links Columns */}
                             <div className="col-span-1 md:col-span-3 grid grid-cols-1 sm:grid-cols-3 gap-8">
                                 <div>
-                                    <h3 className="font-bold text-lg mb-6 text-[#01B0F1]">Company</h3>
+                                    <h3 className="font-bold text-lg mb-6 text-[#4383BF]">Company</h3>
                                     <ul className="space-y-4 text-slate-600">
                                         {["About", "Contact", "Privacy Policy", "Terms"].map((link) => (
                                             <li key={link}>
@@ -615,13 +621,14 @@ export function HomeView({
                                 </div>
 
                                 <div>
-                                    <h3 className="font-bold text-lg mb-6 text-[#01B0F1]">Connect</h3>
+                                    <h3 className="font-bold text-lg mb-6 text-[#4383BF]">Connect</h3>
                                     <ul className="space-y-4 text-slate-600">
-                                        {["Twitter", "Vercel"].map((link) => (
-                                            <li key={link}>
-                                                <Link href="#" className="hover:text-[#01B0F1] transition-colors hover:translate-x-1 inline-block duration-200">{link}</Link>
-                                            </li>
-                                        ))}
+                                        <li>
+                                            <a href="https://www.instagram.com/p/DS8B0LJGKtD/?utm_source=ig_web_copy_link&igsh=MzRlODBiNWFlZA==" target="_blank" rel="noopener noreferrer" className="hover:text-[#4383BF] transition-colors hover:translate-x-1 inline-block duration-200">Instagram</a>
+                                        </li>
+                                        <li>
+                                            <a href="https://www.facebook.com/share/p/1Dank93EJx/" target="_blank" rel="noopener noreferrer" className="hover:text-[#4383BF] transition-colors hover:translate-x-1 inline-block duration-200">Facebook</a>
+                                        </li>
                                     </ul>
                                 </div>
                             </div>
@@ -632,7 +639,7 @@ export function HomeView({
                                 © {new Date().getFullYear()} 18+ PDF. All rights reserved.
                             </div>
                             <div className="text-slate-500 text-sm font-medium">
-                                Made with Lust by  <span className="text-[#FF0000] font-bold">CHN Technologies</span>
+                                Made with Profound Love by  <span className="text-[#FF0000] font-bold">CHN Technologies</span>
                             </div>
                         </div>
                     </div>

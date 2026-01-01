@@ -9,7 +9,7 @@
     /* Brand Colors */
     --color-brand-red: #FF0000;
     --color-brand-green: #089949;
-    --color-brand-blue: #01B0F1;
+    --color-brand-blue: #4383BF;
     --color-brand-yellow: #F9B21D;
     /* Neutrals */
     --color-brand-black: #000000;
@@ -18,7 +18,7 @@
     --color-brand-white: #FFFFFF;
     /* Alerts */
     --color-alert-success: #1CB75E;
-    --color-alert-info: #01B0F1;
+    --color-alert-info: #4383BF;
     --color-alert-warning: #FFA23A;
     --color-alert-error: #FF0000;
     /* Semantic mappings */
@@ -89,7 +89,7 @@
 
 :root {
     /* Primary: Brand Purple */
-    --primary: #01B0F1;
+    --primary: #4383BF;
     --primary-foreground: #FFFFFF;
     /* Secondary: Green (Brand Green) */
     --secondary: #089949;
@@ -99,14 +99,14 @@
     --muted-foreground: #333333;
     /* Accent: Light Grey for hover */
     --accent: #FAFAFA;
-    --accent-foreground: #01B0F1;
+    --accent-foreground: #4383BF;
     /* Destructive: Red (Brand Red) */
     --destructive: #FF0000;
     --destructive-foreground: #FFFFFF;
     /* Border/Input/Ring */
     --border: #E5E5E5;
     --input: #E5E5E5;
-    --ring: #01B0F1;
+    --ring: #4383BF;
     /* Radius */
     --radius: 0.625rem;
     /* Background/Foreground */
@@ -269,7 +269,7 @@ body {
         display: inline-block;
         width: 100%;
         height: 100%;
-        background-color: var(--primary, #01B0F1); /* brand blue */
+        background-color: var(--primary, #4383BF); /* brand blue */
         -webkit-mask-image: url('/home/merge.png');
         -webkit-mask-repeat: no-repeat;
         -webkit-mask-position: center;

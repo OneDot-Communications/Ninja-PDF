@@ -45,7 +45,7 @@ export default function ContentPage() {
         platformName: "",
         heroTitle: "",
         heroSubtitle: "",
-        primaryColor: "#01B0F1",
+        primaryColor: "#4383BF",
         highlightHeight: 1.05,
         logoUrl: ""
     });
@@ -66,7 +66,7 @@ export default function ContentPage() {
                     platformName: data.platform_name || "Ninja PDF",
                     heroTitle: data.hero_title || "",
                     heroSubtitle: data.hero_subtitle || "",
-                    primaryColor: data.primary_color || "#01B0F1",
+                    primaryColor: data.primary_color || "#4383BF",
                     highlightHeight: data.highlight_height || 1.05,
                     logoUrl: data.logo || ""
                 });
@@ -142,7 +142,7 @@ export default function ContentPage() {
                 platformName: res.data.platform_name || "Ninja PDF",
                 heroTitle: res.data.hero_title || "",
                 heroSubtitle: res.data.hero_subtitle || "",
-                primaryColor: res.data.primary_color || "#01B0F1",
+                primaryColor: res.data.primary_color || "#4383BF",
                 highlightHeight: res.data.highlight_height || settings.highlightHeight,
                 logoUrl: res.data.logo || ""
             });
@@ -402,7 +402,7 @@ export default function ContentPage() {
                             <Button
                                 onClick={handleSave}
                                 disabled={saving}
-                                className="flex-1 bg-[#01B0F1] hover:bg-[#0091d4]"
+                                className="flex-1 bg-[#4383BF] hover:bg-[#3470A0]"
                             >
                                 {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
                                 {saving ? 'Saving...' : 'Publish Changes'}

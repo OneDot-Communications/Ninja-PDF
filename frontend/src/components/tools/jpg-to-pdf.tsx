@@ -322,10 +322,10 @@ export function JpgToPdfTool() {
                                             className="bg-[rgba(19,109,236,0.05)] rounded-xl border-2 border-dashed border-[rgba(19,109,236,0.40)] w-full max-w-[204.8px] mx-auto aspect-[204.8/273.08] flex flex-col items-center justify-center cursor-pointer hover:bg-[rgba(19,109,236,0.10)] transition-colors"
                                         >
                                             <div className="bg-[rgba(19,109,236,0.10)] rounded-full w-12 h-12 flex items-center justify-center mb-4">
-                                                <Plus className="h-7 w-7 text-[#136dec]" />
+                                                <Plus className="h-7 w-7 text-[#4383BF]" />
                                             </div>
                                             <div className="text-center px-4">
-                                                <div className="text-[#136dec] font-bold text-sm mb-1">Add more files</div>
+                                                <div className="text-[#4383BF] font-bold text-sm mb-1">Add more files</div>
                                                 <div className="text-[rgba(19,109,236,0.70)] text-xs">or drag & drop here</div>
                                             </div>
                                         </div>
@@ -443,7 +443,7 @@ export function JpgToPdfTool() {
                                                 id="combine"
                                                 checked={combineIntoOne}
                                                 onChange={(e) => setCombineIntoOne(e.target.checked)}
-                                                className="w-5 h-5 rounded border-gray-300 text-[#136dec] focus:ring-[#136dec]"
+                                                className="w-5 h-5 rounded border-gray-300 text-[#4383BF] focus:ring-[#4383BF]"
                                             />
                                             <label htmlFor="combine" className="text-[#111418] text-sm font-medium cursor-pointer select-none flex-1">
                                                 Combine all images into one PDF
@@ -486,7 +486,7 @@ export function JpgToPdfTool() {
                                 <Button
                                     onClick={convertToPdf}
                                     disabled={isProcessing || files.length === 0}
-                                    className="w-full h-[60px] bg-[#136dec] hover:bg-blue-700 text-white rounded-xl flex items-center justify-center gap-2 font-bold text-lg shadow-lg disabled:opacity-50"
+                                    className="w-full h-[60px] bg-[#4383BF] hover:bg-[#3470A0] text-white rounded-xl flex items-center justify-center gap-2 font-bold text-lg shadow-lg disabled:opacity-50"
                                 >
                                     {isProcessing ? (
                                         <>
@@ -512,7 +512,7 @@ export function JpgToPdfTool() {
                         <Button
                             onClick={convertToPdf}
                             disabled={isProcessing || files.length === 0}
-                            className="w-full h-14 bg-[#136dec] hover:bg-blue-700 text-white rounded-xl flex items-center justify-center gap-2 font-bold text-sm shadow-lg disabled:opacity-50"
+                            className="w-full h-14 bg-[#4383BF] hover:bg-[#3470A0] text-white rounded-xl flex items-center justify-center gap-2 font-bold text-sm shadow-lg disabled:opacity-50"
                         >
                             {isProcessing ? (
                                 <>

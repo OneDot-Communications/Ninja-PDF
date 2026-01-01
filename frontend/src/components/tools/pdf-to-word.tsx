@@ -124,7 +124,7 @@ export function PdfToWordTool() {
                             <div className="flex-1 overflow-y-auto p-4 flex items-center justify-center">
                                 {loadingPreview ? (
                                     <div className="flex flex-col items-center gap-4 p-8">
-                                        <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                                        <div className="w-16 h-16 border-4 border-[#4383BF] border-t-transparent rounded-full animate-spin"></div>
                                         <p className="text-[#617289] font-medium">Loading PDF preview...</p>
                                     </div>
                                 ) : pagePreview ? (
@@ -151,7 +151,7 @@ export function PdfToWordTool() {
                         <Button
                             onClick={convertToWord}
                             disabled={isProcessing}
-                            className="w-full h-14 bg-[#136dec] hover:bg-blue-700 text-white rounded-xl flex items-center justify-center gap-2 font-bold text-sm shadow-lg disabled:opacity-50"
+                            className="w-full h-14 bg-[#4383BF] hover:bg-[#3470A0] text-white rounded-xl flex items-center justify-center gap-2 font-bold text-sm shadow-lg disabled:opacity-50"
                         >
                             <span>{isProcessing ? 'Converting...' : 'Convert to Word'}</span>
                             <ArrowRight className="h-5 w-5" />
@@ -182,7 +182,7 @@ export function PdfToWordTool() {
                                     <button
                                         onClick={() => setUseOcr(!useOcr)}
                                         className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors ${
-                                            useOcr ? 'bg-[#136dec]' : 'bg-gray-300'
+                                            useOcr ? 'bg-[#4383BF]' : 'bg-gray-300'
                                         }`}
                                     >
                                         <span

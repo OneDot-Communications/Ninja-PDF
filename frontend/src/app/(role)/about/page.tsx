@@ -41,7 +41,7 @@ export default function AboutPage() {
             {/* Hero Section */}
             <section className="container mx-auto px-4 py-20 text-center">
                 <h1 className="text-4xl md:text-5xl font-bold text-slate-900 mb-6">
-                    Making PDF Management <span className="text-[#01B0F1]">Simple</span> for Everyone
+                    Making PDF Management <span className="text-[#4383BF]">Simple</span> for Everyone
                 </h1>
                 <p className="text-xl text-slate-600 max-w-2xl mx-auto mb-10">
                     We believe everyone deserves access to powerful document tools without complexity or high costs.
@@ -65,22 +65,22 @@ export default function AboutPage() {
                             </p>
                         </div>
                     </div>
-                    <div className="bg-gradient-to-br from-[#01B0F1]/10 to-violet-500/10 rounded-2xl p-8 text-center">
+                    <div className="bg-gradient-to-br from-[#4383BF]/10 to-violet-500/10 rounded-2xl p-8 text-center">
                         <div className="grid grid-cols-2 gap-6">
                             <div className="bg-white rounded-xl p-6 shadow-sm">
-                                <div className="text-4xl font-bold text-[#01B0F1] mb-2">2024</div>
+                                <div className="text-4xl font-bold text-[#4383BF] mb-2">2024</div>
                                 <div className="text-sm text-slate-500">Founded</div>
                             </div>
                             <div className="bg-white rounded-xl p-6 shadow-sm">
-                                <div className="text-4xl font-bold text-[#01B0F1] mb-2">50K+</div>
+                                <div className="text-4xl font-bold text-[#4383BF] mb-2">50K+</div>
                                 <div className="text-sm text-slate-500">Users</div>
                             </div>
                             <div className="bg-white rounded-xl p-6 shadow-sm">
-                                <div className="text-4xl font-bold text-[#01B0F1] mb-2">1M+</div>
+                                <div className="text-4xl font-bold text-[#4383BF] mb-2">1M+</div>
                                 <div className="text-sm text-slate-500">Files Processed</div>
                             </div>
                             <div className="bg-white rounded-xl p-6 shadow-sm">
-                                <div className="text-4xl font-bold text-[#01B0F1] mb-2">25+</div>
+                                <div className="text-4xl font-bold text-[#4383BF] mb-2">25+</div>
                                 <div className="text-sm text-slate-500">PDF Tools</div>
                             </div>
                         </div>
@@ -95,7 +95,7 @@ export default function AboutPage() {
                     {values.map((value) => (
                         <Card key={value.title} className="text-center hover:shadow-lg transition-shadow">
                             <CardContent className="pt-8 pb-6">
-                                <div className="w-14 h-14 bg-[#01B0F1]/10 text-[#01B0F1] rounded-xl flex items-center justify-center mx-auto mb-4">
+                                <div className="w-14 h-14 bg-[#4383BF]/10 text-[#4383BF] rounded-xl flex items-center justify-center mx-auto mb-4">
                                     <value.icon className="w-7 h-7" />
                                 </div>
                                 <h3 className="text-xl font-bold text-slate-900 mb-2">{value.title}</h3>
@@ -135,7 +135,7 @@ export default function AboutPage() {
                     </p>
                     <div className="flex justify-center gap-4">
                         <Link href="/contact">
-                            <Button size="lg" className="bg-[#01B0F1] hover:bg-[#0091d4]">
+                            <Button size="lg" className="bg-[#4383BF] hover:bg-[#3470A0]">
                                 Contact Us
                             </Button>
                         </Link>
