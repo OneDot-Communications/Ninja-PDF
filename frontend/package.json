@@ -45,7 +45,7 @@
         "next": "16.0.10",
         "pdf-lib": "^1.17.1",
         "pdf-password": "^1.0.0",
-        "pdfjs-dist": "^5.4.449",
+        "pdfjs-dist": "4.8.69",
         "pixelmatch": "^7.1.0",
         "pptxgenjs": "^4.0.1",
         "react": "19.2.1",
