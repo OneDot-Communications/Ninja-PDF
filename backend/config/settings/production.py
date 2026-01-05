@@ -35,28 +35,27 @@ DATABASES = {
 EMAIL_BACKEND = 'core.email_backend.ZeptoEmailBackend'
 
 # WARNING: CORS_ORIGIN_ALLOW_ALL is set to True. This allows any origin to make requests.
-CORS_ORIGIN_ALLOW_ALL = True
-# CORS_ALLOWED_ORIGINS = [
-#     "https://ninja-pdf.onrender.com",
-#     "https://ninjapdf.com",
-#     "https://www.ninjapdf.com",
-#     "https://18pluspdf.com",
-#     "https://www.18pluspdf.com",
-#     "https://18pluspdf.in",
-#     "https://www.18pluspdf.in",
-#     "https://octopus-app-4mzsp.ondigitalocean.app",
-# ]
-CORS_ALLOW_CREDENTIALS = True
-
-CSRF_TRUSTED_ORIGINS = [
-    'https://ninja-pdf.onrender.com',
-    'https://ninjapdf.com',
-    'https://www.ninjapdf.com',
+# WARNING: CORS_ORIGIN_ALLOW_ALL is set to True. This allows any origin to make requests.
+CORS_ORIGIN_ALLOW_ALL = False
+CORS_ALLOWED_ORIGINS = [
+    "https://octopus-app-4mzsp.ondigitalocean.app",
+    "http://localhost:8000",
     "https://18pluspdf.com",
     "https://www.18pluspdf.com",
     "https://18pluspdf.in",
     "https://www.18pluspdf.in",
+    "http://localhost:3000",
+]
+CORS_ALLOW_CREDENTIALS = True
+
+CSRF_TRUSTED_ORIGINS = [
     "https://octopus-app-4mzsp.ondigitalocean.app",
+    "http://localhost:8000",
+    "https://18pluspdf.com",
+    "https://www.18pluspdf.com",
+    "https://18pluspdf.in",
+    "https://www.18pluspdf.in",
+    "http://localhost:3000",
 ]
 
 CSRF_COOKIE_SECURE = os.getenv('CSRF_COOKIE_SECURE', 'true').lower() == 'true'
