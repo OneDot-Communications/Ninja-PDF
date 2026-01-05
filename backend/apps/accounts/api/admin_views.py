@@ -4,6 +4,7 @@ from rest_framework import status
 from django.contrib.auth import get_user_model
 from apps.accounts.services.permissions import IsAdmin
 from apps.subscriptions.models.subscription import Subscription, Plan, Invoice, Feature
+from django.db import models
 from django.db.models import Sum, Count
 from core.views import IsSuperAdmin
 
