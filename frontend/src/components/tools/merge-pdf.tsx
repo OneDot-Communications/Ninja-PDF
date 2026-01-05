@@ -2,14 +2,12 @@
 
 import { useState } from "react";
 import { PDFDocument } from "pdf-lib";
-import { FileUpload } from "../ui/file-upload";
 import FileUploadHero from "../ui/file-upload-hero";
 import { Button } from "../ui/button";
 import { ArrowRight, Download, Trash2, FileText, Settings, CheckSquare, Square, ArrowUpDown, GitMerge, Plus, SortAsc, SortDesc } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { pdfApi } from "@/lib/services/pdf-api";
-import { api } from "@/lib/services/api";
 import { getPdfJs } from "@/lib/services/pdf-service";
 import { toast } from "@/lib/hooks/use-toast";
 
@@ -29,81 +27,112 @@ export function MergePdfTool() {
     const [loadingPreviews, setLoadingPreviews] = useState(false);
     const [showArrangeMenu, setShowArrangeMenu] = useState(false);
 
-    const generatePdfPreview = async (file: File): Promise<{previewUrl: string, pagePreviews: string[]}> => {
+    // Lenient header sniff: look for %PDF within first 1KB (some files have BOM/whitespace).
+    const isLikelyPdf = async (file: File): Promise<boolean> => {
         try {
-            // First try backend previews for consistent high quality
-            const result = await api.getPdfPagePreviews(file);
-            if (result && result.previews && result.previews.length > 0) {
-                const previewUrl = result.previews[0].image;
-                const pagePreviews = result.previews.map((p: any) => p.image);
-                return { previewUrl, pagePreviews };
-            }
+            const header = await file.slice(0, 1024).arrayBuffer();
+            const text = new TextDecoder().decode(header);
+            return text.includes("%PDF");
         } catch (err) {
-            // If backend fails, fallback to client-side rendering with higher scale
-            try {
-                const pdfjsLib = await getPdfJs();
-                const arrayBuffer = await file.arrayBuffer();
-                const uint8Array = new Uint8Array(arrayBuffer);
+            console.warn("Failed to inspect PDF header", err);
+            return false;
+        }
+    };
 
-                const pdf = await (pdfjsLib as any).getDocument({
-                    data: uint8Array,
-                    cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/cmaps/',
-                    cMapPacked: true,
-                }).promise;
+    const generatePdfPreview = async (file: File): Promise<{ previewUrl: string; pagePreviews: string[] }> => {
+        // Render the first few pages entirely on the client—no backend dependency.
+        try {
+            const pdfjsLib = await getPdfJs();
+            const arrayBuffer = await file.arrayBuffer();
+            const uint8Array = new Uint8Array(arrayBuffer);
 
-                // Higher quality thumbnail
-                const page = await pdf.getPage(1);
-                const viewport = page.getViewport({ scale: 1.5 });
+            const pdf = await (pdfjsLib as any).getDocument({
+                data: uint8Array,
+                cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/cmaps/',
+                cMapPacked: true,
+            }).promise;
+
+            const previews: string[] = [];
+            const pagesToRender = Math.min(pdf.numPages || 1, 3);
+
+            for (let i = 1; i <= pagesToRender; i++) {
+                const page = await pdf.getPage(i);
+                const viewport = page.getViewport({ scale: 1.4 });
                 const canvas = document.createElement("canvas");
                 const context = canvas.getContext("2d");
+                if (!context) continue;
+
                 canvas.height = viewport.height;
                 canvas.width = viewport.width;
-
-                if (context) {
-                    await page.render({ canvasContext: context, viewport }).promise;
-                    const previewUrl = canvas.toDataURL('image/png');
-                    return { previewUrl, pagePreviews: [previewUrl] };
-                }
-            } catch (error) {
-                console.warn("PDF preview generation failed, using fallback:", error);
+                await page.render({ canvasContext: context, viewport }).promise;
+                previews.push(canvas.toDataURL('image/png'));
             }
-        }
 
-        return { previewUrl: "", pagePreviews: [] };
+            return { previewUrl: previews[0] || "", pagePreviews: previews };
+        } catch (error) {
+            console.warn("Client-side PDF preview generation failed:", error);
+            return { previewUrl: "", pagePreviews: [] };
+        }
     };
 
     const handleFilesSelected = async (newFiles: File[]) => {
         setLoadingPreviews(true);
-        const newMergeFiles = await Promise.all(newFiles.map(async (f) => {
+
+        const prepared: MergeFile[] = [];
+
+        for (const f of newFiles) {
+            const isPdf = await isLikelyPdf(f);
+            if (!isPdf) {
+                // Warn but still attempt to handle; some PDFs have padded headers.
+                toast.show({
+                    title: "Unusual PDF",
+                    message: `${f.name} looks non-standard. We'll still try to open it.`,
+                    variant: "warning",
+                    position: "top-right",
+                });
+            }
+
             let pageCount = 0;
             let previewUrl = "";
             let pagePreviews: string[] = [];
 
             try {
-                // Try to get page count and previews from PDF
-                const arrayBuffer = await f.slice(0, 1024 * 1024).arrayBuffer(); // Read first 1MB
+                // Light read to get page count quickly
+                const arrayBuffer = await f.arrayBuffer();
                 const pdfDoc = await PDFDocument.load(arrayBuffer, { ignoreEncryption: true });
                 pageCount = pdfDoc.getPageCount();
 
-                // Generate previews
+                // Generate first-page preview(s) client-side
                 const previews = await generatePdfPreview(f);
                 previewUrl = previews.previewUrl;
                 pagePreviews = previews.pagePreviews;
             } catch (error) {
-                // Fallback to estimated page count based on file size (rough estimate)
-                pageCount = Math.max(1, Math.round(f.size / (1024 * 1024))); // ~1 page per MB
+                console.warn("PDF parsing failed for preview; skipping file", f.name, error);
+                toast.show({
+                    title: "Preview Failed",
+                    message: `${f.name} could not be read as a PDF.`,
+                    variant: "error",
+                    position: "top-right",
+                });
+                continue;
             }
 
-            return {
+            prepared.push({
                 id: Math.random().toString(36).substr(2, 9),
                 file: f,
                 range: "all",
                 pageCount,
                 previewUrl,
                 pagePreviews
-            };
-        }));
-        setFiles((prev) => [...prev, ...newMergeFiles]);
+            });
+        }
+
+        if (prepared.length === 0) {
+            setLoadingPreviews(false);
+            return;
+        }
+
+        setFiles((prev) => [...prev, ...prepared]);
         setLoadingPreviews(false);
     };
 
@@ -165,7 +194,15 @@ export function MergePdfTool() {
     };
 
     const mergePdfs = async () => {
-        if (files.length < 2) return;
+        if (files.length < 2) {
+            toast.show({
+                title: "Add more PDFs",
+                message: "Please add at least two PDF files to merge.",
+                variant: "error",
+                position: "top-right",
+            });
+            return;
+        }
         setIsProcessing(true);
 
         try {
@@ -183,6 +220,12 @@ export function MergePdfTool() {
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+
+            // Reset to the upload state after a successful merge
+            setFiles([]);
+            setShowArrangeMenu(false);
+            setFlatten(false);
 
             toast.show({
                 title: "Success",
