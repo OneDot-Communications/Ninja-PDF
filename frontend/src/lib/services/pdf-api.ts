@@ -259,14 +259,9 @@ export const pdfApi = {
     // PDF MANIPULATION (client-side only for now - backend can be added later)
     // ─────────────────────────────────────────────────────────────────────────────
     merge: async (files: File[], options?: any): Promise<ProcessingResult> => {
-        return withFallback(
-            () => api.mergePdfs(files),
-            async () => {
-                const processor = await getClientProcessor();
-                return processor.execute("merge", files, options || {});
-            },
-            "merged_document.pdf"
-        );
+        // Force client-side merge to avoid any backend dependency for this tool.
+        const processor = await getClientProcessor();
+        return processor.execute("merge", files, options || {});
     },
 
     split: async (file: File, options: any): Promise<ProcessingResult> => {
