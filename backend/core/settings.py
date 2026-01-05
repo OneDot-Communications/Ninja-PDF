@@ -348,6 +348,7 @@ SOCIALACCOUNT_AUTO_SIGNUP = True
 # CORS - Both localhost (development) and deployed URL (production)
 CORS_ORIGIN_ALLOW_ALL = False
 CORS_ALLOWED_ORIGINS = [
+    "https://api.18pluspdf.com",
     "https://octopus-app-4mzsp.ondigitalocean.app",
     "http://localhost:8000",
     "https://18pluspdf.com",
@@ -372,6 +373,7 @@ ALLOWED_HOSTS = [
 
 # CSRF trusted origins for local dev (frontend running on port 3000)
 CSRF_TRUSTED_ORIGINS = [
+    "https://api.18pluspdf.com",
     "https://octopus-app-4mzsp.ondigitalocean.app",
     "http://localhost:8000",
     "https://18pluspdf.com",
