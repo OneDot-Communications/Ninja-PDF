@@ -13,6 +13,7 @@ ALLOWED_HOSTS = [
     'www.18pluspdf.com',
     '18pluspdf.in',
     'www.18pluspdf.in',
+    'api.18pluspdf.com',
     'octopus-app-4mzsp.ondigitalocean.app',
     '.ondigitalocean.app',
 ]
@@ -35,9 +36,9 @@ DATABASES = {
 EMAIL_BACKEND = 'core.email_backend.ZeptoEmailBackend'
 
 # WARNING: CORS_ORIGIN_ALLOW_ALL is set to True. This allows any origin to make requests.
-# WARNING: CORS_ORIGIN_ALLOW_ALL is set to True. This allows any origin to make requests.
 CORS_ORIGIN_ALLOW_ALL = False
 CORS_ALLOWED_ORIGINS = [
+    "https://api.18pluspdf.com",
     "https://octopus-app-4mzsp.ondigitalocean.app",
     "http://localhost:8000",
     "https://18pluspdf.com",
@@ -49,6 +50,7 @@ CORS_ALLOWED_ORIGINS = [
 CORS_ALLOW_CREDENTIALS = True
 
 CSRF_TRUSTED_ORIGINS = [
+    "https://api.18pluspdf.com",
     "https://octopus-app-4mzsp.ondigitalocean.app",
     "http://localhost:8000",
     "https://18pluspdf.com",
