@@ -1,4 +1,4 @@
-package com._pluspdf._pluspdf_backend;
+package com._pluspdf._plus_pdf_backend;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
