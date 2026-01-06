@@ -292,38 +292,72 @@ export const pdfApi = {
     },
 
     split: async (file: File, options: any): Promise<ProcessingResult> => {
-        return withFallback(
-            () => api.splitPdf(file, options.selectedPages || [], options.splitMode || 'merge'),
-            async () => {
-                const processor = await getClientProcessor();
-                return processor.execute("split", [file], options);
-            },
-            `split-${file.name}`
-        );
+        // Call Spring Boot backend API for PDF splitting
+        const formData = new FormData();
+        formData.append('file', file);
+        if (options?.selectedPages && options.selectedPages.length > 0) {
+            // Convert page numbers to array of integers
+            options.selectedPages.forEach((page: number) => {
+                formData.append('pages', page.toString());
+            });
+        }
+        if (options?.outputFileName) {
+            formData.append('outputFileName', options.outputFileName);
+        }
+
+        const response = await fetch('http://localhost:8081/api/pdf/split', {
+            method: 'POST',
+            body: formData,
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Split failed: ${errorText}`);
+        }
+
+        const blob = await response.blob();
+        const contentDisposition = response.headers.get('Content-Disposition');
+        let fileName = 'split.pdf';
+        if (contentDisposition) {
+            const match = contentDisposition.match(/filename="([^"]+)"/);
+            if (match) {
+                fileName = match[1];
+            }
+        }
+
+        return { blob, fileName };
     },
 
     getPagePreviews: async (file: File): Promise<{ previews: Array<{ pageNumber: number; image: string; width: number; height: number }>; totalPages: number }> => {
-        try {
-            // Try backend API first
-            return await api.getPdfPagePreviews(file);
-        } catch (backendError: any) {
-            // If Quota Limit reached, DO NOT fallback to client side
-            if (backendError.message && backendError.message.includes("QUOTA_EXCEEDED")) {
-                throw backendError;
-            }
+        // Call Spring Boot backend API for page previews
+        const formData = new FormData();
+        formData.append('file', file);
+        // Get all pages for split functionality
+        formData.append('maxPages', '100'); // Get up to 100 pages
 
-            console.warn("Backend API failed, falling back to client-side:", backendError);
+        const response = await fetch('http://localhost:8081/api/pdf/page-previews', {
+            method: 'POST',
+            body: formData,
+        });
 
-            try {
-                // Fallback to client-side processing
-                const processor = await getClientProcessor();
-                const result = await processor.execute("getPagePreviews", [file], {});
-                return result as any;
-            } catch (clientError) {
-                console.error("Both backend and client-side processing failed:", clientError);
-                throw new Error("Failed to get page previews. Please try again later.");
-            }
+        if (!response.ok) {
+            throw new Error(`Failed to get page previews: ${response.statusText}`);
         }
+
+        const data = await response.json();
+
+        // Transform the response to match expected format
+        const previews = data.previews.map((imageData: string, index: number) => ({
+            pageNumber: index + 1,
+            image: imageData,
+            width: 200, // Default width, could be calculated from image
+            height: 280, // Default height, could be calculated from image
+        }));
+
+        return {
+            previews,
+            totalPages: data.totalPages
+        };
     },
 
     rotate: async (file: File, options: any): Promise<ProcessingResult> => {
