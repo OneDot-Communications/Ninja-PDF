@@ -29,6 +29,14 @@ public class PdfToolController {
         return pdfProcessingService.split(file, pages, outputFileName);
     }
 
+    @PostMapping(value = "/compress", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<byte[]> compress(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "level", required = false, defaultValue = "recommended") String level,
+            @RequestParam(value = "outputFileName", required = false) String outputFileName) {
+        return pdfProcessingService.compress(file, level, outputFileName);
+    }
+
     @PostMapping(value = "/page-previews", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<String> getPagePreviews(
             @RequestParam("file") MultipartFile file,

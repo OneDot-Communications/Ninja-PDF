@@ -104,7 +104,24 @@ export const pdfApi = {
     // ─────────────────────────────────────────────────────────────────────────────
     compress: async (file: File, level: "recommended" | "extreme"): Promise<ProcessingResult> => {
         return withFallback(
-            () => api.compressPdf(file, level),
+            async () => {
+                const formData = new FormData();
+                formData.append("file", file);
+                formData.append("level", level);
+
+                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/pdf/compress`, {
+                    method: "POST",
+                    body: formData,
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`Compress failed: ${errorText}`);
+                }
+
+                const blob = await response.blob();
+                return blob;
+            },
             async () => {
                 const processor = await getClientProcessor();
                 return processor.execute("compress", [file], { level });

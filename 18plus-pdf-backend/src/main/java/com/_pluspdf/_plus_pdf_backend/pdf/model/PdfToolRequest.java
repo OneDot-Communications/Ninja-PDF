@@ -9,4 +9,5 @@ public class PdfToolRequest {
     private String outputFileName;
     private int[] pages; // For split operations - specific pages to extract
     private Integer maxPages; // For page previews - maximum number of pages to preview
+    private String level; // For compression level (recommended|extreme)
 }

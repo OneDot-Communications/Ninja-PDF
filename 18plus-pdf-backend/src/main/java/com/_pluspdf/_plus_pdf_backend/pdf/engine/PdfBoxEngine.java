@@ -1,11 +1,19 @@
 package com._pluspdf._plus_pdf_backend.pdf.engine;
 
+import org.apache.pdfbox.cos.COSName;
 import org.apache.pdfbox.multipdf.PDFMergerUtility;
 import org.apache.pdfbox.multipdf.Splitter;
 import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDPage;
+import org.apache.pdfbox.pdmodel.PDResources;
+import org.apache.pdfbox.pdmodel.graphics.image.JPEGFactory;
+import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
+import org.apache.pdfbox.pdmodel.graphics.PDXObject;
 import org.apache.pdfbox.rendering.PDFRenderer;
 import org.springframework.stereotype.Component;
 import javax.imageio.ImageIO;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -56,6 +64,48 @@ public class PdfBoxEngine implements PdfEngine {
 
         merger.mergeDocuments(null);
         return outputStream.toByteArray();
+    }
+
+    @Override
+    public byte[] compress(File file, String level) throws Exception {
+        double scaleFactor = "extreme".equalsIgnoreCase(level) ? 0.5 : 0.75;
+        float jpegQuality = "extreme".equalsIgnoreCase(level) ? 0.4f : 0.65f;
+
+        try (PDDocument document = org.apache.pdfbox.Loader.loadPDF(file)) {
+            for (PDPage page : document.getPages()) {
+                PDResources resources = page.getResources();
+                if (resources == null) {
+                    continue;
+                }
+
+                for (COSName name : resources.getXObjectNames()) {
+                    PDXObject xObject = resources.getXObject(name);
+                    if (xObject instanceof PDImageXObject imageXObject) {
+                        BufferedImage original = imageXObject.getImage();
+                        if (original == null) {
+                            continue;
+                        }
+
+                        int newWidth = Math.max(1, (int) (original.getWidth() * scaleFactor));
+                        int newHeight = Math.max(1, (int) (original.getHeight() * scaleFactor));
+
+                        BufferedImage scaled = new BufferedImage(newWidth, newHeight, BufferedImage.TYPE_INT_RGB);
+                        Graphics2D graphics = scaled.createGraphics();
+                        graphics.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+                        graphics.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+                        graphics.drawImage(original, 0, 0, newWidth, newHeight, null);
+                        graphics.dispose();
+
+                        PDImageXObject compressedImage = JPEGFactory.createFromImage(document, scaled, jpegQuality);
+                        resources.put(name, compressedImage);
+                    }
+                }
+            }
+
+            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+            document.save(outputStream);
+            return outputStream.toByteArray();
+        }
     }
 
     @Override
