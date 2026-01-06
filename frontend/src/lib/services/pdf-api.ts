@@ -259,9 +259,36 @@ export const pdfApi = {
     // PDF MANIPULATION (client-side only for now - backend can be added later)
     // ─────────────────────────────────────────────────────────────────────────────
     merge: async (files: File[], options?: any): Promise<ProcessingResult> => {
-        // Force client-side merge to avoid any backend dependency for this tool.
-        const processor = await getClientProcessor();
-        return processor.execute("merge", files, options || {});
+        // Call Spring Boot backend API for PDF merging
+        const formData = new FormData();
+        files.forEach(file => {
+            formData.append('files', file);
+        });
+        if (options?.outputFileName) {
+            formData.append('outputFileName', options.outputFileName);
+        }
+
+        const response = await fetch('http://localhost:8081/api/pdf/merge', {
+            method: 'POST',
+            body: formData,
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Merge failed: ${errorText}`);
+        }
+
+        const blob = await response.blob();
+        const contentDisposition = response.headers.get('Content-Disposition');
+        let fileName = 'merged.pdf';
+        if (contentDisposition) {
+            const match = contentDisposition.match(/filename="([^"]+)"/);
+            if (match) {
+                fileName = match[1];
+            }
+        }
+
+        return { blob, fileName };
     },
 
     split: async (file: File, options: any): Promise<ProcessingResult> => {
