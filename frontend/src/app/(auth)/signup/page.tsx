@@ -156,7 +156,7 @@ const SignupContent = () => {
                     <div className="space-y-4">
                         <div>
                             <label className="block text-[16px] leading-[24px] text-[#000000] font-['Poppins',sans-serif] mb-2">
-                                Enter your username or email address
+                                Enter your Name
                             </label>
                             <div className="relative">
                                 <input
@@ -164,7 +164,7 @@ const SignupContent = () => {
                                     required
                                     value={firstName}
                                     onChange={(e) => setFirstName(e.target.value)}
-                                    placeholder="Username or email address"
+                                    placeholder="Enter your name"
                                     className="w-full h-[49px] bg-white border border-[#01b0f1] rounded-[9px] px-4 text-[14px] text-gray-800 placeholder:text-[#808080] placeholder:font-light placeholder:font-['Poppins',sans-serif] focus:outline-none focus:ring-2 focus:ring-[#01b0f1]/30 transition-all"
                                 />
                             </div>
@@ -172,7 +172,7 @@ const SignupContent = () => {
                     </div>
 
                     {/* Last Name */}
-                    <div>
+                    {/* <div>
                         <label className="block text-[16px] leading-[24px] text-[#000000] font-['Poppins',sans-serif] mb-2">
                             Enter your Last Name
                         </label>
@@ -186,7 +186,7 @@ const SignupContent = () => {
                                 className="w-full h-[49px] bg-white border border-[#01b0f1] rounded-[9px] px-4 text-[14px] text-gray-800 placeholder:text-[#808080] placeholder:font-light placeholder:font-['Poppins',sans-serif] focus:outline-none focus:ring-2 focus:ring-[#01b0f1]/30 transition-all"
                             />
                         </div>
-                    </div>
+                    </div> */}
 
                     {/* Email */}
                     <div>
