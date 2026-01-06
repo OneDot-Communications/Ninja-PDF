@@ -268,7 +268,7 @@ export const pdfApi = {
             formData.append('outputFileName', options.outputFileName);
         }
 
-        const response = await fetch('http://localhost:8081/api/pdf/merge', {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/pdf/merge`, {
             method: 'POST',
             body: formData,
         });
@@ -305,7 +305,7 @@ export const pdfApi = {
             formData.append('outputFileName', options.outputFileName);
         }
 
-        const response = await fetch('http://localhost:8081/api/pdf/split', {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/pdf/split`, {
             method: 'POST',
             body: formData,
         });
@@ -335,7 +335,7 @@ export const pdfApi = {
         // Get all pages for split functionality
         formData.append('maxPages', '100'); // Get up to 100 pages
 
-        const response = await fetch('http://localhost:8081/api/pdf/page-previews', {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/pdf/page-previews`, {
             method: 'POST',
             body: formData,
         });
