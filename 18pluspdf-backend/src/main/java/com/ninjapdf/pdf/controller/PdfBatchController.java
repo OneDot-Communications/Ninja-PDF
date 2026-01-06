@@ -1,1 +1,0 @@
-package com.ninjapdf.pdf.controller; public class PdfBatchController {}
