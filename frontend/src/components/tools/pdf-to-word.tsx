@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { saveAs } from "file-saver";
 import FileUploadHero from "../ui/file-upload-hero";
 import { Button } from "../ui/button";
@@ -23,6 +24,47 @@ export function PdfToWordTool() {
     const [pagePreview, setPagePreview] = useState<string>("");
     const [useOcr, setUseOcr] = useState(false);
     const [language, setLanguage] = useState("eng");
+    const fileRef = useRef<File | null>(null);
+
+    // Keep ref in sync with state for event handlers
+    useEffect(() => {
+        fileRef.current = file;
+    }, [file]);
+
+    // Warn user before leaving page if file is uploaded
+    useEffect(() => {
+        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+            if (fileRef.current) {
+                e.preventDefault();
+                e.returnValue = '';
+                return '';
+            }
+        };
+
+        // Handle browser back/forward button
+        const handlePopState = (e: PopStateEvent) => {
+            if (fileRef.current) {
+                const confirmLeave = window.confirm(
+                    'You have an uploaded PDF that hasn\'t been converted yet. Are you sure you want to leave this page?'
+                );
+                if (!confirmLeave) {
+                    // Push state back to prevent navigation
+                    window.history.pushState(null, '', window.location.href);
+                }
+            }
+        };
+
+        // Push initial state so we can intercept back button
+        window.history.pushState(null, '', window.location.href);
+
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        window.addEventListener('popstate', handlePopState);
+
+        return () => {
+            window.removeEventListener('beforeunload', handleBeforeUnload);
+            window.removeEventListener('popstate', handlePopState);
+        };
+    }, []);
 
     const handleFileSelected = async (files: File[]) => {
         if (files.length > 0) {
@@ -121,14 +163,14 @@ export function PdfToWordTool() {
                             </div>
 
                             {/* Preview Content */}
-                            <div className="flex-1 overflow-y-auto p-4 flex items-center justify-center">
+                            <div className="flex-1 overflow-y-auto p-4 flex items-start justify-center">
                                 {loadingPreview ? (
-                                    <div className="flex flex-col items-center gap-4 p-8">
+                                    <div className="flex flex-col items-center gap-4 p-8 w-full">
                                         <div className="w-16 h-16 border-4 border-[#4383BF] border-t-transparent rounded-full animate-spin"></div>
                                         <p className="text-[#617289] font-medium">Loading PDF preview...</p>
                                     </div>
                                 ) : pagePreview ? (
-                                    <div className="w-full max-w-2xl flex flex-col items-center gap-3 py-4">
+                                    <div className="w-full max-w-2xl flex flex-col items-center gap-3 pt-4 pb-4">
                                         <img 
                                             src={pagePreview} 
                                             alt="PDF Preview" 
