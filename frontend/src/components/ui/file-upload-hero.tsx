@@ -8,12 +8,14 @@ import Image from "next/image";
 export const FileUploadHero = ({
   title = "Upload Files",
   description = "Drag & drop your PDF's here",
+  buttonText = "Select PDF Files",
   onFilesSelected,
   accept = { "application/pdf": [".pdf"] },
   maxFiles = 20,
 }: {
   title?: string;
   description?: string;
+  buttonText?: string;
   onFilesSelected?: (files: File[]) => void;
   accept?: Record<string, string[]>;
   maxFiles?: number;
@@ -108,7 +110,7 @@ export const FileUploadHero = ({
             >
               <span className="flex items-center gap-2 md:gap-3">
                 <UploadCloud className="w-5 h-5 md:w-6 md:h-6" />
-                Select PDF Files
+                {buttonText}
               </span>
             </Button>
 

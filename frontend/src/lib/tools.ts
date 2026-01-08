@@ -196,16 +196,6 @@ export const tools = [
         href: "/pdf-to-pdfa",
         category: "Convert PDF",
         color: toolColors.pdf,
-        comingSoon: true,
-    },
-    {
-        title: "Repair PDF",
-        description: "Repair a damaged PDF and recover data from corrupt PDF.",
-        icon: "/home/repair-pdf.png",
-        href: "/repair-pdf",
-        category: "Optimize PDF",
-        color: toolColors.optimize,
-        comingSoon: true,
     },
     {
         title: "Page Numbers",
@@ -214,15 +204,6 @@ export const tools = [
         href: "/page-numbers",
         category: "Edit PDF",
         color: toolColors.edit,
-    },
-    {
-        title: "Scan to PDF",
-        description: "Capture document scans from your mobile device and send them instantly to your browser.",
-        icon: "/home/scan-pdf.png",
-        href: "/scan-to-pdf",
-        category: "Organize PDF",
-        color: toolColors.pdf,
-        comingSoon: true,
     },
     {
         title: "OCR PDF",
@@ -250,7 +231,6 @@ export const tools = [
         category: "PDF Security",
         isNew: true,
         color: toolColors.security,
-        comingSoon: true,
     },
     {
         title: "Crop PDF",
@@ -268,7 +248,6 @@ export const tools = [
         href: "/html-to-pdf",
         category: "Convert to PDF",
         color: toolColors.convert,
-        comingSoon: true,
     },
     {
         title: "Create Workflow",
@@ -287,7 +266,6 @@ export const tools = [
         category: "PDF Security",
         isNew: true,
         color: toolColors.security,
-        comingSoon: true,
     },
     {
         title: "Extract Images",
@@ -296,5 +274,22 @@ export const tools = [
         href: "/extract-images",
         category: "Convert from PDF",
         color: toolColors.image,
+    },
+    {
+        title: "Scan to PDF",
+        description: "Scan to PDF because your papers deserve a digital retirement plan.",
+        icon: "/home/scan-pdf.png",
+        href: "/scan-to-pdf",
+        category: "Convert to PDF",
+        isNew: true,
+        color: toolColors.convert,
+    },
+    {
+        title: "Repair PDF",
+        description: "PDFs break too luckily, theirs is easier to fix.",
+        icon: "/home/repair-pdf.png",
+        href: "/repair-pdf",
+        category: "Optimize PDF",
+        color: toolColors.optimize,
     },
 ];

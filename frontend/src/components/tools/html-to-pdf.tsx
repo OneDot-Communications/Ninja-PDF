@@ -1,349 +1,661 @@
 "use client";
 
 import { useState } from "react";
-import FileUploadHero from "../ui/file-upload-hero";
-import { Button } from "../ui/button";
-import { Download, FileText, Loader2, Plus, X } from "lucide-react";
-import html2canvas from "html2canvas";
+import { cn } from "@/lib/utils";
 import jsPDF from "jspdf";
+import {
+    Globe,
+    Settings,
+    FileText,
+    Info,
+    Download,
+    Loader2,
+    Check,
+    AlertCircle,
+    ExternalLink,
+    ChevronDown
+} from "lucide-react";
 
 interface GeneratedPdf {
-    id: string;
-    name: string;
-    pageCount: number;
-    size: string;
-    dataUrl: string;
     blob: Blob;
+    url: string;
+    filename: string;
 }
 
 export function HtmlToPdfTool() {
-    const [htmlFile, setHtmlFile] = useState<File | null>(null);
-    const [htmlContent, setHtmlContent] = useState("");
-    const [isConverting, setIsConverting] = useState(false);
-    const [showConversionUI, setShowConversionUI] = useState(false);
-    const [generatedPdfs, setGeneratedPdfs] = useState<GeneratedPdf[]>([]);
-    const [quality, setQuality] = useState<"high" | "medium" | "low">("high");
+    // URL input state
+    const [url, setUrl] = useState("");
+    const [urlError, setUrlError] = useState("");
+    const [isValidUrl, setIsValidUrl] = useState(false);
 
-    const handleFileSelected = async (files: File[]) => {
-        if (files.length > 0) {
-            const selectedFile = files[0];
-            setHtmlFile(selectedFile);
-            const text = await selectedFile.text();
-            setHtmlContent(text);
-            setShowConversionUI(true);
+    // Conversion state
+    const [isConverting, setIsConverting] = useState(false);
+    const [conversionProgress, setConversionProgress] = useState("");
+    const [conversionError, setConversionError] = useState("");
+    const [generatedPdf, setGeneratedPdf] = useState<GeneratedPdf | null>(null);
+
+    // Configuration state
+    const [pageSize, setPageSize] = useState("A4");
+    const [orientation, setOrientation] = useState("Portrait");
+    const [margins, setMargins] = useState("Normal");
+    const [outputFilename, setOutputFilename] = useState("converted");
+
+    // Rendering options
+    const [includeBackground, setIncludeBackground] = useState(true);
+    const [enableJavascript, setEnableJavascript] = useState(true);
+
+    // Dropdown open states
+    const [sizeDropdownOpen, setSizeDropdownOpen] = useState(false);
+    const [marginsDropdownOpen, setMarginsDropdownOpen] = useState(false);
+    const [printMedia, setPrintMedia] = useState(false);
+
+    // URL validation
+    const validateUrl = (inputUrl: string): boolean => {
+        if (!inputUrl.trim()) {
+            setUrlError("");
+            setIsValidUrl(false);
+            return false;
+        }
+
+        try {
+            const urlObj = new URL(inputUrl);
+            if (urlObj.protocol !== 'http:' && urlObj.protocol !== 'https:') {
+                setUrlError("URL must start with http:// or https://");
+                setIsValidUrl(false);
+                return false;
+            }
+            setUrlError("");
+            setIsValidUrl(true);
+            return true;
+        } catch {
+            setUrlError("Please enter a valid URL");
+            setIsValidUrl(false);
+            return false;
         }
     };
 
-    const convertHtmlFileToPdf = async () => {
-        if (!htmlContent || !htmlFile) return;
+    const handleUrlChange = (value: string) => {
+        setUrl(value);
+        validateUrl(value);
+        setGeneratedPdf(null);
+        setConversionError("");
+    };
+
+    // Get page dimensions
+    const getPageDimensions = () => {
+        const sizes: { [key: string]: { width: number; height: number } } = {
+            "A4": { width: 595.28, height: 841.89 },
+            "Letter": { width: 612, height: 792 },
+            "Legal": { width: 612, height: 1008 },
+            "A3": { width: 841.89, height: 1190.55 },
+            "A5": { width: 419.53, height: 595.28 }
+        };
+        const size = sizes[pageSize] || sizes["A4"];
+        return orientation === "Landscape"
+            ? { width: size.height, height: size.width }
+            : size;
+    };
+
+    const getMarginValues = () => {
+        const marginMap: { [key: string]: number } = {
+            "None": 0,
+            "Minimal": 20,
+            "Normal": 40,
+            "Wide": 60
+        };
+        return marginMap[margins] || 40;
+    };
+
+    // Convert URL to PDF using html2pdf.app API service
+    const convertToPdf = async () => {
+        if (!isValidUrl || !url.trim()) {
+            setConversionError("Please enter a valid URL");
+            return;
+        }
 
         setIsConverting(true);
+        setConversionProgress("Connecting to PDF service...");
+        setConversionError("");
 
         try {
-            // Create a temporary div to render the HTML
-            const tempDiv = document.createElement("div");
-            tempDiv.innerHTML = htmlContent;
-            tempDiv.style.position = "absolute";
-            tempDiv.style.left = "-9999px";
-            tempDiv.style.width = "800px";
-            tempDiv.style.padding = "40px";
-            tempDiv.style.backgroundColor = "#ffffff";
-            document.body.appendChild(tempDiv);
+            setConversionProgress("Rendering webpage to PDF...");
 
-            // Set scale based on quality
-            const scaleMap = { high: 2, medium: 1.5, low: 1 };
-            const scale = scaleMap[quality];
+            // Use html2pdf.app API (free tier available)
+            // This service renders the actual webpage with all styles, icons, and layout
+            const apiUrl = 'https://api.html2pdf.app/v1/generate';
 
-            // Capture the content using html2canvas
-            const canvas = await html2canvas(tempDiv, {
-                scale: scale,
-                useCORS: true,
-                logging: false,
-                backgroundColor: "#ffffff",
+            // Build request parameters
+            const params = new URLSearchParams({
+                url: url,
+                apiKey: 'demo', // Demo key for testing - replace with your own for production
+                format: pageSize,
+                orientation: orientation.toLowerCase(),
+                marginTop: margins === 'None' ? '0' : margins === 'Minimal' ? '5mm' : margins === 'Wide' ? '20mm' : '10mm',
+                marginBottom: margins === 'None' ? '0' : margins === 'Minimal' ? '5mm' : margins === 'Wide' ? '20mm' : '10mm',
+                marginLeft: margins === 'None' ? '0' : margins === 'Minimal' ? '5mm' : margins === 'Wide' ? '20mm' : '10mm',
+                marginRight: margins === 'None' ? '0' : margins === 'Minimal' ? '5mm' : margins === 'Wide' ? '20mm' : '10mm',
+                printBackground: includeBackground.toString(),
+                preferCSSPageSize: 'false',
+                javascript: enableJavascript.toString(),
+                emulateMedia: printMedia ? 'print' : 'screen'
             });
 
-            // Remove the temporary div
-            document.body.removeChild(tempDiv);
-
-            // Create PDF
-            const imgData = canvas.toDataURL("image/png");
-            const pdf = new jsPDF({
-                orientation: "portrait",
-                unit: "pt",
-                format: "a4",
+            // Make API request
+            const response = await fetch(`${apiUrl}?${params.toString()}`, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/pdf'
+                }
             });
 
-            const imgWidth = 595.28;
-            const imgHeight = (canvas.height * imgWidth) / canvas.width;
-            const pageHeight = 841.89;
-            let heightLeft = imgHeight;
-            let position = 0;
+            if (!response.ok) {
+                // If the direct API fails, try alternative approach with POST
+                setConversionProgress("Trying alternative rendering method...");
 
-            pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
-            heightLeft -= pageHeight;
+                // Fallback: Use PDFCrowd-style POST request
+                const fallbackResponse = await fetch('https://api.pdfendpoint.com/v1/convert', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        url: url,
+                        pdf_options: {
+                            format: pageSize,
+                            landscape: orientation === 'Landscape',
+                            print_background: includeBackground,
+                            margin: {
+                                top: margins === 'None' ? '0' : margins === 'Minimal' ? '10px' : margins === 'Wide' ? '40px' : '20px',
+                                bottom: margins === 'None' ? '0' : margins === 'Minimal' ? '10px' : margins === 'Wide' ? '40px' : '20px',
+                                left: margins === 'None' ? '0' : margins === 'Minimal' ? '10px' : margins === 'Wide' ? '40px' : '20px',
+                                right: margins === 'None' ? '0' : margins === 'Minimal' ? '10px' : margins === 'Wide' ? '40px' : '20px'
+                            }
+                        }
+                    })
+                });
 
-            while (heightLeft > 0) {
-                position = heightLeft - imgHeight;
-                pdf.addPage();
-                pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
-                heightLeft -= pageHeight;
+                if (!fallbackResponse.ok) {
+                    throw new Error("PDF service temporarily unavailable. Please try again later.");
+                }
+
+                const fallbackData = await fallbackResponse.json();
+                if (fallbackData.pdf_url) {
+                    // Download the PDF from the URL
+                    const pdfResponse = await fetch(fallbackData.pdf_url);
+                    const pdfBlob = await pdfResponse.blob();
+
+                    setGeneratedPdf({
+                        blob: pdfBlob,
+                        url: URL.createObjectURL(pdfBlob),
+                        filename: `${outputFilename || 'converted'}.pdf`
+                    });
+
+                    setConversionProgress("Conversion complete!");
+                    return;
+                }
             }
 
-            const pdfBlob = pdf.output("blob");
-            const pdfDataUrl = URL.createObjectURL(pdfBlob);
+            // Get PDF blob from response
+            const pdfBlob = await response.blob();
 
-            const pdfName = htmlFile.name.replace(".html", "") || "converted";
+            if (pdfBlob.size < 1000) {
+                // If blob is too small, it might be an error response
+                const text = await pdfBlob.text();
+                if (text.includes('error') || text.includes('Error')) {
+                    throw new Error("Failed to render webpage. The URL may be inaccessible or blocked.");
+                }
+            }
 
-            const newPdf: GeneratedPdf = {
-                id: Date.now().toString(),
-                name: `${pdfName}.pdf`,
-                pageCount: pdf.getNumberOfPages(),
-                size: `${(pdfBlob.size / 1024).toFixed(0)} KB`,
-                dataUrl: pdfDataUrl,
+            setConversionProgress("Finalizing PDF...");
+
+            setGeneratedPdf({
                 blob: pdfBlob,
-            };
+                url: URL.createObjectURL(pdfBlob),
+                filename: `${outputFilename || 'converted'}.pdf`
+            });
 
-            setGeneratedPdfs(prev => [...prev, newPdf]);
-        } catch (error) {
-            console.error("Error converting to PDF:", error);
-            alert("Failed to convert HTML to PDF. Please try again.");
+            setConversionProgress("Conversion complete!");
+
+        } catch (error: any) {
+            console.error("Conversion failed:", error);
+
+            // Provide helpful error message
+            let errorMessage = "Conversion failed. ";
+            if (error.message.includes('fetch') || error.message.includes('network')) {
+                errorMessage += "Network error. Please check your connection.";
+            } else if (error.message.includes('CORS')) {
+                errorMessage += "This URL cannot be accessed due to security restrictions.";
+            } else {
+                errorMessage += error.message || "Please try again.";
+            }
+
+            setConversionError(errorMessage);
+            setGeneratedPdf(null);
         } finally {
             setIsConverting(false);
         }
     };
 
-    const downloadPdf = (pdf: GeneratedPdf) => {
-        const link = document.createElement("a");
-        link.href = pdf.dataUrl;
-        link.download = pdf.name;
+    const downloadPdf = () => {
+        if (!generatedPdf) return;
+        const link = document.createElement('a');
+        link.href = generatedPdf.url;
+        link.download = generatedPdf.filename;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
     };
 
-    const removeFile = () => {
-        setHtmlFile(null);
-        setHtmlContent("");
-        setGeneratedPdfs([]);
-        setShowConversionUI(false);
+    const resetConversion = () => {
+        setGeneratedPdf(null);
+        setConversionProgress("");
+        setConversionError("");
     };
 
-    const clearAll = () => {
-        generatedPdfs.forEach(pdf => URL.revokeObjectURL(pdf.dataUrl));
-        removeFile();
-    };
+    // Toggle Switch Component
+    const ToggleSwitch = ({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) => (
+        <div className="flex items-center justify-between">
+            <span className="text-sm text-gray-700">{label}</span>
+            <button
+                onClick={() => { onChange(!checked); resetConversion(); }}
+                className={cn(
+                    "relative w-11 h-6 rounded-full transition-colors",
+                    checked ? "bg-[#4383BF]" : "bg-gray-300"
+                )}
+            >
+                <span className={cn(
+                    "absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform shadow",
+                    checked && "translate-x-5"
+                )} />
+            </button>
+        </div>
+    );
 
-    // Show file upload screen until file is selected
-    if (!showConversionUI) {
-        return (
-            <div className="min-h-[calc(100vh-120px)] flex items-center justify-center relative">
-                <FileUploadHero
-                    title="HTML to PDF"
-                    onFilesSelected={handleFileSelected}
-                    maxFiles={1}
-                    accept={{ "text/html": [".html"] }}
-                />
-            </div>
-        );
-    }
+    // Determine if convert button should be enabled
+    const canConvert = isValidUrl && url.trim().length > 0 && !isConverting;
 
-    // Show conversion UI after file upload
     return (
-        <div className="flex h-[calc(100vh-120px)] gap-6 p-6">
-            {/* Left Side - File View */}
-            <div className="flex-1 flex flex-col">
-                {/* Tabs */}
-                <div className="flex items-center justify-between mb-6">
-                    <div className="flex bg-white rounded-lg border border-gray-200 shadow-sm">
-                        <button className="px-5 py-2.5 text-sm font-medium text-blue-600 bg-white rounded-lg border-r border-gray-200">
-                            File View
-                        </button>
-                        <button className="px-5 py-2.5 text-sm font-medium text-gray-500 rounded-lg">
-                            Page View
-                        </button>
-                    </div>
-
-                    {generatedPdfs.length === 0 && (
-                        <Button variant="outline" onClick={clearAll} className="text-gray-600">
-                            <FileText className="w-4 h-4 mr-2" />
-                            Clear All
-                        </Button>
-                    )}
-                </div>
-
-                <div className="flex-1 bg-gray-50 rounded-lg p-6 overflow-auto">
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                        {/* HTML File Card */}
-                        <div className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow relative group">
-                            <button
-                                onClick={removeFile}
-                                className="absolute -top-2 -right-2 w-7 h-7 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-md hover:bg-red-600"
-                            >
-                                <X className="w-4 h-4" />
-                            </button>
-
-                            <div className="absolute -top-2 -left-2 w-7 h-7 bg-gray-800 text-white rounded-full flex items-center justify-center text-xs font-semibold shadow-md">
-                                1
+        <div className="bg-[#f6f7f8] min-h-screen pb-8">
+            <div className="max-w-[1800px] mx-auto px-4 py-4">
+                <div className="flex flex-col lg:flex-row gap-6">
+                    {/* Left Column - URL Input */}
+                    <div className="flex-1 lg:max-w-[calc(100%-448px)]">
+                        {/* URL Input Card */}
+                        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+                            {/* Header */}
+                            <div className="flex items-center gap-3 mb-6">
+                                <div className="w-12 h-12 bg-[#4383BF]/10 rounded-xl flex items-center justify-center">
+                                    <Globe className="w-6 h-6 text-[#4383BF]" />
+                                </div>
+                                <div>
+                                    <h2 className="text-lg font-semibold text-gray-900">Webpage URL</h2>
+                                    <p className="text-sm text-gray-500">Enter the URL of the webpage you want to convert</p>
+                                </div>
                             </div>
 
-                            <div className="aspect-[3/4] bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg mb-3 flex items-center justify-center border border-orange-200">
-                                <FileText className="w-16 h-16 text-orange-400" />
-                            </div>
-
-                            <h4 className="text-sm font-semibold text-gray-900 truncate mb-1">
-                                {htmlFile?.name}
-                            </h4>
-                            <p className="text-xs text-gray-500">
-                                {(htmlFile?.size ? htmlFile.size / 1024 : 0).toFixed(0)} KB
-                            </p>
-                        </div>
-
-                        {/* Generated PDFs */}
-                        {generatedPdfs.map((pdf, index) => (
-                            <div
-                                key={pdf.id}
-                                className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow cursor-pointer relative"
-                                onClick={() => downloadPdf(pdf)}
-                            >
-                                <div className="absolute -top-2 -left-2 w-7 h-7 bg-gray-800 text-white rounded-full flex items-center justify-center text-xs font-semibold shadow-md">
-                                    {index + 2}
+                            {/* URL Input Field */}
+                            <div className="space-y-3">
+                                <label className="block text-sm font-medium text-gray-700">
+                                    Website URL
+                                </label>
+                                <div className="relative">
+                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                        <Globe className="w-5 h-5 text-gray-400" />
+                                    </div>
+                                    <input
+                                        type="url"
+                                        value={url}
+                                        onChange={(e) => handleUrlChange(e.target.value)}
+                                        placeholder="https://example.com"
+                                        className={cn(
+                                            "w-full pl-12 pr-12 py-4 text-base border rounded-xl focus:outline-none focus:ring-2 transition-colors",
+                                            urlError
+                                                ? "border-red-300 focus:ring-red-200 bg-red-50"
+                                                : isValidUrl
+                                                    ? "border-green-300 focus:ring-green-200 bg-green-50"
+                                                    : "border-gray-200 focus:ring-[#4383BF] bg-gray-50"
+                                        )}
+                                    />
+                                    {/* Status Icon */}
+                                    <div className="absolute inset-y-0 right-0 pr-4 flex items-center">
+                                        {urlError && <AlertCircle className="w-5 h-5 text-red-500" />}
+                                        {isValidUrl && !urlError && <Check className="w-5 h-5 text-green-500" />}
+                                    </div>
                                 </div>
 
-                                <div className="aspect-[3/4] bg-gradient-to-br from-red-50 to-red-100 rounded-lg mb-3 flex items-center justify-center border border-red-200">
-                                    <FileText className="w-16 h-16 text-red-400" />
-                                </div>
+                                {/* Error Message */}
+                                {urlError && (
+                                    <p className="text-sm text-red-600 flex items-center gap-1">
+                                        <AlertCircle className="w-4 h-4" />
+                                        {urlError}
+                                    </p>
+                                )}
 
-                                <h4 className="text-sm font-semibold text-gray-900 truncate mb-1">
-                                    {pdf.name}
-                                </h4>
-                                <p className="text-xs text-gray-500">
-                                    {pdf.pageCount} {pdf.pageCount === 1 ? "Page" : "Pages"} • {pdf.size}
+                                {/* Helper Text */}
+                                <p className="text-sm text-gray-500">
+                                    Paste the link of the webpage you want to convert to PDF.
                                 </p>
                             </div>
-                        ))}
 
-                        {/* Add More Files */}
-                        <div className="border-2 border-dashed border-blue-300 rounded-lg bg-white hover:border-blue-400 transition-colors cursor-pointer flex flex-col items-center justify-center aspect-[3/4]">
-                            <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center mb-3">
-                                <Plus className="w-6 h-6 text-white" />
+                            {/* URL Preview (when valid) */}
+                            {isValidUrl && url && (
+                                <div className="mt-6 p-4 bg-gray-50 rounded-xl border border-gray-200">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 bg-[#4383BF]/10 rounded-lg flex items-center justify-center">
+                                                <FileText className="w-5 h-5 text-[#4383BF]" />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-sm font-medium text-gray-900 truncate max-w-md">
+                                                    {new URL(url).hostname}
+                                                </p>
+                                                <p className="text-xs text-gray-500 truncate max-w-md">
+                                                    {url}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <a
+                                            href={url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex items-center gap-1 text-sm text-[#4383BF] hover:underline"
+                                        >
+                                            <ExternalLink className="w-4 h-4" />
+                                            Preview
+                                        </a>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Conversion Error */}
+                            {conversionError && (
+                                <div className="mt-4 p-4 bg-red-50 rounded-xl border border-red-200">
+                                    <div className="flex items-center gap-2 text-red-700">
+                                        <AlertCircle className="w-5 h-5" />
+                                        <p className="text-sm font-medium">{conversionError}</p>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Info Card */}
+                        <div className="mt-4 bg-blue-50 rounded-xl border border-blue-200 p-4">
+                            <div className="flex items-start gap-3">
+                                <Info className="w-5 h-5 text-blue-600 mt-0.5" />
+                                <div>
+                                    <h3 className="text-sm font-medium text-blue-900">How it works</h3>
+                                    <ul className="mt-2 text-sm text-blue-700 space-y-1">
+                                        <li>• Enter any public webpage URL</li>
+                                        <li>• Configure page settings on the right</li>
+                                        <li>• Click "Convert to PDF" to generate</li>
+                                        <li>• Download your PDF document</li>
+                                    </ul>
+                                </div>
                             </div>
-                            <p className="text-sm font-semibold text-blue-600">Add more files</p>
-                            <p className="text-xs text-gray-400 mt-1">or drag & drop here</p>
                         </div>
                     </div>
-                </div>
-            </div>
 
-            {/* Right Sidebar - File Summary */}
-            <div className="w-80 bg-white rounded-lg border border-gray-200 shadow-sm p-6 space-y-6">
-                <div className="flex items-center gap-2 text-gray-800">
-                    <FileText className="w-5 h-5" />
-                    <h3 className="text-lg font-bold">File Summary</h3>
-                </div>
+                    {/* Right Column - Configuration Panel */}
+                    <div className="lg:w-[420px] lg:flex-shrink-0">
+                        <div className="bg-white rounded-xl border border-gray-200 shadow-sm lg:sticky lg:top-4 lg:max-h-[calc(100vh-32px)] lg:overflow-y-auto">
+                            {/* Panel Header */}
+                            <div className="p-5 border-b border-gray-100">
+                                <div className="flex items-center gap-2">
+                                    <Settings className="w-5 h-5 text-gray-600" />
+                                    <h2 className="text-lg font-semibold text-gray-900">Conversion Settings</h2>
+                                </div>
+                            </div>
 
-                {/* File Count */}
-                <div className="flex items-center gap-3 p-3 bg-red-50 border border-red-100 rounded-lg">
-                    <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center border border-red-200">
-                        <FileText className="w-5 h-5 text-red-500" />
-                    </div>
-                    <div>
-                        <p className="text-2xl font-bold text-gray-900">1 HTML File</p>
-                        <p className="text-xs text-gray-500">
-                            {(htmlFile?.size ? htmlFile.size / 1024 : 0).toFixed(0)} KB
-                        </p>
-                    </div>
-                </div>
+                            <div className="p-5 pb-24 lg:pb-5 space-y-5">
+                                {/* Page Settings */}
+                                <div className="bg-white rounded-xl border border-gray-200 p-4">
+                                    <h3 className="text-sm font-semibold text-gray-900 mb-3">Page Settings</h3>
+                                    <div className="space-y-3">
+                                        {/* Size - Custom Dropdown */}
+                                        <div className="relative">
+                                            <label className="block text-sm text-gray-600 mb-1.5">Size</label>
+                                            <button
+                                                onClick={() => { setSizeDropdownOpen(!sizeDropdownOpen); setMarginsDropdownOpen(false); }}
+                                                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm bg-white hover:border-[#4383BF]/50 focus:outline-none focus:ring-2 focus:ring-[#4383BF]/20 focus:border-[#4383BF] transition-all flex items-center justify-between"
+                                            >
+                                                <span className="font-medium text-gray-900">{pageSize}</span>
+                                                <ChevronDown className={cn(
+                                                    "w-4 h-4 text-gray-500 transition-transform duration-200",
+                                                    sizeDropdownOpen && "rotate-180"
+                                                )} />
+                                            </button>
+                                            {sizeDropdownOpen && (
+                                                <div className="absolute z-20 w-full mt-1.5 bg-white rounded-xl border border-gray-200 shadow-lg shadow-gray-200/50 py-1 animate-in fade-in slide-in-from-top-1 duration-150">
+                                                    {["A4", "Letter", "Legal", "A3", "A5"].map((size) => (
+                                                        <button
+                                                            key={size}
+                                                            onClick={() => {
+                                                                setPageSize(size);
+                                                                setSizeDropdownOpen(false);
+                                                                resetConversion();
+                                                            }}
+                                                            className={cn(
+                                                                "w-full px-4 py-2.5 text-sm text-left flex items-center justify-between transition-colors",
+                                                                pageSize === size
+                                                                    ? "bg-[#4383BF]/10 text-[#4383BF] font-medium"
+                                                                    : "text-gray-700 hover:bg-gray-50"
+                                                            )}
+                                                        >
+                                                            {size}
+                                                            {pageSize === size && <Check className="w-4 h-4" />}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
 
-                {/* Conversion Stats */}
-                {generatedPdfs.length > 0 && (
-                    <div className="space-y-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                        <div className="flex justify-between text-sm">
-                            <span className="text-gray-600">Generated PDFs</span>
-                            <span className="font-semibold text-gray-900">{generatedPdfs.length}</span>
+                                        {/* Orientation */}
+                                        <div>
+                                            <label className="block text-sm text-gray-600 mb-1.5">Orientation</label>
+                                            <div className="grid grid-cols-2 gap-2">
+                                                {["Portrait", "Landscape"].map((opt) => (
+                                                    <button
+                                                        key={opt}
+                                                        onClick={() => { setOrientation(opt); resetConversion(); }}
+                                                        className={cn(
+                                                            "px-4 py-2.5 rounded-lg text-sm font-medium transition-colors border",
+                                                            orientation === opt
+                                                                ? "bg-[#4383BF] text-white border-[#4383BF]"
+                                                                : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
+                                                        )}
+                                                    >
+                                                        {opt}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        {/* Margins - Custom Dropdown */}
+                                        <div className="relative">
+                                            <label className="block text-sm text-gray-600 mb-1.5">Margins</label>
+                                            <button
+                                                onClick={() => { setMarginsDropdownOpen(!marginsDropdownOpen); setSizeDropdownOpen(false); }}
+                                                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm bg-white hover:border-[#4383BF]/50 focus:outline-none focus:ring-2 focus:ring-[#4383BF]/20 focus:border-[#4383BF] transition-all flex items-center justify-between"
+                                            >
+                                                <span className="font-medium text-gray-900">{margins}</span>
+                                                <ChevronDown className={cn(
+                                                    "w-4 h-4 text-gray-500 transition-transform duration-200",
+                                                    marginsDropdownOpen && "rotate-180"
+                                                )} />
+                                            </button>
+                                            {marginsDropdownOpen && (
+                                                <div className="absolute z-20 w-full mt-1.5 bg-white rounded-xl border border-gray-200 shadow-lg shadow-gray-200/50 py-1 animate-in fade-in slide-in-from-top-1 duration-150">
+                                                    {["None", "Minimal", "Normal", "Wide"].map((margin) => (
+                                                        <button
+                                                            key={margin}
+                                                            onClick={() => {
+                                                                setMargins(margin);
+                                                                setMarginsDropdownOpen(false);
+                                                                resetConversion();
+                                                            }}
+                                                            className={cn(
+                                                                "w-full px-4 py-2.5 text-sm text-left flex items-center justify-between transition-colors",
+                                                                margins === margin
+                                                                    ? "bg-[#4383BF]/10 text-[#4383BF] font-medium"
+                                                                    : "text-gray-700 hover:bg-gray-50"
+                                                            )}
+                                                        >
+                                                            {margin}
+                                                            {margins === margin && <Check className="w-4 h-4" />}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Rendering Options */}
+                                <div className="bg-white rounded-xl border border-gray-200 p-4">
+                                    <h3 className="text-sm font-semibold text-gray-900 mb-3">Rendering Options</h3>
+                                    <div className="space-y-3">
+                                        <ToggleSwitch
+                                            checked={includeBackground}
+                                            onChange={setIncludeBackground}
+                                            label="Include background"
+                                        />
+                                        <ToggleSwitch
+                                            checked={enableJavascript}
+                                            onChange={setEnableJavascript}
+                                            label="Enable JavaScript"
+                                        />
+                                        <ToggleSwitch
+                                            checked={printMedia}
+                                            onChange={setPrintMedia}
+                                            label="Print media"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* About Conversion Info */}
+                                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-100 p-4">
+                                    <div className="flex items-start gap-3">
+                                        <Info className="w-5 h-5 text-blue-600 mt-0.5" />
+                                        <div>
+                                            <h3 className="text-sm font-semibold text-blue-900">About Conversion</h3>
+                                            <p className="text-xs text-blue-700 mt-1">
+                                                Enter a public webpage URL and click convert. The PDF will preserve the page layout, links, and styling.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Output Filename */}
+                                <div className="bg-white rounded-xl border border-gray-200 p-4">
+                                    <h3 className="text-sm font-semibold text-gray-900 mb-3">Output Filename</h3>
+                                    <input
+                                        type="text"
+                                        value={outputFilename}
+                                        onChange={(e) => { setOutputFilename(e.target.value); resetConversion(); }}
+                                        placeholder="converted"
+                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#4383BF] bg-gray-50"
+                                    />
+                                </div>
+
+                                {/* Summary */}
+                                <div className="bg-white rounded-xl border border-gray-200 p-4">
+                                    <h3 className="text-sm font-semibold text-gray-900 mb-3">Summary</h3>
+                                    <div className="space-y-2">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-sm text-gray-600">URL Status</span>
+                                            <span className={cn(
+                                                "text-sm font-semibold",
+                                                isValidUrl ? "text-green-600" : "text-gray-400"
+                                            )}>
+                                                {isValidUrl ? "Valid" : "Not entered"}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-sm text-gray-600">Page Size</span>
+                                            <span className="text-sm font-semibold text-gray-900">{pageSize}</span>
+                                        </div>
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-sm text-gray-600">Orientation</span>
+                                            <span className="text-sm font-semibold text-gray-900">{orientation}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Convert Button - Hidden on mobile since there's a fixed bottom bar */}
+                            <div className="hidden lg:block p-5 pt-0">
+                                <div className="pt-4 border-t border-gray-100">
+                                    {/* Progress Text */}
+                                    {conversionProgress && (
+                                        <p className="text-sm text-center text-gray-600 mb-3">{conversionProgress}</p>
+                                    )}
+
+                                    {!generatedPdf ? (
+                                        <button
+                                            onClick={convertToPdf}
+                                            disabled={!canConvert}
+                                            className="w-full h-14 bg-[#4383BF] hover:bg-[#3A74A8] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-lg rounded-xl flex items-center justify-center gap-2 transition-colors shadow-lg shadow-[#4383BF]/20"
+                                        >
+                                            {isConverting ? (
+                                                <>
+                                                    <Loader2 className="h-5 w-5 animate-spin" />
+                                                    Converting...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <FileText className="h-5 w-5" />
+                                                    Convert to PDF
+                                                </>
+                                            )}
+                                        </button>
+                                    ) : (
+                                        <button
+                                            onClick={downloadPdf}
+                                            className="w-full h-14 bg-green-600 hover:bg-green-700 text-white font-bold text-lg rounded-xl flex items-center justify-center gap-2 transition-colors shadow-lg"
+                                        >
+                                            <Download className="h-5 w-5" />
+                                            Download PDF
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
                         </div>
-                        <div className="flex justify-between text-sm">
-                            <span className="text-gray-600">Total Pages</span>
-                            <span className="font-semibold text-gray-900">
-                                {generatedPdfs.reduce((sum, pdf) => sum + pdf.pageCount, 0)}
-                            </span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                            <span className="text-gray-600">Total Size</span>
-                            <span className="font-semibold text-green-600">
-                                {generatedPdfs.reduce((sum, pdf) => sum + parseFloat(pdf.size), 0).toFixed(0)} KB
-                            </span>
-                        </div>
-                    </div>
-                )}
-
-                <hr className="border-gray-200" />
-
-                {/* Quality Settings */}
-                <div>
-                    <div className="flex items-center justify-between mb-3">
-                        <label className="text-sm font-semibold text-gray-700">Output Quality</label>
                     </div>
 
-                    <div className="flex gap-2">
-                        <button
-                            onClick={() => setQuality("low")}
-                            className={`flex-1 py-2.5 px-3 rounded-lg border text-xs font-medium transition-all ${quality === "low"
-                                    ? "bg-blue-50 border-blue-500 text-blue-700"
-                                    : "border-gray-300 text-gray-600 hover:bg-gray-50"
-                                }`}
-                        >
-                            Smallest
-                        </button>
-                        <button
-                            onClick={() => setQuality("medium")}
-                            className={`flex-1 py-2.5 px-3 rounded-lg border text-xs font-medium transition-all ${quality === "medium"
-                                    ? "bg-blue-50 border-blue-500 text-blue-700"
-                                    : "border-gray-300 text-gray-600 hover:bg-gray-50"
-                                }`}
-                        >
-                            Balanced
-                        </button>
-                        <button
-                            onClick={() => setQuality("high")}
-                            className={`flex-1 py-2.5 px-3 rounded-lg border text-xs font-medium transition-all ${quality === "high"
-                                    ? "bg-blue-50 border-blue-500 text-blue-700"
-                                    : "border-gray-300 text-gray-600 hover:bg-gray-50"
-                                }`}
-                        >
-                            High Quality
-                        </button>
+                    {/* Mobile Bottom Bar */}
+                    <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 z-40">
+                        {conversionProgress && (
+                            <p className="text-sm text-center text-gray-600 mb-2">{conversionProgress}</p>
+                        )}
+                        {!generatedPdf ? (
+                            <button
+                                onClick={convertToPdf}
+                                disabled={!canConvert}
+                                className="w-full h-14 bg-[#4383BF] hover:bg-[#3A74A8] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-lg rounded-xl flex items-center justify-center gap-2 transition-colors"
+                            >
+                                {isConverting ? (
+                                    <>
+                                        <Loader2 className="h-5 w-5 animate-spin" />
+                                        Converting...
+                                    </>
+                                ) : (
+                                    <>
+                                        <FileText className="h-5 w-5" />
+                                        Convert to PDF
+                                    </>
+                                )}
+                            </button>
+                        ) : (
+                            <button
+                                onClick={downloadPdf}
+                                className="w-full h-14 bg-green-600 hover:bg-green-700 text-white font-bold text-lg rounded-xl flex items-center justify-center gap-2 transition-colors"
+                            >
+                                <Download className="h-5 w-5" />
+                                Download PDF
+                            </button>
+                        )}
                     </div>
                 </div>
-
-                {/* Convert Button */}
-                <Button
-                    onClick={convertHtmlFileToPdf}
-                    disabled={isConverting || generatedPdfs.length > 0}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3.5 text-base font-semibold shadow-md"
-                >
-                    {isConverting ? (
-                        <>
-                            <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                            Converting...
-                        </>
-                    ) : generatedPdfs.length > 0 ? (
-                        <>
-                            <Download className="w-5 h-5 mr-2" />
-                            Download PDF
-                        </>
-                    ) : (
-                        <>
-                            <FileText className="w-5 h-5 mr-2" />
-                            CONVERT TO PDF
-                        </>
-                    )}
-                </Button>
-
-                {/* Privacy Note */}
-                <p className="text-xs text-gray-400 text-center flex items-center justify-center gap-1.5">
-                    <span className="text-gray-500">🔒</span>
-                    Securely/Mac loopback file is open/own-based mode, you phantom.
-                </p>
             </div>
         </div>
     );
