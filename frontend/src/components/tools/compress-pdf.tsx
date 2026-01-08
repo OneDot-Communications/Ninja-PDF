@@ -4,10 +4,9 @@ import { useState, useRef, useCallback } from "react";
 import { saveAs } from "file-saver";
 import JSZip from "jszip";
 import FileUploadHero from "../ui/file-upload-hero";
-import { FileText, Archive, FolderOpen, Settings, X, Plus } from "lucide-react";
+import { FileText, Archive, X, Plus, Check } from "lucide-react";
 import { pdfApi } from "@/lib/services/pdf-api";
 import { toast } from "@/lib/hooks/use-toast";
-import { api } from "@/lib/services/api";
 import * as pdfjsLib from "pdfjs-dist";
 
 interface PagePreview {
@@ -20,7 +19,7 @@ interface PagePreview {
 export function CompressPdfTool() {
     const [files, setFiles] = useState<File[]>([]);
     const [isProcessing, setIsProcessing] = useState(false);
-    const [compressionLevel, setCompressionLevel] = useState<"recommended" | "extreme">("recommended");
+    const [compressionLevel, setCompressionLevel] = useState<"recommended" | "extreme" | "less">("recommended");
     const [targetSize, setTargetSize] = useState<number>(60); // 0-100 slider value
     const [viewMode, setViewMode] = useState<"file" | "page">("file");
     const [previews, setPreviews] = useState<{ [key: string]: string }>({});
@@ -38,7 +37,7 @@ export function CompressPdfTool() {
 
     const generatePreview = async (file: File) => {
         try {
-            const result = await api.getPdfPagePreviews(file);
+            const result = await pdfApi.getPagePreviews(file);
             if (result?.previews?.[0]) {
                 setPreviews(prev => ({
                     ...prev,
@@ -78,12 +77,12 @@ export function CompressPdfTool() {
         setIsProcessing(true);
 
         try {
+            const backendLevel = compressionLevel === "extreme" ? "extreme" : "recommended";
+
             if (files.length === 1) {
-                // Single file - direct download
-                const result = await pdfApi.compress(files[0], compressionLevel);
+                const result = await pdfApi.compress(files[0], backendLevel);
                 saveAs(result.blob, result.fileName || `compressed-${files[0].name}`);
             } else {
-                // Multiple files - create ZIP
                 const zip = new JSZip();
                 
                 for (let i = 0; i < files.length; i++) {
@@ -95,12 +94,11 @@ export function CompressPdfTool() {
                         position: "top-right",
                     });
                     
-                    const result = await pdfApi.compress(file, compressionLevel);
+                    const result = await pdfApi.compress(file, backendLevel);
                     const fileName = result.fileName || `compressed-${file.name}`;
                     zip.file(fileName, result.blob);
                 }
 
-                // Generate and download ZIP
                 toast.show({
                     title: "Creating ZIP",
                     message: "Packaging compressed PDFs...",
@@ -176,11 +174,11 @@ export function CompressPdfTool() {
     const totalPages = files.length; // Simplified - could count actual pages
 
     return (
-        <div className="bg-[#f6f7f8] min-h-screen pb-8">
-            <div className="max-w-[1800px] mx-auto px-4 py-4">
-                <div className="flex flex-col lg:flex-row gap-6">
-                    {/* Left Column - File Grid */}
-                    <div className="flex-1 lg:max-w-[calc(100%-448px)]">
+        <div className="bg-[#f6f7f8] min-h-screen relative">
+            <div className="max-w-[1800px] mx-auto px-4 py-4 md:py-8">
+                <div className="flex flex-col lg:flex-row gap-4 lg:gap-8">
+                    {/* Left Column - File Grid (Expanded like merge PDF) */}
+                    <div className="flex-1 max-w-full lg:max-w-[1200px]">
                         {/* View Mode Toggle + Controls */}
                         <div className="bg-white/95 backdrop-blur-sm rounded-xl border border-[#e2e8f0] shadow-sm p-4 mb-6">
                             <div className="flex items-center justify-between flex-wrap gap-4">
@@ -284,132 +282,81 @@ export function CompressPdfTool() {
                         </div>
                     </div>
 
-                    {/* Right Sidebar - Configuration */}
-                    <div className="lg:w-[424px] lg:fixed lg:right-4 lg:top-24">
-                        <div className="bg-white rounded-3xl border border-[#e2e8f0] p-6 shadow-xl">
-                            {/* File Summary */}
+                    {/* Right Sidebar - Compression Options (like merge PDF summary) */}
+                    <div className="hidden lg:block lg:w-[424px] lg:fixed lg:right-4 lg:top-24 lg:h-[calc(100vh-120px)] lg:z-10 order-2 lg:order-1">
+                        <div className="bg-white rounded-2xl lg:rounded-3xl border border-[#e2e8f0] p-4 lg:p-6 h-auto lg:h-full flex flex-col shadow-xl">
+                            {/* Compression Header */}
                             <div className="mb-6">
-                                <div className="flex items-center gap-2 mb-4">
-                                    <FolderOpen className="h-6 w-6 text-[#4383BF]" />
-                                    <h2 className="text-[#111418] font-bold text-lg leading-7">File Summary</h2>
-                                </div>
-
-                                {/* Summary Card */}
-                                <div className="bg-[#f9fafb] rounded-lg border border-[#f3f4f6] p-3 mb-4">
-                                    <div className="flex items-center gap-3">
-                                        <div className="bg-[#ffdede] rounded w-10 h-10 flex items-center justify-center flex-shrink-0">
-                                            <FileText className="h-6 w-6 text-[#ff4b4b]" />
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <div className="text-[#111418] text-sm font-bold leading-5 truncate">
-                                                {files.length} PDF File{files.length > 1 ? 's' : ''}
-                                            </div>
-                                            <div className="text-[#6b7280] text-xs leading-4">
-                                                {formatFileSize(totalSize)}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Stats */}
-                                <div className="border-t border-[#f3f4f6] pt-4 space-y-3">
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-[#6b7280] text-sm">Current Mode</span>
-                                        <span className="text-[#111418] text-sm font-bold">
-                                            {compressionLevel === "recommended" ? "Recommended" : "Extreme"}
-                                        </span>
-                                    </div>
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-[#6b7280] text-sm">Target DPI</span>
-                                        <span className="text-[#111418] text-sm font-bold">{targetDPI} dpi</span>
-                                    </div>
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-[#6b7280] text-sm">Est. Reduction</span>
-                                        <span className="bg-[#f0fdf4] text-[#22c55e] text-sm font-bold px-2 py-1 rounded">
-                                            -{estimatedReduction}%
-                                        </span>
-                                    </div>
-                                </div>
+                                <h2 className="text-[#111418] font-bold text-lg">Compression Level</h2>
+                                <p className="text-[#64748b] text-sm">Choose the quality that fits your needs.</p>
                             </div>
 
-                            {/* Target File Size */}
-                            <div className="mb-6">
-                                <div className="flex items-center gap-2 mb-4">
-                                    <Settings className="h-5 w-5 text-[#9ca3af]" />
-                                    <h3 className="text-[#111418] font-bold text-base">Target File Size</h3>
+                            {/* Compression Levels */}
+                            <div className="flex-1 overflow-y-auto mb-6">
+                                <div className="space-y-3">
+                                    {[{
+                                        value: "extreme",
+                                        title: "EXTREME COMPRESSION",
+                                        desc: "Less quality, high compression"
+                                    }, {
+                                        value: "recommended",
+                                        title: "RECOMMENDED COMPRESSION",
+                                        desc: "Good quality, good compression"
+                                    }, {
+                                        value: "less",
+                                        title: "LESS COMPRESSION",
+                                        desc: "High quality, less compression"
+                                    }].map((item) => {
+                                        const isActive = compressionLevel === item.value;
+                                        return (
+                                            <button
+                                                key={item.value}
+                                                onClick={() => setCompressionLevel(item.value as any)}
+                                                className={`w-full text-left p-4 rounded-lg transition-colors ${
+                                                    isActive ? "bg-[#f1f4fb] border-2 border-[#4383BF]" : "bg-[#f6f7f8] border-2 border-transparent hover:bg-[#e2e8f0]"
+                                                }`}
+                                            >
+                                                <div className="flex items-center justify-between">
+                                                    <div>
+                                                        <div className="text-[#e11d48] text-sm font-bold tracking-tight">
+                                                            {item.title}
+                                                        </div>
+                                                        <div className="text-[#0f172a] text-sm mt-1">
+                                                            {item.desc}
+                                                        </div>
+                                                    </div>
+                                                    {isActive && (
+                                                        <span className="w-8 h-8 bg-[#22c55e] rounded-full flex items-center justify-center text-white shadow">
+                                                            <Check className="h-4 w-4" />
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </button>
+                                        );
+                                    })}
                                 </div>
-
-                                <div className="flex justify-between items-center mb-4">
-                                    <span className="text-[#6b7280] text-sm">Size Goal</span>
-                                    <span className="bg-[#eff6ff] text-[#4383BF] text-sm font-bold px-3 py-1 rounded-md">
-                                        Under 2MB
-                                    </span>
-                                </div>
-
-                                {/* Slider */}
-                                <div className="mb-2">
-                                    <input
-                                        type="range"
-                                        min="0"
-                                        max="100"
-                                        value={targetSize}
-                                        onChange={(e) => setTargetSize(Number(e.target.value))}
-                                        className="w-full h-2 bg-[#e5e7eb] rounded-full appearance-none cursor-pointer"
-                                        style={{
-                                            background: `linear-gradient(to right, #4383BF 0%, #4383BF ${targetSize}%, #e5e7eb ${targetSize}%, #e5e7eb 100%)`
-                                        }}
-                                    />
-                                </div>
-                                <div className="flex justify-between text-xs text-[#9ca3af] font-medium">
-                                    <span>Smallest (Low Quality)</span>
-                                    <span>Largest (High Quality)</span>
-                                </div>
-                            </div>
-
-                            {/* Compression Mode Toggle */}
-                            <div className="bg-[#f1f5f9] rounded-xl p-1 flex mb-6">
-                                <button
-                                    onClick={() => setCompressionLevel("extreme")}
-                                    className={`flex-1 py-2 rounded-md text-sm font-bold transition-all ${
-                                        compressionLevel === "extreme"
-                                            ? "bg-white text-[#4383BF] shadow"
-                                            : "text-[#64748b]"
-                                    }`}
-                                >
-                                    Extreme
-                                </button>
-                                <button
-                                    onClick={() => setCompressionLevel("recommended")}
-                                    className={`flex-1 py-2 rounded-md text-sm font-medium transition-all ${
-                                        compressionLevel === "recommended"
-                                            ? "bg-white text-[#4383BF] shadow"
-                                            : "text-[#64748b]"
-                                    }`}
-                                >
-                                    High Quality
-                                </button>
                             </div>
 
                             {/* Compress Button */}
-                            <button
-                                onClick={compressPdf}
-                                disabled={isProcessing || files.length === 0}
-                                className="w-full bg-[#4383BF] hover:bg-[#3470A0] text-white rounded-xl h-[60px] flex items-center justify-center gap-3 font-bold text-lg shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                            >
-                                <Archive className="h-6 w-6" />
-                                <span>
-                                    {isProcessing 
-                                        ? "Compressing..." 
-                                        : files.length > 1 
-                                            ? `COMPRESS & ZIP (${files.length} FILES)` 
-                                            : "COMPRESS PDF"}
-                                </span>
-                            </button>
-
-                            {/* Footer Text */}
-                            <p className="text-[#617289] text-xs leading-relaxed text-center mt-4 italic">
-                                &quot;Stitching these together like a Frankenstein monster... but prettier.&quot;
-                            </p>
+                            <div className="mt-auto">
+                                <button
+                                    onClick={compressPdf}
+                                    disabled={isProcessing || files.length === 0}
+                                    className="w-full h-[50px] lg:h-[60px] bg-[#4383BF] hover:bg-[#3470A0] text-white rounded-xl flex items-center justify-center gap-2 font-bold text-base lg:text-lg shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                                >
+                                    <Archive className="h-5 w-5" />
+                                    <span>
+                                        {isProcessing 
+                                            ? "Compressing..." 
+                                            : files.length > 1 
+                                                ? `COMPRESS & ZIP (${files.length} FILES)` 
+                                                : "COMPRESS PDF"}
+                                    </span>
+                                </button>
+                                <p className="text-[#94a3b8] text-xs leading-relaxed text-center mt-3 italic">
+                                    "Stitching these together like a Frankenstein monster... but prettier."
+                                </p>
+                            </div>
                         </div>
                     </div>
                 </div>

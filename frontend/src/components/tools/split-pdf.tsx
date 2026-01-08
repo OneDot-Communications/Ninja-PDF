@@ -45,20 +45,12 @@ export function SplitPdfTool() {
     const loadPdfPreview = async (file: File) => {
         setLoadingPreview(true);
         try {
-            // Get only first 10 pages for quick preview, load rest lazily
-            const result = await api.getPdfPagePreviews(file);
+            // Get all pages for split functionality
+            const result = await pdfApi.getPagePreviews(file);
             
-            // Load first batch immediately
-            const firstBatch = result.previews.slice(0, 10);
-            setPagePreviews(firstBatch);
+            // Load all pages immediately
+            setPagePreviews(result.previews);
             setNumPages(result.totalPages);
-            
-            // Load remaining pages after a short delay
-            if (result.previews.length > 10) {
-                setTimeout(() => {
-                    setPagePreviews(result.previews);
-                }, 500);
-            }
         } catch (error) {
             console.error("Error loading PDF preview", error);
             toast.show({
@@ -78,11 +70,12 @@ export function SplitPdfTool() {
     const handleFitScreen = () => setZoom(100);
 
     const handleDeletePage = async (pageNumber: number) => {
-        setDeletedPages(prev => new Set([...prev, pageNumber]));
+        const newDeletedPages = new Set([...deletedPages, pageNumber]);
+        setDeletedPages(newDeletedPages);
         
-        // Merge remaining pages
+        // Check remaining pages using the new set
         const remainingPages = pagePreviews
-            .filter(p => !deletedPages.has(p.pageNumber) && p.pageNumber !== pageNumber)
+            .filter(p => !newDeletedPages.has(p.pageNumber))
             .map(p => p.pageNumber);
 
         if (remainingPages.length === 0) {
@@ -111,9 +104,8 @@ export function SplitPdfTool() {
     const downloadMergedPdf = async () => {
         if (!originalFile) return;
 
-        const remainingPages = pagePreviews
-            .filter(p => !deletedPages.has(p.pageNumber))
-            .map(p => p.pageNumber);
+        const remainingPages = Array.from({ length: numPages }, (_, i) => i + 1)
+            .filter(pageNum => !deletedPages.has(pageNum));
 
         if (remainingPages.length === 0) {
             toast.show({
@@ -156,12 +148,15 @@ export function SplitPdfTool() {
     };
 
     const getRemainingPages = () => {
-        return pagePreviews.filter(p => !deletedPages.has(p.pageNumber)).length;
+        return numPages - deletedPages.size;
     };
 
     const calculateOutputFiles = () => {
         if (explodeMode) return numPages;
-        if (splitMode === "visual") return deletedPages.size > 0 ? 1 : 0;
+        if (splitMode === "visual") {
+            const remainingPages = getRemainingPages();
+            return remainingPages > 0 ? 1 : 0;
+        }
         if (pageRanges.trim()) {
             const ranges = pageRanges.split(',').filter(r => r.trim());
             return ranges.length;
@@ -171,9 +166,11 @@ export function SplitPdfTool() {
 
     const getSelectionText = () => {
         if (explodeMode) return "All pages";
-        if (splitMode === "visual" && deletedPages.size > 0) {
+        if (splitMode === "visual") {
             const remaining = getRemainingPages();
-            return `p1-${remaining}`;
+            if (remaining === numPages) return "All pages";
+            if (remaining === 0) return "None";
+            return `Pages 1-${remaining}`;
         }
         if (pageRanges.trim()) return pageRanges.trim();
         return "None";
@@ -208,9 +205,8 @@ export function SplitPdfTool() {
                 saveAs(result.blob, result.fileName || `split_pages.zip`);
             } else if (splitMode === "visual") {
                 // Visual mode: use deleted pages logic (keep remaining pages)
-                selectedPages = pagePreviews
-                    .filter(p => !deletedPages.has(p.pageNumber))
-                    .map(p => p.pageNumber);
+                selectedPages = Array.from({ length: numPages }, (_, i) => i + 1)
+                    .filter(pageNum => !deletedPages.has(pageNum));
                 
                 if (selectedPages.length === 0 || selectedPages.length === numPages) {
                     toast.show({
