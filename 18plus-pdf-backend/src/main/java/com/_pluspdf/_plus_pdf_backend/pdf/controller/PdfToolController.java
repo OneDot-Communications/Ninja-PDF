@@ -20,4 +20,27 @@ public class PdfToolController {
             @RequestParam(value = "outputFileName", required = false) String outputFileName) {
         return pdfProcessingService.merge(files, outputFileName);
     }
+
+    @PostMapping(value = "/split", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<byte[]> split(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "pages", required = false) int[] pages,
+            @RequestParam(value = "outputFileName", required = false) String outputFileName) {
+        return pdfProcessingService.split(file, pages, outputFileName);
+    }
+
+    @PostMapping(value = "/compress", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<byte[]> compress(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "level", required = false, defaultValue = "recommended") String level,
+            @RequestParam(value = "outputFileName", required = false) String outputFileName) {
+        return pdfProcessingService.compress(file, level, outputFileName);
+    }
+
+    @PostMapping(value = "/page-previews", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<String> getPagePreviews(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "maxPages", required = false, defaultValue = "10") Integer maxPages) {
+        return pdfProcessingService.getPagePreviews(file, maxPages);
+    }
 }

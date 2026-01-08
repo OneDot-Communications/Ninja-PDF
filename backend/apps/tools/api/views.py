@@ -218,9 +218,11 @@ class PDFToWordView(PDFToolAPIView):
             
             output_path = input_path.replace('.pdf', '.docx')
             
-            # Convert
+            # Convert with proper margin settings to prevent header cutoff
             cv = Converter(input_path)
-            cv.convert(output_path)
+            # Use start=0 to include content from the very top of the page
+            # and min_section_height=0 to capture all content including headers
+            cv.convert(output_path, start=0, min_section_height=0)
             cv.close()
             
             # Read output
