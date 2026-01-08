@@ -63,7 +63,7 @@ export function PdfToPowerPointTool() {
         try {
             if (uploadedFiles.length === 1) {
                 // Single file conversion
-                const result = await pdfApi.pdfToPowerpoint(uploadedFiles[0].file);
+                const result = await pdfApi.pdfToPowerpoint(uploadedFiles[0].file, { mode: conversionMode });
                 saveAs(result.blob, result.fileName || `${uploadedFiles[0].file.name.replace('.pdf', '')}.pptx`);
                 
                 toast.show({
@@ -86,7 +86,7 @@ export function PdfToPowerPointTool() {
                         position: "top-right",
                     });
                     
-                    const result = await pdfApi.pdfToPowerpoint(uploadedFile.file);
+                    const result = await pdfApi.pdfToPowerpoint(uploadedFile.file, { mode: conversionMode });
                     const fileName = result.fileName || `${uploadedFile.file.name.replace('.pdf', '')}.pptx`;
                     zip.file(fileName, result.blob);
                 }
