@@ -49,7 +49,9 @@ import {
     ChevronDown,
     RotateCw,
     Palette,
-    Trash2
+    Trash2,
+    Layout,
+    Lightbulb
 } from "lucide-react";
 import { pdfStrategyManager, getPdfJs } from "@/lib/services/pdf-service";
 import { toast } from "@/lib/hooks/use-toast";
@@ -68,11 +70,13 @@ interface RedactionElement {
     useRegex?: boolean;
     caseSensitive?: boolean;
     color?: string;
+    overlayType?: "color" | "blur"; // New property for redaction style
     pathData?: { x: number, y: number }[]; // for freehand
     shapeType?: "rectangle" | "circle" | "ellipse"; // for area
     strokeWidth?: number;
     opacity?: number;
 }
+
 
 // History state for undo/redo
 interface HistoryState {
@@ -97,6 +101,12 @@ export function RedactPdfTool() {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
 
+    // Refs for smooth drag handling (avoid re-renders during drag)
+    const dragStartRef = useRef<{ x: number, y: number } | null>(null);
+    const initialRedactionRef = useRef<Partial<RedactionElement> | null>(null);
+    const rafIdRef = useRef<number | null>(null);
+    const isDraggingRef = useRef(false);
+
     // Drawing state
     const [isDrawing, setIsDrawing] = useState(false);
     const [currentPath, setCurrentPath] = useState<{ x: number, y: number }[]>([]);
@@ -106,7 +116,11 @@ export function RedactPdfTool() {
     const [searchText, setSearchText] = useState("");
     const [caseSensitive, setCaseSensitive] = useState(true);
     const [redactionColor, setRedactionColor] = useState("#000000");
-    const [activeTool, setActiveTool] = useState<"select" | "area" | "highlight" | "text" | "freehand">("select");
+    const [activeTool, setActiveTool] = useState<"select" | "area" | "highlight" | "text" | "freehand">("area");
+    const [redactionType, setRedactionType] = useState<"color" | "blur">("color");
+    const [resizeHandle, setResizeHandle] = useState<string | null>(null);
+    const [dragStart, setDragStart] = useState<{ x: number, y: number } | null>(null);
+    const [initialRedactionState, setInitialRedactionState] = useState<Partial<RedactionElement> | null>(null);
     const [strokeWidth, setStrokeWidth] = useState(3);
     const [opacity, setOpacity] = useState(1);
 
@@ -280,23 +294,42 @@ export function RedactPdfTool() {
                 ctx.globalAlpha = red.opacity || 1;
 
                 if (red.type === 'area') {
-                    ctx.fillStyle = red.color || '#000000';
                     const x = (red.x / 100) * width;
                     const y = (red.y / 100) * height;
                     const w = ((red.width || 0) / 100) * width;
                     const h = ((red.height || 0) / 100) * height;
 
-                    if (red.shapeType === 'rectangle') {
-                        ctx.fillRect(x, y, w, h);
-                    } else if (red.shapeType === 'circle') {
-                        ctx.beginPath();
-                        const radius = Math.min(w, h) / 2;
-                        ctx.arc(x + w / 2, y + h / 2, radius, 0, 2 * Math.PI);
-                        ctx.fill();
-                    } else if (red.shapeType === 'ellipse') {
-                        ctx.beginPath();
-                        ctx.ellipse(x + w / 2, y + h / 2, w / 2, h / 2, 0, 0, 2 * Math.PI);
-                        ctx.fill();
+                    if (red.overlayType === 'blur') {
+                        const baseCanvas = canvasRefs.current[i];
+                        if (baseCanvas) {
+                            try {
+                                ctx.filter = 'blur(4px)';
+                                ctx.drawImage(baseCanvas, x, y, w, h, x, y, w, h);
+                                ctx.filter = 'none';
+                                ctx.fillStyle = 'rgba(0,0,0,0.1)';
+                                ctx.fillRect(x, y, w, h);
+                            } catch (e) {
+                                ctx.fillStyle = '#666666';
+                                ctx.fillRect(x, y, w, h);
+                            }
+                        } else {
+                            ctx.fillStyle = '#666666';
+                            ctx.fillRect(x, y, w, h);
+                        }
+                    } else {
+                        ctx.fillStyle = red.color || '#000000';
+                        if (red.shapeType === 'rectangle') {
+                            ctx.fillRect(x, y, w, h);
+                        } else if (red.shapeType === 'circle') {
+                            ctx.beginPath();
+                            const radius = Math.min(w, h) / 2;
+                            ctx.arc(x + w / 2, y + h / 2, radius, 0, 2 * Math.PI);
+                            ctx.fill();
+                        } else if (red.shapeType === 'ellipse') {
+                            ctx.beginPath();
+                            ctx.ellipse(x + w / 2, y + h / 2, w / 2, h / 2, 0, 0, 2 * Math.PI);
+                            ctx.fill();
+                        }
                     }
                 } else if (red.type === 'highlight') {
                     ctx.fillStyle = red.color || '#FFFF00';
@@ -351,29 +384,30 @@ export function RedactPdfTool() {
                 ctx.stroke();
             }
 
-            // Draw current shape being drawn
+            // Draw current shape being drawn (convert from percentage to pixels)
             if (isDrawing && currentShape) {
                 ctx.fillStyle = redactionColor;
                 ctx.globalAlpha = opacity;
 
-                const x = Math.min(currentShape.startX, currentShape.endX);
-                const y = Math.min(currentShape.startY, currentShape.endY);
-                const w = Math.abs(currentShape.endX - currentShape.startX);
-                const h = Math.abs(currentShape.endY - currentShape.startY);
+                // Convert percentage coordinates to pixel coordinates
+                const startX = (currentShape.startX / 100) * width;
+                const startY = (currentShape.startY / 100) * height;
+                const endX = (currentShape.endX / 100) * width;
+                const endY = (currentShape.endY / 100) * height;
+
+                const x = Math.min(startX, endX);
+                const y = Math.min(startY, endY);
+                const w = Math.abs(endX - startX);
+                const h = Math.abs(endY - startY);
 
                 if (activeTool === 'area') {
-                    if (shapeOptions.find(opt => opt.id === 'rectangle')?.id) {
-                        ctx.fillRect(x, y, w, h);
-                    } else if (shapeOptions.find(opt => opt.id === 'circle')?.id) {
-                        ctx.beginPath();
-                        const radius = Math.min(w, h) / 2;
-                        ctx.arc(x + w / 2, y + h / 2, radius, 0, 2 * Math.PI);
-                        ctx.fill();
-                    } else if (shapeOptions.find(opt => opt.id === 'ellipse')?.id) {
-                        ctx.beginPath();
-                        ctx.ellipse(x + w / 2, y + h / 2, w / 2, h / 2, 0, 0, 2 * Math.PI);
-                        ctx.fill();
-                    }
+                    // Draw with semi-transparent overlay for preview
+                    ctx.globalAlpha = 0.7;
+                    ctx.fillRect(x, y, w, h);
+                    // Add border for visibility
+                    ctx.strokeStyle = '#000';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(x, y, w, h);
                 } else if (activeTool === 'highlight') {
                     ctx.fillStyle = '#FFFF00';
                     ctx.globalAlpha = 0.3;
@@ -431,15 +465,32 @@ export function RedactPdfTool() {
     // Handle mouse down
     const handleMouseDown = (e: React.MouseEvent, pageIndex: number) => {
         const pageNum = pageIndex + 1;
-
-        if (activeTool === 'select') return;
-
-        const canvas = canvasRefs.current[pageIndex];
+        const canvas = overlayCanvasRefs.current[pageIndex];
         if (!canvas) return;
 
         const rect = canvas.getBoundingClientRect();
         let x = ((e.clientX - rect.left) / rect.width) * 100;
         let y = ((e.clientY - rect.top) / rect.height) * 100;
+
+        if (activeTool === 'select') {
+            // Check if hitting a redaction on this page
+            const clickedRedaction = [...redactions].reverse().find(r =>
+                r.page === pageNum &&
+                x >= r.x && x <= r.x + (r.width || 0) &&
+                y >= r.y && y <= r.y + (r.height || 0)
+            );
+
+            if (clickedRedaction) {
+                setSelectedRedactionId(clickedRedaction.id);
+                // Use refs for drag - prevents re-renders during drag
+                isDraggingRef.current = true;
+                dragStartRef.current = { x, y };
+                initialRedactionRef.current = { ...clickedRedaction };
+            } else {
+                setSelectedRedactionId(null);
+            }
+            return;
+        }
 
         // Snap to grid if enabled
         if (snapToGrid) {
@@ -456,32 +507,72 @@ export function RedactPdfTool() {
         }
     };
 
-    // Handle mouse move
+    // Handle mouse move with RAF throttling
     const handleMouseMove = (e: React.MouseEvent, pageIndex: number) => {
-        if (!isDrawing) return;
-
-        const canvas = canvasRefs.current[pageIndex];
+        const canvas = overlayCanvasRefs.current[pageIndex];
         if (!canvas) return;
 
         const rect = canvas.getBoundingClientRect();
-        let x = ((e.clientX - rect.left) / rect.width) * 100;
-        let y = ((e.clientY - rect.top) / rect.height) * 100;
+        const x = ((e.clientX - rect.left) / rect.width) * 100;
+        const y = ((e.clientY - rect.top) / rect.height) * 100;
+
+        // Select tool drag - use refs to avoid re-renders on every pixel
+        if (activeTool === 'select' && isDraggingRef.current && selectedRedactionId && dragStartRef.current && initialRedactionRef.current) {
+            // Cancel any pending RAF
+            if (rafIdRef.current) {
+                cancelAnimationFrame(rafIdRef.current);
+            }
+
+            // Schedule update on next animation frame
+            rafIdRef.current = requestAnimationFrame(() => {
+                const dx = x - dragStartRef.current!.x;
+                const dy = y - dragStartRef.current!.y;
+
+                setRedactions(prev => prev.map(r => {
+                    if (r.id === selectedRedactionId) {
+                        return {
+                            ...r,
+                            x: Math.max(0, Math.min(100 - (r.width || 0), (initialRedactionRef.current!.x || 0) + dx)),
+                            y: Math.max(0, Math.min(100 - (r.height || 0), (initialRedactionRef.current!.y || 0) + dy))
+                        };
+                    }
+                    return r;
+                }));
+            });
+            return;
+        }
+
+        if (!isDrawing) return;
 
         // Snap to grid if enabled
+        let finalX = x;
+        let finalY = y;
         if (snapToGrid) {
-            x = Math.round(x / gridSize) * gridSize;
-            y = Math.round(y / gridSize) * gridSize;
+            finalX = Math.round(x / gridSize) * gridSize;
+            finalY = Math.round(y / gridSize) * gridSize;
         }
 
         if (activeTool === 'freehand') {
-            setCurrentPath(prev => [...prev, { x, y }]);
+            setCurrentPath(prev => [...prev, { x: finalX, y: finalY }]);
         } else if (currentShape) {
-            setCurrentShape({ ...currentShape, endX: x, endY: y });
+            setCurrentShape({ ...currentShape, endX: finalX, endY: finalY });
         }
     };
 
     // Handle mouse up
     const handleMouseUp = (pageIndex: number) => {
+        // Reset drag refs first
+        if (isDraggingRef.current) {
+            isDraggingRef.current = false;
+            dragStartRef.current = null;
+            initialRedactionRef.current = null;
+            if (rafIdRef.current) {
+                cancelAnimationFrame(rafIdRef.current);
+                rafIdRef.current = null;
+            }
+            return; // Drag complete, don't create new redaction
+        }
+
         if (!isDrawing) return;
         setIsDrawing(false);
 
@@ -529,6 +620,7 @@ export function RedactPdfTool() {
                         height,
                         page: pageNum,
                         color: redactionColor,
+                        overlayType: redactionType,
                         opacity: opacity
                     }
                 ]);
@@ -673,6 +765,7 @@ export function RedactPdfTool() {
                                         height: (screenH * 1.5 / viewport.height) * 100,
                                         page: i,
                                         color: redactionColor,
+                                        overlayType: redactionType,
                                         opacity: 1
                                     });
 
@@ -724,37 +817,84 @@ export function RedactPdfTool() {
         if (selectedRedactionId === id) setSelectedRedactionId(null);
     };
 
-    // Apply redactions to PDF
+    // Apply redactions to PDF using pdf-lib
     const applyRedactions = async () => {
         if (!file) return;
+
+        if (redactions.length === 0) {
+            toast.show({
+                title: "No Redactions Found",
+                message: "Please draw at least one redaction box on the document before processing.",
+                variant: "error",
+                position: "top-right",
+            });
+            return;
+        }
+
         setIsProcessing(true);
 
         try {
-            const result = await pdfStrategyManager.execute('redact', [file], {
-                redactions
-            });
+            // Dynamic import pdf-lib
+            const { PDFDocument, rgb } = await import('pdf-lib');
 
-            saveAs(result.blob, result.fileName || `redacted-${file.name}`);
+            // Load the PDF
+            const arrayBuffer = await file.arrayBuffer();
+            const pdfDoc = await PDFDocument.load(arrayBuffer);
+            const pages = pdfDoc.getPages();
+
+            // Apply each redaction
+            for (const red of redactions) {
+                if (red.type === 'freehand') continue; // Skip freehand for now
+
+                const pageIndex = red.page - 1;
+                if (pageIndex < 0 || pageIndex >= pages.length) continue;
+
+                const page = pages[pageIndex];
+                const { width: pageWidth, height: pageHeight } = page.getSize();
+
+                // Convert percentage coordinates to PDF coordinates
+                // Note: PDF coordinate system has origin at bottom-left
+                const x = (red.x / 100) * pageWidth;
+                const y = pageHeight - ((red.y / 100) * pageHeight) - ((red.height || 0) / 100) * pageHeight;
+                const w = ((red.width || 0) / 100) * pageWidth;
+                const h = ((red.height || 0) / 100) * pageHeight;
+
+                // Parse color or default to black
+                let color = rgb(0, 0, 0);
+                if (red.color && red.color !== '#000000') {
+                    const hex = red.color.replace('#', '');
+                    const r = parseInt(hex.substring(0, 2), 16) / 255;
+                    const g = parseInt(hex.substring(2, 4), 16) / 255;
+                    const b = parseInt(hex.substring(4, 6), 16) / 255;
+                    color = rgb(r, g, b);
+                }
+
+                // Draw the redaction rectangle
+                page.drawRectangle({
+                    x,
+                    y,
+                    width: w,
+                    height: h,
+                    color,
+                });
+            }
+
+            // Save and download
+            const pdfBytes = await pdfDoc.save();
+            const blob = new Blob([pdfBytes as any], { type: 'application/pdf' });
+            saveAs(blob, `redacted-${file.name}`);
 
             toast.show({
                 title: "Success",
-                message: "PDF redacted successfully!",
+                message: `PDF redacted with ${redactions.length} redaction(s)!`,
                 variant: "success",
                 position: "top-right",
             });
         } catch (error: any) {
             console.error("Error redacting PDF:", error);
-
-            let errorMessage = "Failed to redact PDF. Please try again.";
-            if (error.message?.includes('corrupted') || error.message?.includes('Invalid PDF structure')) {
-                errorMessage = "The PDF file appears to be corrupted. Try using the Repair PDF tool first.";
-            } else if (error.message?.includes('encrypted') || error.message?.includes('password')) {
-                errorMessage = "The PDF is encrypted. Please use the Unlock PDF tool first.";
-            }
-
             toast.show({
                 title: "Operation Failed",
-                message: errorMessage,
+                message: "Failed to process PDF: " + (error.message || "Unknown error"),
                 variant: "error",
                 position: "top-right",
             });
@@ -819,6 +959,29 @@ export function RedactPdfTool() {
                                     </button>
                                 </div>
 
+                                {/* Search Bar */}
+                                <div className="flex-1 flex items-center justify-center gap-2 max-w-md mx-auto min-w-[240px]">
+                                    <div className="relative w-full">
+                                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-[#617289]" />
+                                        <input
+                                            type="text"
+                                            value={searchText}
+                                            onChange={(e) => setSearchText(e.target.value)}
+                                            placeholder="Search text to redact..."
+                                            className="w-full pl-9 pr-4 py-2 bg-[#f0f2f4] border-none rounded-lg text-sm text-[#111418] placeholder:text-[#617289] focus:outline-none focus:ring-2 focus:ring-[#4383BF]/20 transition-all font-medium"
+                                            onKeyDown={(e) => e.key === 'Enter' && searchAndRedact()}
+                                        />
+                                    </div>
+                                    <Button
+                                        onClick={searchAndRedact}
+                                        disabled={!searchText || isProcessing}
+                                        size="sm"
+                                        className="bg-[#4383BF] hover:bg-[#3A74A8] text-white font-bold px-4 h-9 rounded-lg transition-colors shadow-sm disabled:opacity-50"
+                                    >
+                                        Redact
+                                    </Button>
+                                </div>
+
                                 {/* Clear All Button */}
                                 <Button
                                     variant="ghost"
@@ -871,7 +1034,11 @@ export function RedactPdfTool() {
                                                 />
                                                 <canvas
                                                     ref={(el) => { overlayCanvasRefs.current[index] = el; }}
-                                                    className="absolute top-0 left-0 cursor-crosshair"
+                                                    className={cn(
+                                                        "absolute top-0 left-0",
+                                                        activeTool === 'select' ? 'cursor-default' : 'cursor-crosshair'
+                                                    )}
+                                                    style={{ cursor: isDraggingRef.current ? 'grabbing' : undefined }}
                                                     onMouseDown={(e) => handleMouseDown(e, index)}
                                                     onMouseMove={(e) => handleMouseMove(e, index)}
                                                     onMouseUp={() => handleMouseUp(index)}
@@ -883,7 +1050,7 @@ export function RedactPdfTool() {
                                                     <div
                                                         key={red.id}
                                                         className={cn(
-                                                            "absolute border-2 border-transparent hover:border-blue-500 cursor-pointer group/redaction transition-colors",
+                                                            "absolute border-2 border-transparent hover:border-blue-500 cursor-pointer group/redaction transition-colors pointer-events-none",
                                                             selectedRedactionId === red.id ? "border-blue-500" : ""
                                                         )}
                                                         style={{
@@ -893,13 +1060,10 @@ export function RedactPdfTool() {
                                                             height: `${red.height}%`,
                                                             display: red.type === 'freehand' ? 'none' : 'block'
                                                         }}
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            setSelectedRedactionId(red.id === selectedRedactionId ? null : red.id);
-                                                        }}
                                                     >
                                                         <button
-                                                            className="absolute -top-3 -right-3 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover/redaction:opacity-100 transition-opacity shadow-sm z-10"
+                                                            className="absolute top-0 right-0 translate-x-1/2 -translate-y-1/2 bg-red-500 hover:bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center opacity-0 group-hover/redaction:opacity-100 transition-opacity shadow-md z-20 pointer-events-auto"
+                                                            onMouseDown={(e) => e.stopPropagation()}
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 removeRedaction(red.id);
@@ -934,149 +1098,148 @@ export function RedactPdfTool() {
                     </div>
 
                     {/* Right Sidebar - Floating Card */}
-                    <div className="lg:w-[424px] lg:fixed lg:right-4 lg:top-24 max-h-[calc(100vh-120px)] overflow-y-auto z-20">
-                        <div className="bg-white rounded-3xl border border-[#e2e8f0] p-6 shadow-2xl space-y-8">
-                            {/* Header */}
-                            <div className="border-b border-[#e2e8f0] pb-4 flex items-center justify-between">
-                                <h2 className="font-bold text-lg text-[#111418]">Redact Options</h2>
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => {
-                                        setRedactions([]);
-                                        setSearchText("");
-                                    }}
-                                    className="h-8 text-[#617289]"
-                                >
-                                    <RotateCw className="h-3.5 w-3.5 mr-2" />
-                                    Reset
-                                </Button>
-                            </div>
+                    <div className="lg:w-[424px] lg:fixed lg:right-4 lg:top-24 z-20">
+                        <div className="bg-white rounded-3xl border border-[#e2e8f0] p-6 shadow-2xl h-[calc(100vh-140px)] min-h-[600px] flex flex-col justify-between">
+                            <div className="space-y-6 overflow-y-auto pr-1">
+                                {/* Header */}
+                                <div className="flex items-center gap-2 pb-2 border-b border-[#e2e8f0]">
+                                    <Layout className="h-5 w-5 text-[#111418]" />
+                                    <h2 className="font-bold text-lg text-[#111418]">Download Options</h2>
+                                </div>
 
-                            {/* 1. Search & Redact */}
-                            <div className="space-y-4">
-                                <h3 className="text-sm font-bold text-[#111418] flex items-center gap-2">
-                                    <Search className="h-4 w-4 text-[#136dec]" />
-                                    Search & Redact
-                                </h3>
+                                {/* Summary Section */}
                                 <div className="space-y-3">
+                                    <h3 className="text-[11px] font-bold text-[#889096] uppercase tracking-wider">SUMMARY</h3>
+                                    <div className="bg-[#f8f9fa] rounded-2xl p-5 space-y-3">
+                                        <div className="flex justify-between text-sm">
+                                            <span className="text-gray-600">File Name</span>
+                                            <span className="font-medium text-[#111418] truncate max-w-[200px]" title={file.name}>{file.name}</span>
+                                        </div>
+                                        <div className="flex justify-between text-sm">
+                                            <span className="text-gray-600">Total Pages</span>
+                                            <span className="font-medium text-[#111418]">{numPages}</span>
+                                        </div>
+                                        <div className="flex justify-between text-sm">
+                                            <span className="text-gray-600">Pages with Redactions</span>
+                                            <span className="font-medium text-[#111418]">{new Set(redactions.map(r => r.page)).size}</span>
+                                        </div>
+                                        <div className="flex justify-between text-sm">
+                                            <span className="text-gray-600">Redactions Count</span>
+                                            <span className="font-medium text-[#111418]">{redactions.length}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Tip Box */}
+                                <div className="bg-[#f8f9fa] rounded-2xl p-4 flex gap-3">
+                                    <div className="mt-0.5">
+                                        <div className="w-5 h-5 flex items-center justify-center">
+                                            <Lightbulb className="h-4 w-4 text-[#fbbf24] fill-current" />
+                                        </div>
+                                    </div>
                                     <div className="space-y-1">
-                                        <label className="text-xs font-medium text-[#617289]">Find Text</label>
-                                        <div className="flex gap-2">
-                                            <input
-                                                type="text"
-                                                value={searchText}
-                                                onChange={(e) => setSearchText(e.target.value)}
-                                                placeholder="Enter text to redact..."
-                                                className="flex-1 h-10 px-3 rounded-lg border border-[#e2e8f0] text-sm focus:outline-none focus:ring-2 focus:ring-[#136dec]/20 focus:border-[#136dec] transition-all"
-                                            />
-                                            <Button
-                                                onClick={searchAndRedact}
-                                                disabled={!searchText || isProcessing}
-                                                className="bg-[#136dec] hover:bg-blue-700 text-white shadow-sm"
-                                            >
-                                                Find
-                                            </Button>
-                                        </div>
+                                        <h4 className="text-[13px] font-bold text-[#4785ff] uppercase tracking-wide">TIP</h4>
+                                        <p className="text-[13px] text-[#64748b] leading-tight">
+                                            Click and drag to draw redaction boxes. Use the Select tool to move or resize them.
+                                        </p>
                                     </div>
-                                    <div className="flex flex-wrap gap-4 pt-1">
-                                        <label className="flex items-center gap-2 cursor-pointer group">
-                                            <div className="relative flex items-center">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={caseSensitive}
-                                                    onChange={(e) => setCaseSensitive(e.target.checked)}
-                                                    className="peer h-4 w-4 rounded border-gray-300 text-[#136dec] focus:ring-[#136dec]"
-                                                />
-                                            </div>
-                                            <span className="text-sm text-[#617289] group-hover:text-[#111418] transition-colors">Match Case</span>
-                                        </label>
+                                </div>
+
+                                {/* Fill Style */}
+                                <div className="space-y-3">
+                                    <h3 className="text-[11px] font-bold text-[#889096] uppercase tracking-wider">FILL STYLE</h3>
+                                    <div className="bg-[#f8f9fa] p-1.5 rounded-xl flex gap-1">
+                                        <button
+                                            onClick={() => setRedactionType('color')}
+                                            className={cn(
+                                                "flex-1 flex items-center justify-center gap-2 py-2 px-2 rounded-lg text-[11px] font-bold transition-all",
+                                                redactionType === 'color'
+                                                    ? "bg-white text-[#111418] shadow-sm ring-1 ring-black/5"
+                                                    : "text-[#617289] hover:text-[#111418] hover:bg-black/5"
+                                            )}
+                                        >
+                                            <div className="w-3 h-3 rounded-full bg-black" />
+                                            Solid Color
+                                        </button>
+                                        <button
+                                            onClick={() => setRedactionType('blur')}
+                                            className={cn(
+                                                "flex-1 flex items-center justify-center gap-2 py-2 px-2 rounded-lg text-[11px] font-bold transition-all",
+                                                redactionType === 'blur'
+                                                    ? "bg-white text-[#111418] shadow-sm ring-1 ring-black/5"
+                                                    : "text-[#617289] hover:text-[#111418] hover:bg-black/5"
+                                            )}
+                                        >
+                                            <Grid3x3 className="h-3 w-3" />
+                                            Blur / Pixelate
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Manual Tools - Simplified for Context */}
+                                <div className="space-y-3">
+                                    <h3 className="text-[11px] font-bold text-[#889096] uppercase tracking-wider">REDACTION TOOLS</h3>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <button
+                                            onClick={() => setActiveTool('select')}
+                                            className={cn(
+                                                "flex items-center justify-center gap-2 p-3 rounded-xl border transition-all",
+                                                activeTool === 'select'
+                                                    ? "bg-[#4383BF]/5 border-[#4383BF] text-[#4383BF]"
+                                                    : "border-[#e2e8f0] text-[#617289] hover:border-[#cbd5e1] hover:bg-gray-50"
+                                            )}
+                                        >
+                                            <Move className="h-4 w-4" />
+                                            <span className="text-xs font-bold">Select</span>
+                                        </button>
+                                        <button
+                                            onClick={() => setActiveTool('area')}
+                                            className={cn(
+                                                "flex items-center justify-center gap-2 p-3 rounded-xl border transition-all",
+                                                activeTool === 'area'
+                                                    ? "bg-[#4383BF]/5 border-[#4383BF] text-[#4383BF]"
+                                                    : "border-[#e2e8f0] text-[#617289] hover:border-[#cbd5e1] hover:bg-gray-50"
+                                            )}
+                                        >
+                                            <Square className="h-4 w-4" />
+                                            <span className="text-xs font-bold">Draw Box</span>
+                                        </button>
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="h-px bg-[#e2e8f0]" />
-
-                            {/* 2. Manual Tools */}
-                            <div className="space-y-4">
-                                <h3 className="text-sm font-bold text-[#111418] flex items-center gap-2">
-                                    <PenTool className="h-4 w-4 text-[#136dec]" />
-                                    Manual Tools
-                                </h3>
-                                <div className="grid grid-cols-2 gap-2">
-                                    <button
-                                        onClick={() => setActiveTool('select')}
-                                        className={cn(
-                                            "flex flex-col items-center justify-center gap-2 p-3 rounded-xl border transition-all",
-                                            activeTool === 'select'
-                                                ? "bg-[#136dec]/5 border-[#136dec] text-[#136dec]"
-                                                : "border-[#e2e8f0] text-[#617289] hover:border-[#cbd5e1] hover:bg-gray-50"
-                                        )}
-                                    >
-                                        <Move className="h-5 w-5" />
-                                        <span className="text-[10px] font-bold">Select</span>
-                                    </button>
-                                    <button
-                                        onClick={() => setActiveTool('area')}
-                                        className={cn(
-                                            "flex flex-col items-center justify-center gap-2 p-3 rounded-xl border transition-all",
-                                            activeTool === 'area'
-                                                ? "bg-[#136dec]/5 border-[#136dec] text-[#136dec]"
-                                                : "border-[#e2e8f0] text-[#617289] hover:border-[#cbd5e1] hover:bg-gray-50"
-                                        )}
-                                    >
-                                        <Square className="h-5 w-5" />
-                                        <span className="text-[10px] font-bold">Area</span>
-                                    </button>
-                                </div>
-
-                                {/* Tool Properties */}
-                                <div className="bg-[#f8fafc] rounded-xl p-4 space-y-4 border border-[#e2e8f0]">
-                                    <div className="space-y-2">
-                                        <label className="text-xs font-medium text-[#617289]">Redaction Color</label>
-                                        <div className="flex flex-wrap gap-2">
-                                            {colorPresets.map(color => (
-                                                <button
-                                                    key={color}
-                                                    onClick={() => setRedactionColor(color)}
-                                                    className={cn(
-                                                        "w-6 h-6 rounded-full border border-gray-200 transition-transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#136dec]",
-                                                        redactionColor === color ? "ring-2 ring-offset-2 ring-[#136dec] scale-110" : ""
-                                                    )}
-                                                    style={{ backgroundColor: color }}
-                                                    title={color}
-                                                />
-                                            ))}
-                                            <input
-                                                type="color"
-                                                value={redactionColor}
-                                                onChange={(e) => setRedactionColor(e.target.value)}
-                                                className="w-6 h-6 rounded-full overflow-hidden cursor-pointer border-0 p-0"
-                                                title="Custom Color"
-                                            />
-                                        </div>
-                                    </div>
-
-
-                                </div>
-                            </div>
-
-                            <div className="pt-4">
+                            <div className="space-y-3 pt-6 mt-auto">
                                 <Button
                                     onClick={applyRedactions}
                                     disabled={isProcessing}
-                                    className="w-full h-12 text-base font-bold bg-[#136dec] hover:bg-blue-700 text-white shadow-lg shadow-blue-500/20 rounded-xl"
+                                    className="w-full h-[52px] text-[15px] font-bold bg-[#4383BF] hover:bg-[#3A74A8] text-white shadow-lg shadow-blue-500/10 rounded-xl disabled:opacity-70 transition-all border-none"
                                 >
-                                    {isProcessing ? "Processing..." : "Apply Redactions"}
+                                    {isProcessing ? (
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                            <span>Processing...</span>
+                                        </div>
+                                    ) : (
+                                        <div className="flex items-center gap-2">
+                                            <Shield className="h-5 w-5" />
+                                            <span>Redact & Download ({redactions.length})</span>
+                                        </div>
+                                    )}
                                 </Button>
-                                <p className="text-xs text-center text-[#617289] mt-3">
-                                    Redactions are permanent once applied.
-                                </p>
+
+                                <Button
+                                    variant="ghost"
+                                    onClick={() => saveAs(file, file.name)}
+                                    className="w-full h-[52px] text-[15px] font-bold text-[#4b5563] bg-[#f3f5f9] hover:bg-[#e5e7eb] hover:text-[#111418] rounded-xl border-none"
+                                >
+                                    <Download className="h-4 w-4 mr-2" />
+                                    Download Original
+                                </Button>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </div >
     );
 }
