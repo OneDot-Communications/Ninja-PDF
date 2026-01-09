@@ -7,7 +7,9 @@ import FileUploadHero from "../ui/file-upload-hero";
 import { FileText, Archive, X, Plus, Check } from "lucide-react";
 import { pdfApi } from "@/lib/services/pdf-api";
 import { toast } from "@/lib/hooks/use-toast";
+import { isPasswordError } from "@/lib/utils";
 import * as pdfjsLib from "pdfjs-dist";
+import { PasswordProtectedModal } from "../ui/password-protected-modal";
 
 interface PagePreview {
     pageNumber: number;
@@ -23,12 +25,13 @@ export function CompressPdfTool() {
     const [targetSize, setTargetSize] = useState<number>(60); // 0-100 slider value
     const [viewMode, setViewMode] = useState<"file" | "page">("file");
     const [previews, setPreviews] = useState<{ [key: string]: string }>({});
+    const [showPasswordModal, setShowPasswordModal] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const handleFileSelected = async (newFiles: File[]) => {
         const pdfFiles = newFiles.filter(f => f.type === "application/pdf");
         setFiles(prev => [...prev, ...pdfFiles]);
-        
+
         // Generate previews for new files
         for (const file of pdfFiles) {
             await generatePreview(file);
@@ -44,8 +47,11 @@ export function CompressPdfTool() {
                     [file.name]: result.previews[0].image
                 }));
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error("Failed to generate preview:", error);
+            if (isPasswordError(error)) {
+                setShowPasswordModal(true);
+            }
         }
     };
 
@@ -84,7 +90,7 @@ export function CompressPdfTool() {
                 saveAs(result.blob, result.fileName || `compressed-${files[0].name}`);
             } else {
                 const zip = new JSZip();
-                
+
                 for (let i = 0; i < files.length; i++) {
                     const file = files[i];
                     toast.show({
@@ -93,7 +99,7 @@ export function CompressPdfTool() {
                         variant: "default",
                         position: "top-right",
                     });
-                    
+
                     const result = await pdfApi.compress(file, backendLevel);
                     const fileName = result.fileName || `compressed-${file.name}`;
                     zip.file(fileName, result.blob);
@@ -105,15 +111,15 @@ export function CompressPdfTool() {
                     variant: "default",
                     position: "top-right",
                 });
-                
+
                 const zipBlob = await zip.generateAsync({ type: "blob" });
                 saveAs(zipBlob, `compressed-pdfs-${Date.now()}.zip`);
             }
 
             toast.show({
                 title: "Success",
-                message: files.length === 1 
-                    ? "PDF compressed successfully!" 
+                message: files.length === 1
+                    ? "PDF compressed successfully!"
                     : `${files.length} PDFs compressed and saved as ZIP!`,
                 variant: "success",
                 position: "top-right",
@@ -147,26 +153,33 @@ export function CompressPdfTool() {
 
     if (files.length === 0) {
         return (
-            <div className="min-h-[calc(100vh-120px)] flex items-center justify-center">
-                <FileUploadHero
-                    title="Compress PDF"
-                    onFilesSelected={handleFileSelected}
-                    maxFiles={10}
-                    accept={{ "application/pdf": [".pdf"] }}
+            <>
+                <div className="min-h-[calc(100vh-120px)] flex items-center justify-center">
+                    <FileUploadHero
+                        title="Compress PDF"
+                        onFilesSelected={handleFileSelected}
+                        maxFiles={10}
+                        accept={{ "application/pdf": [".pdf"] }}
+                    />
+                    <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept=".pdf"
+                        multiple
+                        className="hidden"
+                        onChange={(e) => {
+                            if (e.target.files) {
+                                handleFileSelected(Array.from(e.target.files));
+                            }
+                        }}
+                    />
+                </div>
+                <PasswordProtectedModal
+                    isOpen={showPasswordModal}
+                    onClose={() => setShowPasswordModal(false)}
+                    toolName="compressing"
                 />
-                <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept=".pdf"
-                    multiple
-                    className="hidden"
-                    onChange={(e) => {
-                        if (e.target.files) {
-                            handleFileSelected(Array.from(e.target.files));
-                        }
-                    }}
-                />
-            </div>
+            </>
         );
     }
 
@@ -186,21 +199,19 @@ export function CompressPdfTool() {
                                 <div className="bg-[#f0f2f4] rounded-lg p-1 flex">
                                     <button
                                         onClick={() => setViewMode("file")}
-                                        className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${
-                                            viewMode === "file"
-                                                ? "bg-white text-[#4383BF] shadow"
-                                                : "text-[#617289]"
-                                        }`}
+                                        className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${viewMode === "file"
+                                            ? "bg-white text-[#4383BF] shadow"
+                                            : "text-[#617289]"
+                                            }`}
                                     >
                                         File View
                                     </button>
                                     <button
                                         onClick={() => setViewMode("page")}
-                                        className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${
-                                            viewMode === "page"
-                                                ? "bg-white text-[#4383BF] shadow"
-                                                : "text-[#617289]"
-                                        }`}
+                                        className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${viewMode === "page"
+                                            ? "bg-white text-[#4383BF] shadow"
+                                            : "text-[#617289]"
+                                            }`}
                                     >
                                         Page View
                                     </button>
@@ -212,7 +223,7 @@ export function CompressPdfTool() {
                                     className="flex items-center gap-2 text-[#617289] hover:text-red-600 transition-colors px-3 py-2 rounded-lg hover:bg-red-50"
                                 >
                                     <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                                        <path d="M15 16h4v2h-4zm0-8h7v2h-7zm0 4h6v2h-6zM3 18c0 1.1.9 2 2 2h6c1.1 0 2-.9 2-2V8H3v10zM14 5h-3l-1-1H6L5 5H2v2h12z"/>
+                                        <path d="M15 16h4v2h-4zm0-8h7v2h-7zm0 4h6v2h-6zM3 18c0 1.1.9 2 2 2h6c1.1 0 2-.9 2-2V8H3v10zM14 5h-3l-1-1H6L5 5H2v2h12z" />
                                     </svg>
                                     <span className="text-sm font-bold">Clear All</span>
                                 </button>
@@ -312,9 +323,8 @@ export function CompressPdfTool() {
                                             <button
                                                 key={item.value}
                                                 onClick={() => setCompressionLevel(item.value as any)}
-                                                className={`w-full text-left p-4 rounded-lg transition-colors ${
-                                                    isActive ? "bg-[#f1f4fb] border-2 border-[#4383BF]" : "bg-[#f6f7f8] border-2 border-transparent hover:bg-[#e2e8f0]"
-                                                }`}
+                                                className={`w-full text-left p-4 rounded-lg transition-colors ${isActive ? "bg-[#f1f4fb] border-2 border-[#4383BF]" : "bg-[#f6f7f8] border-2 border-transparent hover:bg-[#e2e8f0]"
+                                                    }`}
                                             >
                                                 <div className="flex items-center justify-between">
                                                     <div>
@@ -346,10 +356,10 @@ export function CompressPdfTool() {
                                 >
                                     <Archive className="h-5 w-5" />
                                     <span>
-                                        {isProcessing 
-                                            ? "Compressing..." 
-                                            : files.length > 1 
-                                                ? `COMPRESS & ZIP (${files.length} FILES)` 
+                                        {isProcessing
+                                            ? "Compressing..."
+                                            : files.length > 1
+                                                ? `COMPRESS & ZIP (${files.length} FILES)`
                                                 : "COMPRESS PDF"}
                                     </span>
                                 </button>
@@ -373,6 +383,11 @@ export function CompressPdfTool() {
                         handleFileSelected(Array.from(e.target.files));
                     }
                 }}
+            />
+            <PasswordProtectedModal
+                isOpen={showPasswordModal}
+                onClose={() => setShowPasswordModal(false)}
+                toolName="compressing"
             />
         </div>
     );

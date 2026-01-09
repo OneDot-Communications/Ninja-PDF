@@ -378,14 +378,10 @@ export const pdfApi = {
     },
 
     rotate: async (file: File, options: any): Promise<ProcessingResult> => {
-        return withFallback(
-            () => api.organizePdf(file, options.pages || []),
-            async () => {
-                const processor = await getClientProcessor();
-                return processor.execute("rotate", [file], options);
-            },
-            `rotate-${file.name}`
-        );
+        // Always use client-side processing for rotate to properly handle
+        // page objects with rotation angles
+        const processor = await getClientProcessor();
+        return processor.execute("rotate", [file], options);
     },
 
     watermark: async (file: File, options: any): Promise<ProcessingResult> => {
@@ -419,21 +415,10 @@ export const pdfApi = {
     },
 
     organize: async (files: File[], options: any): Promise<ProcessingResult> => {
-        // If we have multiple files, we MUST use the client-side processor because
-        // the backend API (api.organizePdf) currently only supports a single storage file reference.
-        if (files.length > 1) {
-            const processor = await getClientProcessor();
-            return processor.execute("organize", files, options);
-        }
-
-        return withFallback(
-            () => api.organizePdf(files[0], options.pages || []),
-            async () => {
-                const processor = await getClientProcessor();
-                return processor.execute("organize", files, options);
-            },
-            `organized-document.pdf`
-        );
+        // Always use client-side processing for organize to properly handle
+        // page objects with originalIndex, rotation, and blank pages
+        const processor = await getClientProcessor();
+        return processor.execute("organize", files, options);
     },
 
     addPageNumbers: async (file: File, options: any): Promise<ProcessingResult> => {

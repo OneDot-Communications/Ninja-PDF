@@ -423,6 +423,142 @@ export function ScanToPdfTool() {
                                 )}
                             </Droppable>
                         </DragDropContext>
+
+                        {/* Mobile Options Panel - Visible only on mobile */}
+                        <div className="lg:hidden bg-white rounded-xl border border-[#e2e8f0] shadow-sm p-6 space-y-6 mt-4 mb-24">
+                            {/* Header */}
+                            <div className="flex items-center gap-2 pb-4 border-b border-[#e2e8f0]">
+                                <Settings className="h-5 w-5 text-[#111418]" />
+                                <h2 className="text-[#111418] font-bold text-lg">PDF Settings</h2>
+                            </div>
+
+                            {/* Page Size */}
+                            <div>
+                                <label className="text-[#617289] font-bold text-xs uppercase tracking-wider mb-3 block">
+                                    Page Size
+                                </label>
+                                <div className="flex gap-2">
+                                    {[
+                                        { value: "a4", label: "A4" },
+                                        { value: "letter", label: "Letter" },
+                                        { value: "legal", label: "Legal" },
+                                    ].map((opt) => (
+                                        <button
+                                            key={opt.value}
+                                            onClick={() => setPageSize(opt.value as any)}
+                                            className={`flex-1 px-3 py-3 rounded-full font-bold text-sm transition-all ${pageSize === opt.value
+                                                    ? "bg-[#4383BF] text-white shadow-md"
+                                                    : "bg-[#f0f2f4] text-[#617289] hover:bg-[#e2e8f0]"
+                                                }`}
+                                        >
+                                            {opt.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Orientation */}
+                            <div>
+                                <label className="text-[#617289] font-bold text-xs uppercase tracking-wider mb-3 block">
+                                    Orientation
+                                </label>
+                                <div className="flex gap-2">
+                                    {[
+                                        { value: "portrait", label: "Portrait" },
+                                        { value: "landscape", label: "Landscape" },
+                                    ].map((opt) => (
+                                        <button
+                                            key={opt.value}
+                                            onClick={() => setOrientation(opt.value as any)}
+                                            className={`flex-1 px-4 py-3 rounded-full font-bold text-sm transition-all ${orientation === opt.value
+                                                    ? "bg-[#4383BF] text-white shadow-md"
+                                                    : "bg-[#f0f2f4] text-[#617289] hover:bg-[#e2e8f0]"
+                                                }`}
+                                        >
+                                            {opt.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Margins */}
+                            <div>
+                                <label className="text-[#617289] font-bold text-xs uppercase tracking-wider mb-3 block">
+                                    Margins
+                                </label>
+                                <div className="flex gap-2">
+                                    {[
+                                        { value: "none", label: "None" },
+                                        { value: "normal", label: "Normal" },
+                                        { value: "wide", label: "Wide" },
+                                    ].map((opt) => (
+                                        <button
+                                            key={opt.value}
+                                            onClick={() => setMargin(opt.value as any)}
+                                            className={`flex-1 px-3 py-3 rounded-full font-bold text-sm transition-all ${margin === opt.value
+                                                    ? "bg-[#4383BF] text-white shadow-md"
+                                                    : "bg-[#f0f2f4] text-[#617289] hover:bg-[#e2e8f0]"
+                                                }`}
+                                        >
+                                            {opt.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Scan Enhancements */}
+                            <div>
+                                <label className="text-[#617289] font-bold text-xs uppercase tracking-wider mb-3 block">
+                                    Scan Enhancements
+                                </label>
+                                <div className="space-y-3">
+                                    <label className="flex items-center gap-3 bg-[#f6f7f8] rounded-xl p-4 cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={autoEnhance}
+                                            onChange={(e) => setAutoEnhance(e.target.checked)}
+                                            className="w-5 h-5 rounded border-gray-300 text-[#4383BF] focus:ring-[#4383BF]"
+                                        />
+                                        <span className="text-[#111418] text-sm font-medium">Auto enhance</span>
+                                    </label>
+                                    <label className="flex items-center gap-3 bg-[#f6f7f8] rounded-xl p-4 cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={convertGrayscale}
+                                            onChange={(e) => setConvertGrayscale(e.target.checked)}
+                                            className="w-5 h-5 rounded border-gray-300 text-[#4383BF] focus:ring-[#4383BF]"
+                                        />
+                                        <span className="text-[#111418] text-sm font-medium">Convert to grayscale</span>
+                                    </label>
+                                    <label className="flex items-center gap-3 bg-[#f6f7f8] rounded-xl p-4 cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={increaseContrast}
+                                            onChange={(e) => setIncreaseContrast(e.target.checked)}
+                                            className="w-5 h-5 rounded border-gray-300 text-[#4383BF] focus:ring-[#4383BF]"
+                                        />
+                                        <span className="text-[#111418] text-sm font-medium">Increase contrast</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            {/* Summary */}
+                            <div className="bg-[#f6f7f8] rounded-xl p-4">
+                                <div className="text-[#617289] font-bold text-xs uppercase tracking-wider mb-3">
+                                    Summary
+                                </div>
+                                <div className="space-y-2">
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-[#617289] text-sm">Total Images</span>
+                                        <span className="text-[#111418] font-bold text-sm">{files.length}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-[#617289] text-sm">Selected Images</span>
+                                        <span className="text-[#111418] font-bold text-sm">{selectedFiles.length}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     {/* Right Sidebar */}

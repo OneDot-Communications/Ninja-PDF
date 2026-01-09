@@ -21,8 +21,9 @@ import {
 } from "lucide-react";
 import { pdfStrategyManager, getPdfJs } from "@/lib/services/pdf-service";
 import { toast } from "@/lib/hooks/use-toast";
-import { cn } from "@/lib/utils";
+import { cn, isPasswordError } from "@/lib/utils";
 import { computeDiff, computeGenericDiff, DiffResult } from "@/lib/diff-utils";
+import { PasswordProtectedModal } from "../ui/password-protected-modal";
 
 interface TextItem {
     str: string;
@@ -44,6 +45,7 @@ export function ComparePdfTool() {
     const [numPages, setNumPages] = useState(0);
     const [isProcessing, setIsProcessing] = useState(false);
     const [zoom, setZoom] = useState(100);
+    const [showPasswordModal, setShowPasswordModal] = useState(false);
 
     // UI state
     const [compareMode, setCompareMode] = useState<"overlay" | "text">("text");
@@ -99,8 +101,11 @@ export function ComparePdfTool() {
                     const ab = await file1.arrayBuffer();
                     const pdf = await (pdfjsLib as any).getDocument(new Uint8Array(ab)).promise;
                     maxPages = Math.max(maxPages, pdf.numPages);
-                } catch (e) {
+                } catch (e: any) {
                     console.error("Error loading file 1 metadata", e);
+                    if (isPasswordError(e)) {
+                        setShowPasswordModal(true);
+                    }
                 }
             }
             if (file2) {
@@ -108,8 +113,11 @@ export function ComparePdfTool() {
                     const ab = await file2.arrayBuffer();
                     const pdf = await (pdfjsLib as any).getDocument(new Uint8Array(ab)).promise;
                     maxPages = Math.max(maxPages, pdf.numPages);
-                } catch (e) {
+                } catch (e: any) {
                     console.error("Error loading file 2 metadata", e);
+                    if (isPasswordError(e)) {
+                        setShowPasswordModal(true);
+                    }
                 }
             }
 
@@ -338,143 +346,157 @@ export function ComparePdfTool() {
 
     if (!file1 || !file2) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-[calc(100vh-120px)]">
-                <FileUploadHero
-                    title={!file1 ? "Compare PDFs" : "Upload Second PDF"}
-                    description={!file1 ? "Upload two PDFs to compare side-by-side" : `First file selected: ${file1.name}`}
-                    onFilesSelected={handleFilesSelected}
-                    maxFiles={2}
-                    accept={{ "application/pdf": [".pdf"] }}
+            <>
+                <div className="flex flex-col items-center justify-center min-h-[calc(100vh-120px)]">
+                    <FileUploadHero
+                        title={!file1 ? "Compare PDFs" : "Upload Second PDF"}
+                        description={!file1 ? "Upload two PDFs to compare side-by-side" : `First file selected: ${file1.name}`}
+                        onFilesSelected={handleFilesSelected}
+                        maxFiles={2}
+                        accept={{ "application/pdf": [".pdf"] }}
+                    />
+                </div>
+                <PasswordProtectedModal
+                    isOpen={showPasswordModal}
+                    onClose={() => setShowPasswordModal(false)}
+                    toolName="comparing"
                 />
-            </div>
+            </>
         );
     }
 
     return (
-        <div className="flex bg-[#F3F4F6] min-h-[calc(100vh-64px)] font-sans relative">
-            <div className="flex-1 flex flex-col relative overflow-hidden">
-                <div className="absolute top-6 left-1/2 -translate-x-1/2 z-20 print:hidden hidden md:block"></div>
+        <>
+            <div className="flex bg-[#F3F4F6] min-h-[calc(100vh-64px)] font-sans relative">
+                <div className="flex-1 flex flex-col relative overflow-hidden">
+                    <div className="absolute top-6 left-1/2 -translate-x-1/2 z-20 print:hidden hidden md:block"></div>
 
-                <div className="flex-1 grid grid-cols-2 relative mt-0">
-                    {/* File A */}
-                    <div className="flex flex-col h-full border-r border-gray-200 bg-[#f8f9fa]">
-                        <div className="h-12 bg-white border-b border-gray-100 flex items-center px-6 sticky top-0 z-10">
-                            <div className="w-2 h-2 rounded-full bg-red-500 mr-2"></div>
-                            <span className="text-sm font-bold text-gray-700 truncate max-w-[200px]" title={file1.name}>File A</span>
-                        </div>
-                        <div ref={leftScrollRef} onScroll={() => handleScroll("left")} className="flex-1 overflow-y-auto overflow-x-hidden p-6 sm:p-8 lg:p-12 scroll-smooth">
-                            <div className="flex flex-col items-center gap-8 min-h-max pb-20 pt-16">
-                                {Array.from({ length: numPages }).map((_, index) => (
-                                    <div key={`file1-page-${index}`} className="flex flex-col gap-2 w-full max-w-[600px] relative">
-                                        <div className="bg-white rounded shadow-sm border border-gray-100 relative overflow-hidden transition-shadow hover:shadow-md">
-                                            <canvas ref={el => { canvas1Refs.current[index] = el; }} className="w-full h-auto block" />
-                                        </div>
-                                        <span className="text-xs text-center text-gray-400 font-medium">Page {index + 1} of {numPages}</span>
-                                    </div>
-                                ))}
+                    <div className="flex-1 grid grid-cols-2 relative mt-0">
+                        {/* File A */}
+                        <div className="flex flex-col h-full border-r border-gray-200 bg-[#f8f9fa]">
+                            <div className="h-12 bg-white border-b border-gray-100 flex items-center px-6 sticky top-0 z-10">
+                                <div className="w-2 h-2 rounded-full bg-red-500 mr-2"></div>
+                                <span className="text-sm font-bold text-gray-700 truncate max-w-[200px]" title={file1.name}>File A</span>
                             </div>
-                        </div>
-                    </div>
-
-                    {/* File B */}
-                    <div className="flex flex-col h-full bg-[#f8f9fa]">
-                        <div className="h-12 bg-white border-b border-gray-100 flex items-center px-6 sticky top-0 z-10">
-                            <div className="w-2 h-2 rounded-full bg-green-500 mr-2"></div>
-                            <span className="text-sm font-bold text-gray-700 truncate max-w-[200px]" title={file2.name}>File B</span>
-                        </div>
-                        <div ref={rightScrollRef} onScroll={() => handleScroll("right")} className="flex-1 overflow-y-auto overflow-x-hidden p-6 sm:p-8 lg:p-12 scroll-smooth">
-                            <div className="flex flex-col items-center gap-8 min-h-max pb-20 pt-16">
-                                {Array.from({ length: numPages }).map((_, index) => (
-                                    <div key={`file2-page-${index}`} className="flex flex-col gap-2 w-full max-w-[600px] relative">
-                                        <div className="bg-white rounded shadow-sm border border-gray-100 relative overflow-hidden transition-shadow hover:shadow-md">
-                                            <canvas ref={el => { canvas2Refs.current[index] = el; }} className="w-full h-auto block" />
-                                        </div>
-                                        <span className="text-xs text-center text-gray-400 font-medium">Page {index + 1} of {numPages}</span>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Sidebar */}
-            <div className="w-[340px] bg-white border-l border-gray-200 flex flex-col shadow-xl z-30 overflow-hidden">
-                <div className="p-6 border-b border-gray-100 bg-white">
-                    <h2 className="text-[#111418] font-black text-xl tracking-tight mb-6">Configuration</h2>
-                    <div className="flex p-1 bg-gray-100 rounded-lg mb-6">
-                        <button onClick={() => setCompareMode("text")} className={cn("flex-1 flex flex-col items-center justify-center py-3 rounded-md text-sm font-medium transition-all gap-1", compareMode === "text" ? "bg-white text-blue-600 shadow-sm" : "text-gray-500 hover:text-gray-900")}>
-                            <FileText className="w-5 h-5 mb-1" /> Semantic Text
-                        </button>
-                        <button onClick={() => setCompareMode("overlay")} className={cn("flex-1 flex flex-col items-center justify-center py-3 rounded-md text-sm font-medium transition-all gap-1", compareMode === "overlay" ? "bg-white text-blue-600 shadow-sm" : "text-gray-500 hover:text-gray-900")}>
-                            <Layers className="w-5 h-5 mb-1" /> Content Overlay
-                        </button>
-                    </div>
-                    {compareMode === "text" && (<div className="bg-blue-50 border border-blue-100 rounded-lg p-3 text-sm text-blue-800 mb-6">Compare text changes between two PDFs.</div>)}
-                    {compareMode === "overlay" && (<div className="bg-gray-50 border border-gray-100 rounded-lg p-3 text-sm text-gray-600 mb-6">Highlight visual pixel differences.</div>)}
-                    <div className="relative mb-6">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                        <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-9 bg-white border-gray-200 focus:border-[#4383BF] focus:ring-[#4383BF]/20 h-10 rounded-lg" placeholder="Search text" />
-                    </div>
-                </div>
-
-                <div className="flex-1 overflow-y-auto bg-gray-50/50">
-                    <div className="p-6">
-                        <div className="flex items-center justify-between mb-4">
-                            <h3 className="font-bold text-gray-900">Change report ({changesCount})</h3>
-                            <span className="text-xs text-gray-500">{numPages} Pages</span>
-                        </div>
-                        {(additionCount > 0 || deletionCount > 0) && (
-                            <div className="flex gap-2 mb-6">
-                                <div className="flex-1 bg-green-50 border border-green-100 rounded-lg p-2 text-center">
-                                    <span className="block text-xl font-bold text-green-600">+{additionCount}</span>
-                                    <span className="text-xs text-green-700 font-medium">Additions</span>
-                                </div>
-                                <div className="flex-1 bg-red-50 border border-red-100 rounded-lg p-2 text-center">
-                                    <span className="block text-xl font-bold text-red-600">-{deletionCount}</span>
-                                    <span className="text-xs text-red-700 font-medium">Deletions</span>
-                                </div>
-                            </div>
-                        )}
-                        <div className="space-y-3">
-                            {isComparing ? (
-                                <div className="text-center py-8 text-gray-500">Computing differences...</div>
-                            ) : changesCount === 0 ? (
-                                <div className="flex flex-col items-center justify-center py-8 text-gray-400">
-                                    <CheckCircle2 className="w-12 h-12 mb-2 opacity-20" />
-                                    <p className="text-sm">No text differences found</p>
-                                </div>
-                            ) : (
-                                diffResults.map((diff, i) => {
-                                    if (diff.type === 'keep') return null;
-                                    const val = diff.value.trim();
-                                    if (!val) return null;
-                                    if (searchQuery && !val.toLowerCase().includes(searchQuery.toLowerCase())) return null;
-
-                                    return (
-                                        <div key={i} className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden flex flex-col">
-                                            <div className="px-3 py-2 border-b border-gray-50 flex justify-between items-center bg-gray-50/30">
-                                                <span className={cn("text-xs font-bold uppercase", diff.type === 'add' ? "text-green-600" : "text-red-600")}>
-                                                    {diff.type === 'add' ? "Addition" : "Deletion"}
-                                                </span>
-                                                <span className={cn("text-xs font-medium px-1.5 py-0.5 rounded", diff.type === 'add' ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700")}>
-                                                    {diff.type === 'add' ? "+" : "-"}{diff.value.length}
-                                                </span>
+                            <div ref={leftScrollRef} onScroll={() => handleScroll("left")} className="flex-1 overflow-y-auto overflow-x-hidden p-6 sm:p-8 lg:p-12 scroll-smooth">
+                                <div className="flex flex-col items-center gap-8 min-h-max pb-20 pt-16">
+                                    {Array.from({ length: numPages }).map((_, index) => (
+                                        <div key={`file1-page-${index}`} className="flex flex-col gap-2 w-full max-w-[600px] relative">
+                                            <div className="bg-white rounded shadow-sm border border-gray-100 relative overflow-hidden transition-shadow hover:shadow-md">
+                                                <canvas ref={el => { canvas1Refs.current[index] = el; }} className="w-full h-auto block" />
                                             </div>
-                                            <div className="p-3 text-sm text-gray-700 break-words leading-relaxed font-mono bg-white">{diff.value}</div>
+                                            <span className="text-xs text-center text-gray-400 font-medium">Page {index + 1} of {numPages}</span>
                                         </div>
-                                    );
-                                })
-                            )}
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* File B */}
+                        <div className="flex flex-col h-full bg-[#f8f9fa]">
+                            <div className="h-12 bg-white border-b border-gray-100 flex items-center px-6 sticky top-0 z-10">
+                                <div className="w-2 h-2 rounded-full bg-green-500 mr-2"></div>
+                                <span className="text-sm font-bold text-gray-700 truncate max-w-[200px]" title={file2.name}>File B</span>
+                            </div>
+                            <div ref={rightScrollRef} onScroll={() => handleScroll("right")} className="flex-1 overflow-y-auto overflow-x-hidden p-6 sm:p-8 lg:p-12 scroll-smooth">
+                                <div className="flex flex-col items-center gap-8 min-h-max pb-20 pt-16">
+                                    {Array.from({ length: numPages }).map((_, index) => (
+                                        <div key={`file2-page-${index}`} className="flex flex-col gap-2 w-full max-w-[600px] relative">
+                                            <div className="bg-white rounded shadow-sm border border-gray-100 relative overflow-hidden transition-shadow hover:shadow-md">
+                                                <canvas ref={el => { canvas2Refs.current[index] = el; }} className="w-full h-auto block" />
+                                            </div>
+                                            <span className="text-xs text-center text-gray-400 font-medium">Page {index + 1} of {numPages}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
-                <div className="p-6 bg-white border-t border-gray-100">
-                    <button onClick={exportComparison} disabled={isProcessing} className="w-full bg-[#E11D48] hover:bg-[#be123c] text-white rounded-xl h-[56px] flex items-center justify-center gap-2 font-bold text-base shadow-lg shadow-[#E11D48]/20 disabled:opacity-50 transition-all active:scale-[0.98]">
-                        <span>Download report</span> <ArrowRightCircle className="h-5 w-5 stroke-[2.5]" />
-                    </button>
+
+                {/* Sidebar */}
+                <div className="w-[340px] bg-white border-l border-gray-200 flex flex-col shadow-xl z-30 overflow-hidden">
+                    <div className="p-6 border-b border-gray-100 bg-white">
+                        <h2 className="text-[#111418] font-black text-xl tracking-tight mb-6">Configuration</h2>
+                        <div className="flex p-1 bg-gray-100 rounded-lg mb-6">
+                            <button onClick={() => setCompareMode("text")} className={cn("flex-1 flex flex-col items-center justify-center py-3 rounded-md text-sm font-medium transition-all gap-1", compareMode === "text" ? "bg-white text-blue-600 shadow-sm" : "text-gray-500 hover:text-gray-900")}>
+                                <FileText className="w-5 h-5 mb-1" /> Semantic Text
+                            </button>
+                            <button onClick={() => setCompareMode("overlay")} className={cn("flex-1 flex flex-col items-center justify-center py-3 rounded-md text-sm font-medium transition-all gap-1", compareMode === "overlay" ? "bg-white text-blue-600 shadow-sm" : "text-gray-500 hover:text-gray-900")}>
+                                <Layers className="w-5 h-5 mb-1" /> Content Overlay
+                            </button>
+                        </div>
+                        {compareMode === "text" && (<div className="bg-blue-50 border border-blue-100 rounded-lg p-3 text-sm text-blue-800 mb-6">Compare text changes between two PDFs.</div>)}
+                        {compareMode === "overlay" && (<div className="bg-gray-50 border border-gray-100 rounded-lg p-3 text-sm text-gray-600 mb-6">Highlight visual pixel differences.</div>)}
+                        <div className="relative mb-6">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                            <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-9 bg-white border-gray-200 focus:border-[#4383BF] focus:ring-[#4383BF]/20 h-10 rounded-lg" placeholder="Search text" />
+                        </div>
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto bg-gray-50/50">
+                        <div className="p-6">
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="font-bold text-gray-900">Change report ({changesCount})</h3>
+                                <span className="text-xs text-gray-500">{numPages} Pages</span>
+                            </div>
+                            {(additionCount > 0 || deletionCount > 0) && (
+                                <div className="flex gap-2 mb-6">
+                                    <div className="flex-1 bg-green-50 border border-green-100 rounded-lg p-2 text-center">
+                                        <span className="block text-xl font-bold text-green-600">+{additionCount}</span>
+                                        <span className="text-xs text-green-700 font-medium">Additions</span>
+                                    </div>
+                                    <div className="flex-1 bg-red-50 border border-red-100 rounded-lg p-2 text-center">
+                                        <span className="block text-xl font-bold text-red-600">-{deletionCount}</span>
+                                        <span className="text-xs text-red-700 font-medium">Deletions</span>
+                                    </div>
+                                </div>
+                            )}
+                            <div className="space-y-3">
+                                {isComparing ? (
+                                    <div className="text-center py-8 text-gray-500">Computing differences...</div>
+                                ) : changesCount === 0 ? (
+                                    <div className="flex flex-col items-center justify-center py-8 text-gray-400">
+                                        <CheckCircle2 className="w-12 h-12 mb-2 opacity-20" />
+                                        <p className="text-sm">No text differences found</p>
+                                    </div>
+                                ) : (
+                                    diffResults.map((diff, i) => {
+                                        if (diff.type === 'keep') return null;
+                                        const val = diff.value.trim();
+                                        if (!val) return null;
+                                        if (searchQuery && !val.toLowerCase().includes(searchQuery.toLowerCase())) return null;
+
+                                        return (
+                                            <div key={i} className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden flex flex-col">
+                                                <div className="px-3 py-2 border-b border-gray-50 flex justify-between items-center bg-gray-50/30">
+                                                    <span className={cn("text-xs font-bold uppercase", diff.type === 'add' ? "text-green-600" : "text-red-600")}>
+                                                        {diff.type === 'add' ? "Addition" : "Deletion"}
+                                                    </span>
+                                                    <span className={cn("text-xs font-medium px-1.5 py-0.5 rounded", diff.type === 'add' ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700")}>
+                                                        {diff.type === 'add' ? "+" : "-"}{diff.value.length}
+                                                    </span>
+                                                </div>
+                                                <div className="p-3 text-sm text-gray-700 break-words leading-relaxed font-mono bg-white">{diff.value}</div>
+                                            </div>
+                                        );
+                                    })
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                    <div className="p-6 bg-white border-t border-gray-100">
+                        <button onClick={exportComparison} disabled={isProcessing} className="w-full bg-[#E11D48] hover:bg-[#be123c] text-white rounded-xl h-[56px] flex items-center justify-center gap-2 font-bold text-base shadow-lg shadow-[#E11D48]/20 disabled:opacity-50 transition-all active:scale-[0.98]">
+                            <span>Download report</span> <ArrowRightCircle className="h-5 w-5 stroke-[2.5]" />
+                        </button>
+                    </div>
                 </div>
             </div>
-        </div>
+            <PasswordProtectedModal
+                isOpen={showPasswordModal}
+                onClose={() => setShowPasswordModal(false)}
+                toolName="comparing"
+            />
+        </>
     );
 }
