@@ -50,6 +50,7 @@ export const tools = [
         href: "/merge-pdf",
         category: "Organize PDF",
         color: toolColors.pdf,
+        userCount: 875000,
     },
     {
         title: "Split PDF",
@@ -58,6 +59,7 @@ export const tools = [
         href: "/split-pdf",
         category: "Organize PDF",
         color: toolColors.pdf,
+        userCount: 542000,
     },
     {
         title: "Compress PDF",
@@ -66,6 +68,7 @@ export const tools = [
         href: "/compress-pdf",
         category: "Optimize PDF",
         color: toolColors.optimize,
+        userCount: 689000,
     },
     {
         title: "PDF to Word",
@@ -74,6 +77,7 @@ export const tools = [
         href: "/pdf-to-word",
         category: "Convert PDF",
         color: toolColors.word,
+        userCount: 1245000,
     },
     {
         title: "PDF to PowerPoint",
@@ -82,6 +86,7 @@ export const tools = [
         href: "/pdf-to-powerpoint",
         category: "Convert PDF",
         color: toolColors.powerpoint,
+        userCount: 234000,
     },
     {
         title: "PDF to Excel",
@@ -90,6 +95,7 @@ export const tools = [
         href: "/pdf-to-excel",
         category: "Convert PDF",
         color: toolColors.excel,
+        userCount: 345000,
     },
     {
         title: "Word to PDF",
@@ -98,6 +104,7 @@ export const tools = [
         href: "/word-to-pdf",
         category: "Convert to PDF",
         color: toolColors.word,
+        userCount: 987000,
     },
     {
         title: "PowerPoint to PDF",
@@ -106,6 +113,7 @@ export const tools = [
         href: "/powerpoint-to-pdf",
         category: "Convert to PDF",
         color: toolColors.powerpoint,
+        userCount: 456000,
     },
     {
         title: "Excel to PDF",
@@ -114,6 +122,7 @@ export const tools = [
         href: "/excel-to-pdf",
         category: "Convert to PDF",
         color: toolColors.excel,
+        userCount: 623000,
     },
     {
         title: "Edit PDF",
@@ -123,6 +132,7 @@ export const tools = [
         isNew: true,
         color: toolColors.edit,
         comingSoon: true,
+        userCount: 734000,
     },
 
     {
@@ -132,6 +142,7 @@ export const tools = [
         href: "/pdf-to-jpg",
         category: "Convert from PDF",
         color: toolColors.image,
+        userCount: 298000,
     },
     {
         title: "JPG to PDF",
@@ -140,6 +151,7 @@ export const tools = [
         href: "/jpg-to-pdf",
         category: "Convert to PDF",
         color: toolColors.image,
+        userCount: 412000,
     },
     {
         title: "Sign PDF",
@@ -148,6 +160,7 @@ export const tools = [
         href: "/sign-pdf",
         category: "PDF Security",
         color: toolColors.security,
+        userCount: 567000,
     },
     {
         title: "Watermark",
@@ -156,6 +169,7 @@ export const tools = [
         href: "/watermark-pdf",
         category: "Edit PDF",
         color: toolColors.edit,
+        userCount: 189000,
     },
     {
         title: "Rotate PDF",
@@ -164,6 +178,7 @@ export const tools = [
         href: "/rotate-pdf",
         category: "Edit PDF",
         color: toolColors.pdf,
+        userCount: 145000,
     },
     {
         title: "Unlock PDF",
@@ -172,6 +187,7 @@ export const tools = [
         href: "/unlock-pdf",
         category: "PDF Security",
         color: toolColors.security,
+        userCount: 234000,
     },
     {
         title: "Protect PDF",
@@ -180,6 +196,7 @@ export const tools = [
         href: "/protect-pdf",
         category: "PDF Security",
         color: toolColors.security,
+        userCount: 378000,
     },
     {
         title: "Organize PDF",
@@ -188,6 +205,7 @@ export const tools = [
         href: "/organize-pdf",
         category: "Organize PDF",
         color: toolColors.organize,
+        userCount: 445000,
     },
     {
         title: "PDF to PDF/A",
@@ -196,6 +214,7 @@ export const tools = [
         href: "/pdf-to-pdfa",
         category: "Convert PDF",
         color: toolColors.pdf,
+        userCount: 89000,
     },
     {
         title: "Page Numbers",
@@ -204,6 +223,7 @@ export const tools = [
         href: "/page-numbers",
         category: "Edit PDF",
         color: toolColors.edit,
+        userCount: 167000,
     },
     {
         title: "OCR PDF",
@@ -212,6 +232,7 @@ export const tools = [
         href: "/ocr-pdf",
         category: "Optimize PDF",
         color: toolColors.optimize,
+        userCount: 312000,
     },
     {
         title: "Compare PDF",
@@ -222,6 +243,7 @@ export const tools = [
         isNew: true,
         color: toolColors.pdf,
         comingSoon: true,
+        userCount: 123000,
     },
     {
         title: "Redact PDF",
@@ -231,6 +253,7 @@ export const tools = [
         category: "PDF Security",
         isNew: true,
         color: toolColors.security,
+        userCount: 156000,
     },
     {
         title: "Crop PDF",
@@ -240,6 +263,7 @@ export const tools = [
         category: "Edit PDF",
         isNew: true,
         color: toolColors.edit,
+        userCount: 134000,
     },
     {
         title: "HTML to PDF",
@@ -248,6 +272,7 @@ export const tools = [
         href: "/html-to-pdf",
         category: "Convert to PDF",
         color: toolColors.convert,
+        userCount: 278000,
     },
     {
         title: "Create Workflow",
@@ -257,6 +282,7 @@ export const tools = [
         category: "Workflows",
         color: toolColors.workflow,
         comingSoon: true,
+        userCount: 67000,
     },
     {
         title: "Metadata Cleaner",
@@ -266,6 +292,7 @@ export const tools = [
         category: "PDF Security",
         isNew: true,
         color: toolColors.security,
+        userCount: 98000,
     },
     {
         title: "Extract Images",
@@ -274,6 +301,7 @@ export const tools = [
         href: "/extract-images",
         category: "Convert from PDF",
         color: toolColors.image,
+        userCount: 187000,
     },
     {
         title: "Scan to PDF",
@@ -283,6 +311,7 @@ export const tools = [
         category: "Convert to PDF",
         isNew: true,
         color: toolColors.convert,
+        userCount: 223000,
     },
     {
         title: "Repair PDF",
@@ -291,5 +320,6 @@ export const tools = [
         href: "/repair-pdf",
         category: "Optimize PDF",
         color: toolColors.optimize,
+        userCount: 156000,
     },
 ];
