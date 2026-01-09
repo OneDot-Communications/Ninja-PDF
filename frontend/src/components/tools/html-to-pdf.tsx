@@ -543,7 +543,7 @@ export function HtmlToPdfTool() {
 
                     {/* Right Column - Configuration Panel */}
                     <div className="lg:w-[420px] lg:flex-shrink-0">
-                        <div className="bg-white rounded-xl border border-gray-200 shadow-sm lg:sticky lg:top-4 lg:max-h-[calc(100vh-32px)] lg:overflow-y-auto">
+                        <div className="bg-white rounded-xl border border-gray-200 shadow-sm lg:sticky lg:top-4 lg:max-h-[calc(100vh-32px)] flex flex-col relative overflow-hidden">
                             {/* Panel Header */}
                             <div className="p-5 border-b border-gray-100">
                                 <div className="flex items-center gap-2">
@@ -552,7 +552,7 @@ export function HtmlToPdfTool() {
                                 </div>
                             </div>
 
-                            <div className="p-5 pb-24 lg:pb-5 space-y-5">
+                            <div className="flex-1 overflow-y-auto p-5 pb-24 lg:pb-5 space-y-5">
                                 {/* Page Settings */}
                                 <div className="bg-white rounded-xl border border-gray-200 p-4">
                                     <h3 className="text-sm font-semibold text-gray-900 mb-3">Page Settings</h3>
@@ -728,80 +728,49 @@ export function HtmlToPdfTool() {
                                 </div>
                             </div>
 
-                            {/* Convert Button - Hidden on mobile since there's a fixed bottom bar */}
-                            <div className="hidden lg:block p-5 pt-0">
-                                <div className="pt-4 border-t border-gray-100">
-                                    {/* Progress Text */}
-                                    {conversionProgress && (
-                                        <p className="text-sm text-center text-gray-600 mb-3">{conversionProgress}</p>
-                                    )}
+                        </div> {/* End of Scrollable Content */}
 
-                                    {!generatedPdf ? (
-                                        <button
-                                            onClick={convertToPdf}
-                                            disabled={!canConvert}
-                                            className="w-full h-14 bg-[#4383BF] hover:bg-[#3A74A8] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-lg rounded-xl flex items-center justify-center gap-2 transition-colors shadow-lg shadow-[#4383BF]/20"
-                                        >
-                                            {isConverting ? (
-                                                <>
-                                                    <Loader2 className="h-5 w-5 animate-spin" />
-                                                    Converting...
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <FileText className="h-5 w-5" />
-                                                    Convert to PDF
-                                                </>
-                                            )}
-                                        </button>
-                                    ) : (
-                                        <button
-                                            onClick={downloadPdf}
-                                            className="w-full h-14 bg-green-600 hover:bg-green-700 text-white font-bold text-lg rounded-xl flex items-center justify-center gap-2 transition-colors shadow-lg"
-                                        >
-                                            <Download className="h-5 w-5" />
-                                            Download PDF
-                                        </button>
-                                    )}
-                                </div>
+                        {/* Convert Button - Fixed Sticky Footer */}
+                        <div className="p-5 border-t border-gray-100 bg-white z-20">
+                            <div className="pt-4 border-t border-gray-100">
+                                {/* Progress Text */}
+                                {conversionProgress && (
+                                    <p className="text-sm text-center text-gray-600 mb-3">{conversionProgress}</p>
+                                )}
+
+                                {!generatedPdf ? (
+                                    <button
+                                        onClick={convertToPdf}
+                                        disabled={!canConvert}
+                                        className="w-full h-16 sm:h-[72px] lg:h-[64px] flex-shrink-0 bg-[#4383BF] hover:bg-[#3A74A8] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-lg rounded-xl flex items-center justify-center gap-2 transition-colors shadow-lg shadow-[#4383BF]/20"
+                                    >
+                                        {isConverting ? (
+                                            <>
+                                                <Loader2 className="h-5 w-5 animate-spin" />
+                                                Converting...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <FileText className="h-5 w-5" />
+                                                Convert to PDF
+                                            </>
+                                        )}
+                                    </button>
+                                ) : (
+                                    <button
+                                        onClick={downloadPdf}
+                                        className="w-full h-16 sm:h-[72px] lg:h-[64px] flex-shrink-0 bg-green-600 hover:bg-green-700 text-white font-bold text-lg rounded-xl flex items-center justify-center gap-2 transition-colors shadow-lg"
+                                    >
+                                        <Download className="h-5 w-5" />
+                                        Download PDF
+                                    </button>
+                                )}
                             </div>
                         </div>
                     </div>
-
-                    {/* Mobile Bottom Bar */}
-                    <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 z-40">
-                        {conversionProgress && (
-                            <p className="text-sm text-center text-gray-600 mb-2">{conversionProgress}</p>
-                        )}
-                        {!generatedPdf ? (
-                            <button
-                                onClick={convertToPdf}
-                                disabled={!canConvert}
-                                className="w-full h-14 bg-[#4383BF] hover:bg-[#3A74A8] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-lg rounded-xl flex items-center justify-center gap-2 transition-colors"
-                            >
-                                {isConverting ? (
-                                    <>
-                                        <Loader2 className="h-5 w-5 animate-spin" />
-                                        Converting...
-                                    </>
-                                ) : (
-                                    <>
-                                        <FileText className="h-5 w-5" />
-                                        Convert to PDF
-                                    </>
-                                )}
-                            </button>
-                        ) : (
-                            <button
-                                onClick={downloadPdf}
-                                className="w-full h-14 bg-green-600 hover:bg-green-700 text-white font-bold text-lg rounded-xl flex items-center justify-center gap-2 transition-colors"
-                            >
-                                <Download className="h-5 w-5" />
-                                Download PDF
-                            </button>
-                        )}
-                    </div>
                 </div>
+
+
             </div>
         </div>
     );

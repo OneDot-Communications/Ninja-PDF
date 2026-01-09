@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { saveAs } from "file-saver";
+import { isPasswordError } from "@/lib/utils";
 import FileUploadHero from "../ui/file-upload-hero";
 import { Button } from "../ui/button";
 import {
@@ -16,12 +17,14 @@ import {
     RotateCw,
     Palette,
     Layers,
-    Move
+    Move,
+    Lock
 } from "lucide-react";
 import { getPdfJs } from "@/lib/services/pdf-service";
 import { pdfApi } from "@/lib/services/pdf-api";
 import { toast } from "@/lib/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { PasswordProtectedModal } from "../ui/password-protected-modal";
 
 // Watermark element interface
 interface WatermarkElement {
@@ -53,6 +56,8 @@ export function WatermarkPdfTool() {
     const [watermarks, setWatermarks] = useState<WatermarkElement[]>([]);
     const [numPages, setNumPages] = useState(0);
     const [isProcessing, setIsProcessing] = useState(false);
+    const [showPasswordModal, setShowPasswordModal] = useState(false);
+    const [mobileSettingsOpen, setMobileSettingsOpen] = useState(false);
 
     // Canvas refs for grid view
     const canvasRefs = useRef<(HTMLCanvasElement | null)[]>([]);
@@ -162,8 +167,16 @@ export function WatermarkPdfTool() {
 
                 // Add initial watermark
                 addInitialWatermark();
-            } catch (error) {
+            } catch (error: any) {
                 console.error("Error loading PDF", error);
+
+                // Check for password-protected PDF
+                if (isPasswordError(error)) {
+                    setFile(null);
+                    setShowPasswordModal(true);
+                    return;
+                }
+
                 toast.show({
                     title: "Error",
                     message: "Failed to load PDF file.",
@@ -421,14 +434,23 @@ export function WatermarkPdfTool() {
 
     if (!file) {
         return (
-            <div className="min-h-[calc(100vh-120px)] flex items-center justify-center">
-                <FileUploadHero
-                    title="Watermark PDF"
-                    onFilesSelected={handleFileSelected}
-                    maxFiles={1}
-                    accept={{ "application/pdf": [".pdf"] }}
+            <>
+                {/* Password Protected Modal */}
+                <PasswordProtectedModal
+                    isOpen={showPasswordModal}
+                    onClose={() => setShowPasswordModal(false)}
+                    toolName="adding watermarks"
                 />
-            </div>
+
+                <div className="min-h-[calc(100vh-120px)] flex items-center justify-center">
+                    <FileUploadHero
+                        title="Watermark PDF"
+                        onFilesSelected={handleFileSelected}
+                        maxFiles={1}
+                        accept={{ "application/pdf": [".pdf"] }}
+                    />
+                </div>
+            </>
         );
     }
 
@@ -494,347 +516,392 @@ export function WatermarkPdfTool() {
                         </div>
                     </div>
 
-                    {/* Right Sidebar - Configuration */}
-                    <div className="lg:w-[424px] lg:fixed lg:right-4 lg:top-24">
-                        <div className="bg-white rounded-3xl border border-[#e2e8f0] p-6 shadow-xl max-h-[calc(100vh-120px)] overflow-y-auto">
+                    {/* Mobile Floating Action Bar */}
+                    <div className={cn(
+                        "fixed bottom-6 left-4 right-4 z-40 flex gap-3 lg:hidden transition-all duration-300",
+                        mobileSettingsOpen ? "translate-y-[150%] opacity-0" : "translate-y-0 opacity-100"
+                    )}>
+                        <button
+                            onClick={() => setMobileSettingsOpen(true)}
+                            className="flex-1 bg-white/90 backdrop-blur-md border border-slate-200 shadow-[0_8px_20px_rgba(0,0,0,0.1)] text-slate-700 font-bold h-14 rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-all"
+                        >
+                            <Settings className="w-5 h-5" />
+                            Settings
+                        </button>
+                        <button
+                            onClick={applyWatermarks}
+                            disabled={isProcessing}
+                            className="flex-1 bg-[#4383BF] text-white shadow-[0_8px_20px_rgba(67,131,191,0.3)] font-bold h-14 rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-70 disabled:active:scale-100"
+                        >
+                            {isProcessing && <RotateCw className="w-5 h-5 animate-spin" />}
+                            Stamp PDF
+                        </button>
+                    </div>
 
-                            {/* Header */}
-                            <div className="flex items-center justify-between mb-6">
-                                <div>
-                                    <h2 className="text-[#111418] font-bold text-lg leading-7">Watermark Settings</h2>
-                                    <p className="text-[#617289] text-xs">Customize your stamp</p>
+                    {/* Right Sidebar - Configuration (Mobile Sheet / Desktop Sidebar) */}
+                    <div className={cn(
+                        "fixed bottom-0 left-0 right-0 z-50 transition-transform duration-300 transform lg:transform-none lg:transition-none lg:w-[424px] lg:fixed lg:right-4 lg:top-24 lg:left-auto lg:bottom-auto",
+                        mobileSettingsOpen ? "translate-y-0" : "translate-y-full lg:translate-y-0"
+                    )}>
+                        {/* Mobile Overlay Backdrop */}
+                        {mobileSettingsOpen && (
+                            <div
+                                className="fixed inset-0 bg-black/20 backdrop-blur-[2px] z-[-1] lg:hidden"
+                                onClick={() => setMobileSettingsOpen(false)}
+                            />
+                        )}
+
+                        <div className="bg-white rounded-t-3xl lg:rounded-3xl border border-[#e2e8f0] shadow-[0_-8px_30px_rgba(0,0,0,0.15)] lg:shadow-xl w-full h-[85vh] lg:h-auto lg:max-h-[calc(100vh-120px)] flex flex-col relative overflow-hidden">
+                            {/* Scrollable Content */}
+                            <div className="flex-1 overflow-y-auto p-6">
+                                {/* Mobile Drag Handle */}
+                                <div className="lg:hidden w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-6" />
+
+                                {/* Mobile Close Button */}
+                                <div className="lg:hidden absolute top-4 right-4">
+                                    <button
+                                        onClick={() => setMobileSettingsOpen(false)}
+                                        className="p-2 bg-slate-100 rounded-full hover:bg-slate-200 transition-colors"
+                                    >
+                                        <X className="w-5 h-5 text-slate-600" />
+                                    </button>
                                 </div>
-                                <button
-                                    onClick={resetSettings}
-                                    className="flex items-center gap-1.5 text-[#617289] text-xs font-bold hover:text-[#4383BF] transition-colors"
-                                >
-                                    <RotateCw className="w-3.5 h-3.5" />
-                                    Reset
-                                </button>
-                            </div>
 
-                            {/* Tabs */}
-                            <div className="bg-[#f0f2f5] p-1 rounded-xl flex gap-1 mb-6">
-                                <button
-                                    onClick={() => setActiveTab("text")}
-                                    className={cn(
-                                        "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold transition-all",
-                                        activeTab === "text"
-                                            ? "bg-white text-[#4383BF] shadow-sm"
-                                            : "text-[#64748b] hover:text-[#111418]"
-                                    )}
-                                >
-                                    <Type className="w-4 h-4" />
-                                    Text
-                                </button>
-                                <button
-                                    onClick={() => setActiveTab("image")}
-                                    className={cn(
-                                        "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold transition-all",
-                                        activeTab === "image"
-                                            ? "bg-white text-[#4383BF] shadow-sm"
-                                            : "text-[#64748b] hover:text-[#111418]"
-                                    )}
-                                >
-                                    <ImageIcon className="w-4 h-4" />
-                                    Image
-                                </button>
-                            </div>
-
-                            {/* Text Settings */}
-                            {activeTab === "text" && (
-                                <div className="space-y-6">
-                                    {/* Text Content */}
+                                {/* Header */}
+                                <div className="flex items-center justify-between mb-6">
                                     <div>
-                                        <div className="flex justify-between items-center mb-2">
-                                            <label className="text-xs font-bold text-[#617289] uppercase tracking-wider">Watermark Text</label>
-                                            <button className="text-[#4383BF] text-xs font-bold hover:underline">Insert Variable</button>
-                                        </div>
-                                        <input
-                                            type="text"
-                                            value={text}
-                                            onChange={(e) => setText(e.target.value)}
-                                            className="w-full h-14 rounded-xl border border-[#e2e8f0] px-4 bg-[#f8fafc] text-[#111418] font-bold text-lg focus:border-[#4383BF] focus:ring-2 focus:ring-[#4383BF]/20 transition-all outline-none"
-                                            placeholder="CONFIDENTIAL"
-                                        />
+                                        <h2 className="text-[#111418] font-bold text-lg leading-7">Watermark Settings</h2>
+                                        <p className="text-[#617289] text-xs">Customize your stamp</p>
                                     </div>
+                                    <button
+                                        onClick={resetSettings}
+                                        className="flex items-center gap-1.5 text-[#617289] text-xs font-bold hover:text-[#4383BF] transition-colors"
+                                    >
+                                        <RotateCw className="w-3.5 h-3.5" />
+                                        Reset
+                                    </button>
+                                </div>
 
-                                    {/* Font & Color */}
-                                    <div className="flex gap-3">
-                                        <div className="flex-1 relative">
-                                            <select
-                                                value={fontFamily}
-                                                onChange={(e) => setFontFamily(e.target.value)}
-                                                className="w-full h-12 appearance-none rounded-xl border border-[#e2e8f0] pl-4 pr-8 bg-white text-[#111418] text-sm font-medium focus:border-[#4383BF] outline-none"
-                                            >
-                                                {fontOptions.map(f => <option key={f} value={f}>{f}</option>)}
-                                            </select>
-                                            {/* Chevron shim */}
-                                            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[#64748b]">
-                                                <svg width="10" height="6" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                    <path d="M1 1L5 5L9 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                                                </svg>
-                                            </div>
-                                        </div>
+                                {/* Tabs */}
+                                <div className="bg-[#f0f2f5] p-1 rounded-xl flex gap-1 mb-6">
+                                    <button
+                                        onClick={() => setActiveTab("text")}
+                                        className={cn(
+                                            "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold transition-all",
+                                            activeTab === "text"
+                                                ? "bg-white text-[#4383BF] shadow-sm"
+                                                : "text-[#64748b] hover:text-[#111418]"
+                                        )}
+                                    >
+                                        <Type className="w-4 h-4" />
+                                        Text
+                                    </button>
+                                    <button
+                                        onClick={() => setActiveTab("image")}
+                                        className={cn(
+                                            "flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold transition-all",
+                                            activeTab === "image"
+                                                ? "bg-white text-[#4383BF] shadow-sm"
+                                                : "text-[#64748b] hover:text-[#111418]"
+                                        )}
+                                    >
+                                        <ImageIcon className="w-4 h-4" />
+                                        Image
+                                    </button>
+                                </div>
 
-                                        {/* Color Picker Button */}
-                                        <div className="relative group">
-                                            <div className="w-12 h-12 rounded-xl border border-[#e2e8f0] bg-white flex items-center justify-center cursor-pointer hover:border-[#4383BF] transition-colors">
-                                                <div className="w-6 h-6 rounded-full border border-black/10 shadow-sm" style={{ backgroundColor: color }} />
+                                {/* Text Settings */}
+                                {activeTab === "text" && (
+                                    <div className="space-y-6">
+                                        {/* Text Content */}
+                                        <div>
+                                            <div className="flex justify-between items-center mb-2">
+                                                <label className="text-xs font-bold text-[#617289] uppercase tracking-wider">Watermark Text</label>
+                                                <button className="text-[#4383BF] text-xs font-bold hover:underline">Insert Variable</button>
                                             </div>
                                             <input
-                                                type="color"
-                                                value={color}
-                                                onChange={(e) => setColor(e.target.value)}
+                                                type="text"
+                                                value={text}
+                                                onChange={(e) => setText(e.target.value)}
+                                                className="w-full h-14 rounded-xl border border-[#e2e8f0] px-4 bg-[#f8fafc] text-[#111418] font-bold text-lg focus:border-[#4383BF] focus:ring-2 focus:ring-[#4383BF]/20 transition-all outline-none"
+                                                placeholder="CONFIDENTIAL"
+                                            />
+                                        </div>
+
+                                        {/* Font & Color */}
+                                        <div className="flex gap-3">
+                                            <div className="flex-1 relative">
+                                                <select
+                                                    value={fontFamily}
+                                                    onChange={(e) => setFontFamily(e.target.value)}
+                                                    className="w-full h-12 appearance-none rounded-xl border border-[#e2e8f0] pl-4 pr-8 bg-white text-[#111418] text-sm font-medium focus:border-[#4383BF] outline-none"
+                                                >
+                                                    {fontOptions.map(f => <option key={f} value={f}>{f}</option>)}
+                                                </select>
+                                                {/* Chevron shim */}
+                                                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[#64748b]">
+                                                    <svg width="10" height="6" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                        <path d="M1 1L5 5L9 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                                                    </svg>
+                                                </div>
+                                            </div>
+
+                                            {/* Color Picker Button */}
+                                            <div className="relative group">
+                                                <div className="w-12 h-12 rounded-xl border border-[#e2e8f0] bg-white flex items-center justify-center cursor-pointer hover:border-[#4383BF] transition-colors">
+                                                    <div className="w-6 h-6 rounded-full border border-black/10 shadow-sm" style={{ backgroundColor: color }} />
+                                                </div>
+                                                <input
+                                                    type="color"
+                                                    value={color}
+                                                    onChange={(e) => setColor(e.target.value)}
+                                                    className="absolute inset-0 opacity-0 cursor-pointer"
+                                                />
+                                            </div>
+
+                                            {/* Size Input */}
+                                            <div className="w-20 relative">
+                                                <input
+                                                    type="number"
+                                                    value={fontSize}
+                                                    onChange={(e) => setFontSize(Number(e.target.value))}
+                                                    className="w-full h-12 rounded-xl border border-[#e2e8f0] pl-3 pr-8 bg-white text-[#111418] text-sm font-medium focus:border-[#4383BF] outline-none text-center"
+                                                />
+                                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94a3b8] text-xs font-medium pointer-events-none">px</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Image Settings */}
+                                {activeTab === "image" && (
+                                    <div className="space-y-6">
+                                        <div className="border-2 border-dashed border-[#e2e8f0] rounded-xl p-4 text-center hover:bg-[#f8fafc] transition-colors cursor-pointer relative">
+                                            <input
+                                                type="file"
+                                                ref={imageInputRef}
+                                                onChange={handleImageUpload}
+                                                accept="image/png, image/jpeg, image/jpg"
                                                 className="absolute inset-0 opacity-0 cursor-pointer"
                                             />
+
+                                            {imagePreview ? (
+                                                <div className="relative">
+                                                    <img
+                                                        src={imagePreview}
+                                                        alt="Watermark Preview"
+                                                        className="max-h-32 mx-auto rounded shadow-sm object-contain"
+                                                    />
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setImageFile(null);
+                                                            setImagePreview(null);
+                                                        }}
+                                                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 shadow-md"
+                                                    >
+                                                        <X className="w-3 h-3" />
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <div className="py-4">
+                                                    <ImageIcon className="h-8 w-8 text-[#94a3b8] mx-auto mb-2" />
+                                                    <p className="text-sm font-bold text-[#111418]">Click to upload image</p>
+                                                    <p className="text-xs text-[#64748b]">PNG, JPG (Max 5MB)</p>
+                                                </div>
+                                            )}
                                         </div>
 
-                                        {/* Size Input */}
-                                        <div className="w-20 relative">
-                                            <input
-                                                type="number"
-                                                value={fontSize}
-                                                onChange={(e) => setFontSize(Number(e.target.value))}
-                                                className="w-full h-12 rounded-xl border border-[#e2e8f0] pl-3 pr-8 bg-white text-[#111418] text-sm font-medium focus:border-[#4383BF] outline-none text-center"
-                                            />
-                                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94a3b8] text-xs font-medium pointer-events-none">px</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Image Settings */}
-                            {activeTab === "image" && (
-                                <div className="space-y-6">
-                                    <div className="border-2 border-dashed border-[#e2e8f0] rounded-xl p-4 text-center hover:bg-[#f8fafc] transition-colors cursor-pointer relative">
-                                        <input
-                                            type="file"
-                                            ref={imageInputRef}
-                                            onChange={handleImageUpload}
-                                            accept="image/png, image/jpeg, image/jpg"
-                                            className="absolute inset-0 opacity-0 cursor-pointer"
-                                        />
-
-                                        {imagePreview ? (
-                                            <div className="relative">
-                                                <img
-                                                    src={imagePreview}
-                                                    alt="Watermark Preview"
-                                                    className="max-h-32 mx-auto rounded shadow-sm object-contain"
+                                        {imagePreview && (
+                                            <div>
+                                                <div className="flex justify-between items-center mb-3">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-sm font-bold text-[#111418]">Size Scale</span>
+                                                    </div>
+                                                    <span className="bg-[#f0f2f5] text-[#111418] text-xs font-bold px-2 py-1 rounded">
+                                                        {imageScale}%
+                                                    </span>
+                                                </div>
+                                                <input
+                                                    type="range"
+                                                    min="10"
+                                                    max="100"
+                                                    value={imageScale}
+                                                    onChange={(e) => setImageScale(Number(e.target.value))}
+                                                    className="w-full h-1.5 bg-[#e2e8f0] rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#136dec]"
                                                 />
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        setImageFile(null);
-                                                        setImagePreview(null);
-                                                    }}
-                                                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 shadow-md"
-                                                >
-                                                    <X className="w-3 h-3" />
-                                                </button>
-                                            </div>
-                                        ) : (
-                                            <div className="py-4">
-                                                <ImageIcon className="h-8 w-8 text-[#94a3b8] mx-auto mb-2" />
-                                                <p className="text-sm font-bold text-[#111418]">Click to upload image</p>
-                                                <p className="text-xs text-[#64748b]">PNG, JPG (Max 5MB)</p>
                                             </div>
                                         )}
                                     </div>
+                                )}
 
-                                    {imagePreview && (
+                                {/* Placement Section */}
+                                <div className="mt-8">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <h3 className="text-[#111418] font-bold text-sm">Placement</h3>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-[#617289] text-xs font-medium">Mosaic Mode</span>
+                                            <button
+                                                onClick={() => setMosaicMode(!mosaicMode)}
+                                                className={cn(
+                                                    "w-10 h-6 rounded-full transition-colors relative",
+                                                    mosaicMode ? "bg-[#4383BF]" : "bg-[#e2e8f0]"
+                                                )}
+                                            >
+                                                <div className={cn(
+                                                    "w-4 h-4 bg-white rounded-full shadow-sm absolute top-1 transition-transform",
+                                                    mosaicMode ? "left-5" : "left-1"
+                                                )} />
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-[#f8fafc] border border-[#e2e8f0] rounded-2xl p-4">
+                                        <div className="flex gap-6">
+                                            {/* 3x3 Grid */}
+                                            <div className="grid grid-cols-3 gap-2 w-[100px] flex-shrink-0">
+                                                {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                                                    <button
+                                                        key={i}
+                                                        onClick={() => handleGridClick(i)}
+                                                        className={cn(
+                                                            "aspect-square rounded border transition-all flex items-center justify-center",
+                                                            selectedGrid === i
+                                                                ? "bg-[#4383BF] border-[#4383BF] text-white"
+                                                                : "bg-white border-[#e2e8f0] hover:border-[#94a3b8]"
+                                                        )}
+                                                    >
+                                                        {selectedGrid === i && <Layers className="w-3 h-3" />}
+                                                    </button>
+                                                ))}
+                                            </div>
+
+                                            {/* Info & Coordinates */}
+                                            <div className="flex flex-col justify-between flex-1">
+                                                <p className="text-[#64748b] text-xs leading-relaxed">
+                                                    Click a grid cell to anchor the watermark.
+                                                </p>
+                                                <div className="flex gap-2 mt-2">
+                                                    <div className="bg-white border border-[#e2e8f0] rounded-md px-2 py-1 text-[10px] font-bold text-[#111418]">
+                                                        X: {posX}%
+                                                    </div>
+                                                    <div className="bg-white border border-[#e2e8f0] rounded-md px-2 py-1 text-[10px] font-bold text-[#111418]">
+                                                        Y: {posY}%
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Appearance Section */}
+                                <div className="mt-8">
+                                    <h3 className="text-[#111418] font-bold text-sm mb-4">Appearance</h3>
+
+                                    {/* Layering Cards */}
+                                    <div className="grid grid-cols-2 gap-3 mb-6">
+                                        <button
+                                            onClick={() => setLayer("over")}
+                                            className={cn(
+                                                "h-16 rounded-xl border-2 flex flex-col items-center justify-center gap-1 transition-all",
+                                                layer === "over"
+                                                    ? "bg-[#eff6ff] border-[#4383BF] text-[#4383BF]"
+                                                    : "bg-white border-[#e2e8f0] text-[#64748b] hover:border-[#cbd5e1]"
+                                            )}
+                                        >
+                                            <Layers className="w-5 h-5" />
+                                            <span className="text-xs font-bold">Over Content</span>
+                                        </button>
+                                        <button
+                                            onClick={() => setLayer("under")}
+                                            className={cn(
+                                                "h-16 rounded-xl border-2 flex flex-col items-center justify-center gap-1 transition-all",
+                                                layer === "under"
+                                                    ? "bg-[#eff6ff] border-[#4383BF] text-[#4383BF]"
+                                                    : "bg-white border-[#e2e8f0] text-[#64748b] hover:border-[#cbd5e1]"
+                                            )}
+                                        >
+                                            <Layers className="w-5 h-5 opacity-50" />
+                                            <span className="text-xs font-bold">Behind Content</span>
+                                        </button>
+                                    </div>
+
+                                    {/* Sliders */}
+                                    <div className="space-y-6">
+                                        {/* Transparency */}
                                         <div>
                                             <div className="flex justify-between items-center mb-3">
                                                 <div className="flex items-center gap-2">
-                                                    <span className="text-sm font-bold text-[#111418]">Size Scale</span>
+                                                    <Palette className="w-4 h-4 text-[#64748b]" />
+                                                    <span className="text-sm font-bold text-[#111418]">Transparency</span>
                                                 </div>
                                                 <span className="bg-[#f0f2f5] text-[#111418] text-xs font-bold px-2 py-1 rounded">
-                                                    {imageScale}%
+                                                    {Math.round(opacity * 100)}%
                                                 </span>
                                             </div>
                                             <input
                                                 type="range"
-                                                min="10"
-                                                max="100"
-                                                value={imageScale}
-                                                onChange={(e) => setImageScale(Number(e.target.value))}
+                                                min="0"
+                                                max="1"
+                                                step="0.01"
+                                                value={opacity}
+                                                onChange={(e) => setOpacity(Number(e.target.value))}
                                                 className="w-full h-1.5 bg-[#e2e8f0] rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#136dec]"
                                             />
                                         </div>
-                                    )}
-                                </div>
-                            )}
 
-                            {/* Placement Section */}
-                            <div className="mt-8">
-                                <div className="flex items-center justify-between mb-4">
-                                    <h3 className="text-[#111418] font-bold text-sm">Placement</h3>
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-[#617289] text-xs font-medium">Mosaic Mode</span>
-                                        <button
-                                            onClick={() => setMosaicMode(!mosaicMode)}
-                                            className={cn(
-                                                "w-10 h-6 rounded-full transition-colors relative",
-                                                mosaicMode ? "bg-[#4383BF]" : "bg-[#e2e8f0]"
-                                            )}
-                                        >
-                                            <div className={cn(
-                                                "w-4 h-4 bg-white rounded-full shadow-sm absolute top-1 transition-transform",
-                                                mosaicMode ? "left-5" : "left-1"
-                                            )} />
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div className="bg-[#f8fafc] border border-[#e2e8f0] rounded-2xl p-4">
-                                    <div className="flex gap-6">
-                                        {/* 3x3 Grid */}
-                                        <div className="grid grid-cols-3 gap-2 w-[100px] flex-shrink-0">
-                                            {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-                                                <button
-                                                    key={i}
-                                                    onClick={() => handleGridClick(i)}
-                                                    className={cn(
-                                                        "aspect-square rounded border transition-all flex items-center justify-center",
-                                                        selectedGrid === i
-                                                            ? "bg-[#4383BF] border-[#4383BF] text-white"
-                                                            : "bg-white border-[#e2e8f0] hover:border-[#94a3b8]"
-                                                    )}
-                                                >
-                                                    {selectedGrid === i && <Layers className="w-3 h-3" />}
-                                                </button>
-                                            ))}
-                                        </div>
-
-                                        {/* Info & Coordinates */}
-                                        <div className="flex flex-col justify-between flex-1">
-                                            <p className="text-[#64748b] text-xs leading-relaxed">
-                                                Click a grid cell to anchor the watermark.
-                                            </p>
-                                            <div className="flex gap-2 mt-2">
-                                                <div className="bg-white border border-[#e2e8f0] rounded-md px-2 py-1 text-[10px] font-bold text-[#111418]">
-                                                    X: {posX}%
+                                        {/* Rotation */}
+                                        <div>
+                                            <div className="flex justify-between items-center mb-3">
+                                                <div className="flex items-center gap-2">
+                                                    <RotateCw className="w-4 h-4 text-[#64748b]" />
+                                                    <span className="text-sm font-bold text-[#111418]">Rotation</span>
                                                 </div>
-                                                <div className="bg-white border border-[#e2e8f0] rounded-md px-2 py-1 text-[10px] font-bold text-[#111418]">
-                                                    Y: {posY}%
-                                                </div>
+                                                <span className="bg-[#f0f2f5] text-[#111418] text-xs font-bold px-2 py-1 rounded">
+                                                    {rotation}°
+                                                </span>
+                                            </div>
+                                            <input
+                                                type="range"
+                                                min="0"
+                                                max="360"
+                                                step="1"
+                                                value={rotation}
+                                                onChange={(e) => setRotation(Number(e.target.value))}
+                                                className="w-full h-1.5 bg-[#e2e8f0] rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#136dec]"
+                                            />
+                                            <div className="flex justify-end gap-3 mt-2">
+                                                {[90, 180, 360].map(deg => (
+                                                    <button
+                                                        key={deg}
+                                                        onClick={() => setRotation(deg)}
+                                                        className="text-[10px] font-bold text-[#94a3b8] hover:text-[#4383BF]"
+                                                    >
+                                                        {deg}°
+                                                    </button>
+                                                ))}
                                             </div>
                                         </div>
                                     </div>
                                 </div>
+
+                            </div> {/* End of Scrollable Content */}
+
+                            {/* Sticky Action Button Footer */}
+                            <div className="p-6 border-t border-slate-100 bg-white z-20">
+                                <button
+                                    onClick={applyWatermarks}
+                                    disabled={isProcessing}
+                                    className="w-full bg-[#4383BF] hover:bg-[#3470A0] text-white rounded-xl h-16 sm:h-[72px] lg:h-[64px] flex-shrink-0 flex items-center justify-center gap-3 font-bold text-xl lg:text-lg shadow-lg shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all transform active:scale-[0.99]"
+                                >
+                                    <span>Stamp Document</span>
+                                    {isProcessing && <RotateCw className="w-6 h-6 animate-spin" />}
+                                </button>
+
+                                <p className="text-center text-[#94a3b8] text-[10px] mt-3">
+                                    Making it official! Only selected pages will be affected.
+                                </p>
                             </div>
-
-                            {/* Appearance Section */}
-                            <div className="mt-8">
-                                <h3 className="text-[#111418] font-bold text-sm mb-4">Appearance</h3>
-
-                                {/* Layering Cards */}
-                                <div className="grid grid-cols-2 gap-3 mb-6">
-                                    <button
-                                        onClick={() => setLayer("over")}
-                                        className={cn(
-                                            "h-16 rounded-xl border-2 flex flex-col items-center justify-center gap-1 transition-all",
-                                            layer === "over"
-                                                ? "bg-[#eff6ff] border-[#4383BF] text-[#4383BF]"
-                                                : "bg-white border-[#e2e8f0] text-[#64748b] hover:border-[#cbd5e1]"
-                                        )}
-                                    >
-                                        <Layers className="w-5 h-5" />
-                                        <span className="text-xs font-bold">Over Content</span>
-                                    </button>
-                                    <button
-                                        onClick={() => setLayer("under")}
-                                        className={cn(
-                                            "h-16 rounded-xl border-2 flex flex-col items-center justify-center gap-1 transition-all",
-                                            layer === "under"
-                                                ? "bg-[#eff6ff] border-[#4383BF] text-[#4383BF]"
-                                                : "bg-white border-[#e2e8f0] text-[#64748b] hover:border-[#cbd5e1]"
-                                        )}
-                                    >
-                                        <Layers className="w-5 h-5 opacity-50" />
-                                        <span className="text-xs font-bold">Behind Content</span>
-                                    </button>
-                                </div>
-
-                                {/* Sliders */}
-                                <div className="space-y-6">
-                                    {/* Transparency */}
-                                    <div>
-                                        <div className="flex justify-between items-center mb-3">
-                                            <div className="flex items-center gap-2">
-                                                <Palette className="w-4 h-4 text-[#64748b]" />
-                                                <span className="text-sm font-bold text-[#111418]">Transparency</span>
-                                            </div>
-                                            <span className="bg-[#f0f2f5] text-[#111418] text-xs font-bold px-2 py-1 rounded">
-                                                {Math.round(opacity * 100)}%
-                                            </span>
-                                        </div>
-                                        <input
-                                            type="range"
-                                            min="0"
-                                            max="1"
-                                            step="0.01"
-                                            value={opacity}
-                                            onChange={(e) => setOpacity(Number(e.target.value))}
-                                            className="w-full h-1.5 bg-[#e2e8f0] rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#136dec]"
-                                        />
-                                    </div>
-
-                                    {/* Rotation */}
-                                    <div>
-                                        <div className="flex justify-between items-center mb-3">
-                                            <div className="flex items-center gap-2">
-                                                <RotateCw className="w-4 h-4 text-[#64748b]" />
-                                                <span className="text-sm font-bold text-[#111418]">Rotation</span>
-                                            </div>
-                                            <span className="bg-[#f0f2f5] text-[#111418] text-xs font-bold px-2 py-1 rounded">
-                                                {rotation}°
-                                            </span>
-                                        </div>
-                                        <input
-                                            type="range"
-                                            min="0"
-                                            max="360"
-                                            step="1"
-                                            value={rotation}
-                                            onChange={(e) => setRotation(Number(e.target.value))}
-                                            className="w-full h-1.5 bg-[#e2e8f0] rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#136dec]"
-                                        />
-                                        <div className="flex justify-end gap-3 mt-2">
-                                            {[90, 180, 360].map(deg => (
-                                                <button
-                                                    key={deg}
-                                                    onClick={() => setRotation(deg)}
-                                                    className="text-[10px] font-bold text-[#94a3b8] hover:text-[#4383BF]"
-                                                >
-                                                    {deg}°
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="h-px bg-[#e2e8f0] my-8" />
-
-                            {/* Action Button */}
-                            <button
-                                onClick={applyWatermarks}
-                                disabled={isProcessing}
-                                className="w-full bg-[#4383BF] hover:bg-[#3470A0] text-white rounded-xl h-[56px] flex items-center justify-center gap-3 font-bold text-base shadow-lg shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all transform active:scale-[0.99]"
-                            >
-                                <span>Stamp Document</span>
-                                {isProcessing ? (
-                                    <RotateCw className="w-5 h-5 animate-spin" />
-                                ) : (
-                                    <div className="w-5 h-5 flex items-center justify-center">🚀</div>
-                                )}
-                            </button>
-
-                            <p className="text-center text-[#94a3b8] text-[10px] mt-3">
-                                Making it official! Only selected pages will be affected.
-                            </p>
 
                         </div>
                     </div>

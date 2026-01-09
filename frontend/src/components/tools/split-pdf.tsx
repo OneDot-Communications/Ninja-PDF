@@ -5,10 +5,12 @@ import { saveAs } from "file-saver";
 import FileUploadHero from "../ui/file-upload-hero";
 import { Button } from "../ui/button";
 import { ArrowRight, Minus, Plus, Maximize2, Layers, Scissors, X, Edit, Trash2 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, isPasswordError } from "@/lib/utils";
 import { pdfApi } from "@/lib/services/pdf-api";
 import { api } from "@/lib/services/api";
 import { toast } from "@/lib/hooks/use-toast";
+import { PasswordProtectedModal } from "../ui/password-protected-modal";
+
 
 interface PagePreview {
     pageNumber: number;
@@ -29,6 +31,7 @@ export function SplitPdfTool() {
     const [splitMode, setSplitMode] = useState<"visual" | "fixed">("visual");
     const [pageRanges, setPageRanges] = useState<string>("");
     const [explodeMode, setExplodeMode] = useState(false);
+    const [showPasswordModal, setShowPasswordModal] = useState(false);
 
     const handleFileSelected = async (files: File[]) => {
         if (files.length > 0) {
@@ -47,12 +50,19 @@ export function SplitPdfTool() {
         try {
             // Get all pages for split functionality
             const result = await pdfApi.getPagePreviews(file);
-            
+
             // Load all pages immediately
             setPagePreviews(result.previews);
             setNumPages(result.totalPages);
-        } catch (error) {
+
+        } catch (error: any) {
             console.error("Error loading PDF preview", error);
+
+            if (isPasswordError(error)) {
+                setShowPasswordModal(true);
+                return;
+            }
+
             toast.show({
                 title: "Preview Error",
                 message: "Failed to load PDF preview",
@@ -72,7 +82,7 @@ export function SplitPdfTool() {
     const handleDeletePage = async (pageNumber: number) => {
         const newDeletedPages = new Set([...deletedPages, pageNumber]);
         setDeletedPages(newDeletedPages);
-        
+
         // Check remaining pages using the new set
         const remainingPages = pagePreviews
             .filter(p => !newDeletedPages.has(p.pageNumber))
@@ -193,7 +203,7 @@ export function SplitPdfTool() {
 
         try {
             let selectedPages: number[] = [];
-            
+
             if (explodeMode) {
                 // Explode mode: split into separate files
                 selectedPages = Array.from({ length: numPages }, (_, i) => i + 1);
@@ -207,7 +217,7 @@ export function SplitPdfTool() {
                 // Visual mode: use deleted pages logic (keep remaining pages)
                 selectedPages = Array.from({ length: numPages }, (_, i) => i + 1)
                     .filter(pageNum => !deletedPages.has(pageNum));
-                
+
                 if (selectedPages.length === 0 || selectedPages.length === numPages) {
                     toast.show({
                         title: "No Split",
@@ -218,7 +228,7 @@ export function SplitPdfTool() {
                     setIsProcessing(false);
                     return;
                 }
-                
+
                 const result = await pdfApi.split(originalFile, {
                     selectedPages: selectedPages,
                     splitMode: "extract"
@@ -269,26 +279,38 @@ export function SplitPdfTool() {
 
     if (!file) {
         return (
-            <div className="min-h-[calc(100vh-120px)] flex items-center justify-center">
-                <FileUploadHero
-                    title="Split PDF"
-                    onFilesSelected={handleFileSelected}
-                    maxFiles={1}
-                    accept={{ "application/pdf": [".pdf"] }}
+            <>
+                <PasswordProtectedModal
+                    isOpen={showPasswordModal}
+                    onClose={() => setShowPasswordModal(false)}
+                    toolName="splitting"
                 />
-            </div>
+                <div className="min-h-[calc(100vh-120px)] flex items-center justify-center">
+                    <FileUploadHero
+                        title="Split PDF"
+                        onFilesSelected={handleFileSelected}
+                        maxFiles={1}
+                        accept={{ "application/pdf": [".pdf"] }}
+                    />
+                </div>
+            </>
         );
     }
 
     return (
         <div className="bg-[#f6f7f8] min-h-screen relative pb-24 lg:pb-8">
+            <PasswordProtectedModal
+                isOpen={showPasswordModal}
+                onClose={() => setShowPasswordModal(false)}
+                toolName="splitting"
+            />
             <div className="max-w-[1800px] mx-auto px-4 py-4 md:py-8">
                 <div className="flex flex-col lg:flex-row gap-4 lg:gap-8">
                     {/* Left Column - PDF Preview */}
                     <div className="flex-1 max-w-full lg:max-w-[calc(100%-448px)] lg:mr-[448px]">
                         {/* Header Section */}
                         <div className="mb-4 md:mb-6">
-                            <h1 className="text-[#111418] text-2xl md:text-3xl lg:text-[32px] font-bold leading-8 md:leading-10 mb-2" style={{letterSpacing: '-0.8px'}}>
+                            <h1 className="text-[#111418] text-2xl md:text-3xl lg:text-[32px] font-bold leading-8 md:leading-10 mb-2" style={{ letterSpacing: '-0.8px' }}>
                                 Split PDF
                             </h1>
                             <p className="text-[#617289] text-sm md:text-base leading-5 md:leading-6 font-normal">
@@ -335,7 +357,7 @@ export function SplitPdfTool() {
                                     <p className="text-[#617289] font-medium">Loading PDF pages...</p>
                                 </div>
                             ) : pagePreviews.length > 0 ? (
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" style={{transform: `scale(${zoom / 100})`, transformOrigin: 'top center', transition: 'transform 0.2s ease'}}>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" style={{ transform: `scale(${zoom / 100})`, transformOrigin: 'top center', transition: 'transform 0.2s ease' }}>
                                     {pagePreviews.map((page) => (
                                         <div
                                             key={page.pageNumber}

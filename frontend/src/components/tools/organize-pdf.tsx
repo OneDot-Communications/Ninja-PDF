@@ -6,7 +6,8 @@ import {
     DndContext,
     closestCenter,
     KeyboardSensor,
-    PointerSensor,
+    MouseSensor,
+    TouchSensor,
     useSensor,
     useSensors,
     DragEndEvent
@@ -46,7 +47,8 @@ import { Input } from "@/components/ui/input";
 import { pdfApi } from "@/lib/services/pdf-api";
 import { getPdfJs } from "@/lib/services/pdf-service";
 import { toast } from "@/lib/hooks/use-toast";
-import { cn } from "@/lib/utils";
+import { cn, isPasswordError } from "@/lib/utils";
+import { PasswordProtectedModal } from "../ui/password-protected-modal";
 
 // Page item interface
 interface PageItem {
@@ -71,6 +73,7 @@ export function OrganizePdfTool() {
     const [initialPages, setInitialPages] = useState<PageItem[]>([]);
     const [currentPage, setCurrentPage] = useState(1);
     const [isProcessing, setIsProcessing] = useState(false);
+    const [showPasswordModal, setShowPasswordModal] = useState(false);
 
     // UI state
     const [viewMode, setViewMode] = useState<"file" | "page">("page");
@@ -84,17 +87,22 @@ export function OrganizePdfTool() {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const canvasRefs = useRef<(HTMLCanvasElement | null)[]>([]);
 
-    // DnD Sensors
-    const sensors = useSensors(
-        useSensor(PointerSensor, {
-            activationConstraint: {
-                distance: 8,
-            },
-        }),
-        useSensor(KeyboardSensor, {
-            coordinateGetter: sortableKeyboardCoordinates,
-        })
-    );
+    // DnD Sensors - MouseSensor for desktop, TouchSensor for mobile
+    const mouseSensor = useSensor(MouseSensor, {
+        activationConstraint: {
+            distance: 10,
+        },
+    });
+    const touchSensor = useSensor(TouchSensor, {
+        activationConstraint: {
+            delay: 200,
+            tolerance: 5,
+        },
+    });
+    const keyboardSensor = useSensor(KeyboardSensor, {
+        coordinateGetter: sortableKeyboardCoordinates,
+    });
+    const sensors = useSensors(mouseSensor, touchSensor, keyboardSensor);
 
     const handleFileSelected = async (selectedFiles: File[]) => {
         if (selectedFiles.length > 0) {
@@ -150,6 +158,14 @@ export function OrganizePdfTool() {
 
             } catch (error: any) {
                 console.error("Error loading PDF:", error);
+
+                // Check for password-protected PDF
+                if (isPasswordError(error)) {
+                    setShowPasswordModal(true);
+                    setIsProcessing(false);
+                    return;
+                }
+
                 toast.show({
                     title: "Load Failed",
                     message: "Failed to load PDF. Please try again.",
@@ -323,7 +339,7 @@ export function OrganizePdfTool() {
     };
 
     useEffect(() => {
-        if (Object.keys(fileMap).length === 0) return;
+        if (Object.keys(fileMap).length === 0 || pages.length === 0) return;
 
         const renderThumbnails = async () => {
             const scale = 0.5;
@@ -350,7 +366,6 @@ export function OrganizePdfTool() {
                     await page.render({
                         canvasContext: context,
                         viewport: viewport,
-                        canvas: canvas,
                     }).promise;
                 } catch (e) {
                     console.error("Render error", e);
@@ -358,8 +373,16 @@ export function OrganizePdfTool() {
             }
         };
 
-        const timeout = setTimeout(renderThumbnails, 100);
-        return () => clearTimeout(timeout);
+        // Initial render with delay for DOM to be ready
+        const timeout = setTimeout(renderThumbnails, 200);
+
+        // Also render again after a longer delay to catch late-mounted canvases
+        const secondTimeout = setTimeout(renderThumbnails, 500);
+
+        return () => {
+            clearTimeout(timeout);
+            clearTimeout(secondTimeout);
+        };
     }, [pages, fileMap]);
 
 
@@ -378,255 +401,281 @@ export function OrganizePdfTool() {
 
     if (Object.keys(fileMap).length === 0) {
         return (
-            <div className="min-h-[calc(100vh-120px)] flex items-center justify-center">
-                <FileUploadHero
-                    title="Organize PDF"
-                    onFilesSelected={handleFileSelected}
-                    maxFiles={10}
-                    accept={{ "application/pdf": [".pdf"] }}
+            <>
+                <PasswordProtectedModal
+                    isOpen={showPasswordModal}
+                    onClose={() => setShowPasswordModal(false)}
+                    toolName="organizing"
                 />
-            </div>
+                <div className="min-h-[calc(100vh-120px)] flex items-center justify-center">
+                    <FileUploadHero
+                        title="Organize PDF"
+                        onFilesSelected={handleFileSelected}
+                        maxFiles={10}
+                        accept={{ "application/pdf": [".pdf"] }}
+                    />
+                </div>
+            </>
         );
     }
 
     return (
-        <div className="bg-[#f8f9fa] min-h-screen pb-8">
-            <div className="max-w-[1800px] mx-auto px-6 py-4">
-                <div className="flex flex-col lg:flex-row gap-8">
+        <>
+            <PasswordProtectedModal
+                isOpen={showPasswordModal}
+                onClose={() => setShowPasswordModal(false)}
+                toolName="organizing"
+            />
+            <div className="bg-[#f8f9fa] min-h-screen pb-24 lg:pb-8">
+                <div className="max-w-[1800px] mx-auto px-4 lg:px-6 py-4">
+                    <div className="flex flex-col lg:flex-row gap-8">
 
-                    {/* Main Content Area */}
-                    <div className="flex-1 lg:max-w-[calc(100%-460px)]">
+                        {/* Main Content Area */}
+                        <div className="flex-1 lg:max-w-[calc(100%-460px)]">
 
-                        {/* Toolbar */}
-                        <div className="bg-white rounded-2xl border border-[#e2e8f0] shadow-sm p-2 mb-8 flex items-center justify-between min-h-[72px]">
-                            <div className="flex items-center gap-4">
-                                {/* View Toggle */}
-                                <div className="bg-[#f1f5f9] p-1 rounded-xl flex items-center">
-                                    <button
-                                        onClick={() => setViewMode("file")}
-                                        className={cn(
-                                            "px-4 py-2 rounded-lg text-sm font-bold transition-all",
-                                            viewMode === "file" ? "bg-white text-[#111418] shadow-sm" : "text-[#64748b] hover:text-[#111418]"
-                                        )}
-                                    >
-                                        File View
-                                    </button>
-                                    <button
-                                        onClick={() => setViewMode("page")}
-                                        className={cn(
-                                            "px-4 py-2 rounded-lg text-sm font-bold transition-all",
-                                            viewMode === "page" ? "bg-white text-[#111418] shadow-sm" : "text-[#64748b] hover:text-[#111418]"
-                                        )}
-                                    >
-                                        Page View
-                                    </button>
-                                </div>
-
-                                <div className="w-px h-10 bg-gray-200 mx-1" />
-
-                                {/* Actions Group */}
-                                <div className="flex items-center gap-1">
-                                    <ToolbarButton
-                                        onClick={addBlankPage}
-                                        icon={<FilePlus2 className="w-5 h-5" />}
-                                        label="BLANK"
-                                    />
-                                    <ToolbarButton
-                                        onClick={cloneSelected}
-                                        icon={<Copy className="w-5 h-5" />}
-                                        label={`CLONE ${selectedPages.size > 0 ? `(${selectedPages.size})` : ''}`}
-                                        active={selectedPages.size > 0}
-                                    />
-                                    <ToolbarButton
-                                        onClick={deleteSelected}
-                                        icon={<Trash2 className="w-5 h-5" />}
-                                        label="DELETE"
-                                        disabled={selectedPages.size === 0}
-                                    />
-                                </div>
-
-                                <div className="w-px h-10 bg-gray-200 mx-1" />
-
-                                {/* Rotation Group */}
-                                <div className="flex items-center gap-1">
-                                    <ToolbarButton
-                                        onClick={() => rotateSelected(-90)}
-                                        icon={<RotateCcw className="w-5 h-5" />}
-                                        label="LEFT"
-                                        disabled={selectedPages.size === 0}
-                                    />
-                                    <ToolbarButton
-                                        onClick={() => rotateSelected(90)}
-                                        icon={<RotateCw className="w-5 h-5" />}
-                                        label="RIGHT"
-                                        disabled={selectedPages.size === 0}
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Right Side Tools */}
-                            <div className="flex items-center gap-4">
-                                <div className="flex items-center bg-[#f1f5f9] rounded-xl p-1 gap-1">
-                                    <button onClick={() => sortPages('asc')} className="p-2 hover:bg-white rounded-lg transition-all text-[#64748b] hover:text-[#111418]" title="Sort A-Z">
-                                        <ArrowDownAZ className="h-5 w-5" />
-                                    </button>
-                                    <button onClick={() => sortPages('desc')} className="p-2 hover:bg-white rounded-lg transition-all text-[#64748b] hover:text-[#111418]" title="Sort Z-A">
-                                        <ArrowUpAZ className="h-5 w-5" />
-                                    </button>
-                                </div>
-
-                                <div className="w-px h-10 bg-gray-200 mx-1" />
-
-                                <button
-                                    onClick={clearAll}
-                                    className="flex items-center gap-2 px-3 py-2 text-[#64748b] hover:text-red-500 transition-colors rounded-lg font-bold text-sm"
-                                >
-                                    <ListRestart className="w-5 h-5" />
-                                    Clear All
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* Content Grid */}
-                        {viewMode === "file" ? (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                                {uniqueFiles.map((file, index) => (
-                                    <div key={file.id} className="relative group">
-                                        <div className="absolute -top-3 -left-3 z-10 w-8 h-8 bg-[#4b5563] text-white rounded-full flex items-center justify-center text-xs font-bold shadow-md border-2 border-white">
-                                            {index + 1}
-                                        </div>
-
-                                        <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden hover:shadow-lg transition-all cursor-pointer h-full">
-                                            <div className="aspect-[4/5] bg-gray-50 flex items-center justify-center relative p-4 border-b border-gray-100">
-                                                <div className="relative w-full h-full shadow-md bg-white rounded-lg overflow-hidden">
-                                                    <div className="w-full h-full flex items-center justify-center bg-gray-100">
-                                                        <FileText className="w-16 h-16 text-gray-300" />
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="p-4">
-                                                <h3 className="font-bold text-[#111418] text-sm truncate mb-1" title={file.name}>{file.name}</h3>
-                                                <p className="text-[#64748b] text-xs font-medium">
-                                                    {file.pageCount} Pages • {formatFileSize(file.size)}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
-
-                                <button
-                                    onClick={() => fileInputRef.current?.click()}
-                                    className="bg-[#eef6ff] border-2 border-dashed border-[#136dec] rounded-2xl aspect-[4/5] flex flex-col items-center justify-center gap-4 hover:bg-[#e0f0ff] transition-all group"
-                                >
-                                    <div className="bg-[#136dec] rounded-full w-12 h-12 flex items-center justify-center shadow-lg shadow-blue-500/30 group-hover:scale-110 transition-transform">
-                                        <Plus className="h-6 w-6 text-white stroke-[3]" />
-                                    </div>
-                                    <div className="text-center px-4">
-                                        <div className="text-[#136dec] text-sm font-bold mb-1">Add more files</div>
-                                        <div className="text-[#136dec]/60 text-xs">or drag & drop here</div>
-                                    </div>
-                                </button>
-                            </div>
-                        ) : (
-                            /* Page View with dnd-kit (Grid Support) */
-                            <DndContext
-                                sensors={sensors}
-                                collisionDetection={closestCenter}
-                                onDragEnd={handleDragEnd}
-                            >
-                                <SortableContext
-                                    items={pages.map(p => p.id)}
-                                    strategy={rectSortingStrategy}
-                                >
-                                    <div className="flex flex-wrap gap-6">
-                                        {pages.map((page, index) => (
-                                            <SortablePageCard
-                                                key={page.id}
-                                                page={page}
-                                                index={index}
-                                                isSelected={selectedPages.has(page.id)}
-                                                toggleSelection={toggleSelection}
-                                                setCanvasRef={(el) => { canvasRefs.current[index] = el; }}
-                                            />
-                                        ))}
-
-                                        {/* Add Pages Button as last item (not sortable, but visually in grid) */}
+                            {/* Toolbar */}
+                            <div className="bg-white rounded-2xl border border-[#e2e8f0] shadow-sm p-2 mb-6 lg:mb-8 overflow-x-auto">
+                                <div className="flex items-center gap-2 lg:gap-4 min-w-max lg:min-w-0 lg:justify-between">
+                                    {/* View Toggle */}
+                                    <div className="bg-[#f1f5f9] p-1 rounded-xl flex items-center flex-shrink-0">
                                         <button
-                                            onClick={() => fileInputRef.current?.click()}
-className="bg-[#f8fbff] border-2 border-dashed border-[#4383BF] rounded-2xl flex flex-col items-center justify-center gap-3 hover:bg-[#f0f7ff] transition-all min-h-[300px] w-full sm:w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)] xl:w-[calc(25%-18px)]"
-                                            >
-                                            <div className="bg-[#4383BF]/10 p-3 rounded-full">
-                                                <Plus className="h-6 w-6 text-[#4383BF]" />
-                                            </div>
-                                            <span className="text-[#4383BF] text-sm font-bold">Add Pages</span>
+                                            onClick={() => setViewMode("file")}
+                                            className={cn(
+                                                "px-3 lg:px-4 py-2 rounded-lg text-xs lg:text-sm font-bold transition-all",
+                                                viewMode === "file" ? "bg-white text-[#111418] shadow-sm" : "text-[#64748b] hover:text-[#111418]"
+                                            )}
+                                        >
+                                            File View
+                                        </button>
+                                        <button
+                                            onClick={() => setViewMode("page")}
+                                            className={cn(
+                                                "px-3 lg:px-4 py-2 rounded-lg text-xs lg:text-sm font-bold transition-all",
+                                                viewMode === "page" ? "bg-white text-[#111418] shadow-sm" : "text-[#64748b] hover:text-[#111418]"
+                                            )}
+                                        >
+                                            Page View
                                         </button>
                                     </div>
-                                </SortableContext>
-                            </DndContext>
-                        )}
-                    </div>
 
-                    {/* Right Sidebar - Sticky */}
-                    <div className="lg:w-[420px] lg:fixed lg:right-6 lg:top-24">
-                        <div className="bg-white rounded-[32px] border border-[#e2e8f0] p-8 shadow-xl flex flex-col h-[calc(100vh-140px)]">
-                            <div className="flex items-center justify-between mb-8">
-                                <h2 className="text-[#111418] font-black text-xl tracking-tight">Organize Settings</h2>
-                                <button
-                                    onClick={resetChanges}
-                                    className="flex items-center gap-2 text-[#64748b] hover:text-[#4383BF] text-sm font-bold transition-colors"
-                                >
-                                    <RefreshCcw className="w-4 h-4" />
-                                    Reset
-                                </button>
+                                    <div className="hidden lg:block w-px h-10 bg-gray-200 mx-1" />
+
+                                    {/* Actions Group */}
+                                    <div className="flex items-center gap-1 flex-shrink-0">
+                                        <ToolbarButton
+                                            onClick={addBlankPage}
+                                            icon={<FilePlus2 className="w-5 h-5" />}
+                                            label="BLANK"
+                                        />
+                                        <ToolbarButton
+                                            onClick={cloneSelected}
+                                            icon={<Copy className="w-5 h-5" />}
+                                            label={`CLONE ${selectedPages.size > 0 ? `(${selectedPages.size})` : ''}`}
+                                            active={selectedPages.size > 0}
+                                        />
+                                        <ToolbarButton
+                                            onClick={deleteSelected}
+                                            icon={<Trash2 className="w-5 h-5" />}
+                                            label="DELETE"
+                                            disabled={selectedPages.size === 0}
+                                        />
+                                    </div>
+
+                                    <div className="hidden lg:block w-px h-10 bg-gray-200 mx-1" />
+
+                                    {/* Rotation Group */}
+                                    <div className="flex items-center gap-1 flex-shrink-0">
+                                        <ToolbarButton
+                                            onClick={() => rotateSelected(-90)}
+                                            icon={<RotateCcw className="w-5 h-5" />}
+                                            label="LEFT"
+                                            disabled={selectedPages.size === 0}
+                                        />
+                                        <ToolbarButton
+                                            onClick={() => rotateSelected(90)}
+                                            icon={<RotateCw className="w-5 h-5" />}
+                                            label="RIGHT"
+                                            disabled={selectedPages.size === 0}
+                                        />
+                                    </div>
+
+                                    {/* Right Side Tools */}
+                                    <div className="flex items-center gap-2 lg:gap-4 flex-shrink-0 ml-auto">
+                                        <div className="flex items-center bg-[#f1f5f9] rounded-xl p-1 gap-1">
+                                            <button onClick={() => sortPages('asc')} className="p-2 hover:bg-white rounded-lg transition-all text-[#64748b] hover:text-[#111418]" title="Sort A-Z">
+                                                <ArrowDownAZ className="h-5 w-5" />
+                                            </button>
+                                            <button onClick={() => sortPages('desc')} className="p-2 hover:bg-white rounded-lg transition-all text-[#64748b] hover:text-[#111418]" title="Sort Z-A">
+                                                <ArrowUpAZ className="h-5 w-5" />
+                                            </button>
+                                        </div>
+
+                                        <div className="hidden lg:block w-px h-10 bg-gray-200 mx-1" />
+
+                                        <button
+                                            onClick={clearAll}
+                                            className="hidden lg:flex items-center gap-2 px-3 py-2 text-[#64748b] hover:text-red-500 transition-colors rounded-lg font-bold text-sm"
+                                        >
+                                            <ListRestart className="w-5 h-5" />
+                                            Clear All
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
 
-                            <div className="flex-1">
-                                {selectedPages.size > 0 ? (
-                                    <div className="p-6 bg-blue-50 rounded-2xl border border-blue-100">
-                                        <h3 className="text-[#4383BF] font-bold mb-2">{selectedPages.size} Page{selectedPages.size > 1 ? 's' : ''} Selected</h3>
-                                        <p className="text-sm text-blue-700/80 mb-4">
-                                            You can rotate, delete, or clone these pages using the toolbar above.
-                                        </p>
-                                    </div>
-                                ) : (
-                                    <div className="text-center text-gray-400 mt-20">
-                                        <p className="text-sm">Select pages to see options</p>
-                                    </div>
-                                )}
-                            </div>
+                            {/* Content Grid */}
+                            {viewMode === "file" ? (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                                    {uniqueFiles.map((file, index) => (
+                                        <div key={file.id} className="relative group">
+                                            <div className="absolute -top-3 -left-3 z-10 w-8 h-8 bg-[#4b5563] text-white rounded-full flex items-center justify-center text-xs font-bold shadow-md border-2 border-white">
+                                                {index + 1}
+                                            </div>
 
-                            <div className="mt-8 space-y-4">
-                                <button
-                                    onClick={savePdf}
-                                    disabled={isProcessing || pages.length === 0}
-                                    className="w-full bg-[#4383BF] hover:bg-[#3470A0] text-white rounded-2xl h-[64px] flex items-center justify-center gap-3 font-bold text-lg shadow-xl shadow-[#4383BF]/20 disabled:opacity-50 transition-all active:scale-[0.98]"
+                                            <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden hover:shadow-lg transition-all cursor-pointer h-full">
+                                                <div className="aspect-[4/5] bg-gray-50 flex items-center justify-center relative p-4 border-b border-gray-100">
+                                                    <div className="relative w-full h-full shadow-md bg-white rounded-lg overflow-hidden">
+                                                        <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                                                            <FileText className="w-16 h-16 text-gray-300" />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="p-4">
+                                                    <h3 className="font-bold text-[#111418] text-sm truncate mb-1" title={file.name}>{file.name}</h3>
+                                                    <p className="text-[#64748b] text-xs font-medium">
+                                                        {file.pageCount} Pages • {formatFileSize(file.size)}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+
+                                    <button
+                                        onClick={() => fileInputRef.current?.click()}
+                                        className="bg-[#eef6ff] border-2 border-dashed border-[#136dec] rounded-2xl aspect-[4/5] flex flex-col items-center justify-center gap-4 hover:bg-[#e0f0ff] transition-all group"
+                                    >
+                                        <div className="bg-[#136dec] rounded-full w-12 h-12 flex items-center justify-center shadow-lg shadow-blue-500/30 group-hover:scale-110 transition-transform">
+                                            <Plus className="h-6 w-6 text-white stroke-[3]" />
+                                        </div>
+                                        <div className="text-center px-4">
+                                            <div className="text-[#136dec] text-sm font-bold mb-1">Add more files</div>
+                                            <div className="text-[#136dec]/60 text-xs">or drag & drop here</div>
+                                        </div>
+                                    </button>
+                                </div>
+                            ) : (
+                                /* Page View with dnd-kit (Grid Support) */
+                                <DndContext
+                                    sensors={sensors}
+                                    collisionDetection={closestCenter}
+                                    onDragEnd={handleDragEnd}
                                 >
-                                    <span>Download Document</span>
-                                    <Download className="h-5 w-5 stroke-[3]" />
-                                </button>
+                                    <SortableContext
+                                        items={pages.map(p => p.id)}
+                                        strategy={rectSortingStrategy}
+                                    >
+                                        <div className="flex flex-wrap gap-6">
+                                            {pages.map((page, index) => (
+                                                <SortablePageCard
+                                                    key={page.id}
+                                                    page={page}
+                                                    index={index}
+                                                    isSelected={selectedPages.has(page.id)}
+                                                    toggleSelection={toggleSelection}
+                                                    setCanvasRef={(el) => { canvasRefs.current[index] = el; }}
+                                                />
+                                            ))}
 
-                                <p className="text-[#94a3b8] text-xs font-bold text-center">
-                                    Don&apos;t worry, we didn&apos;t make you dizzy.
-                                </p>
+                                            {/* Add Pages Button as last item (not sortable, but visually in grid) */}
+                                            <button
+                                                onClick={() => fileInputRef.current?.click()}
+                                                className="bg-[#f8fbff] border-2 border-dashed border-[#4383BF] rounded-2xl flex flex-col items-center justify-center gap-3 hover:bg-[#f0f7ff] transition-all min-h-[300px] w-full sm:w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)] xl:w-[calc(25%-18px)]"
+                                            >
+                                                <div className="bg-[#4383BF]/10 p-3 rounded-full">
+                                                    <Plus className="h-6 w-6 text-[#4383BF]" />
+                                                </div>
+                                                <span className="text-[#4383BF] text-sm font-bold">Add Pages</span>
+                                            </button>
+                                        </div>
+                                    </SortableContext>
+                                </DndContext>
+                            )}
+                        </div>
+
+                        {/* Right Sidebar - Sticky (Hidden on mobile) */}
+                        <div className="hidden lg:block lg:w-[420px] lg:fixed lg:right-6 lg:top-24">
+                            <div className="bg-white rounded-[32px] border border-[#e2e8f0] p-8 shadow-xl flex flex-col h-[calc(100vh-140px)]">
+                                <div className="flex items-center justify-between mb-8">
+                                    <h2 className="text-[#111418] font-black text-xl tracking-tight">Organize Settings</h2>
+                                    <button
+                                        onClick={resetChanges}
+                                        className="flex items-center gap-2 text-[#64748b] hover:text-[#4383BF] text-sm font-bold transition-colors"
+                                    >
+                                        <RefreshCcw className="w-4 h-4" />
+                                        Reset
+                                    </button>
+                                </div>
+
+                                <div className="flex-1">
+                                    {selectedPages.size > 0 ? (
+                                        <div className="p-6 bg-blue-50 rounded-2xl border border-blue-100">
+                                            <h3 className="text-[#4383BF] font-bold mb-2">{selectedPages.size} Page{selectedPages.size > 1 ? 's' : ''} Selected</h3>
+                                            <p className="text-sm text-blue-700/80 mb-4">
+                                                You can rotate, delete, or clone these pages using the toolbar above.
+                                            </p>
+                                        </div>
+                                    ) : (
+                                        <div className="text-center text-gray-400 mt-20">
+                                            <p className="text-sm">Select pages to see options</p>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="mt-8 space-y-4">
+                                    <button
+                                        onClick={savePdf}
+                                        disabled={isProcessing || pages.length === 0}
+                                        className="w-full bg-[#4383BF] hover:bg-[#3470A0] text-white rounded-2xl h-[64px] flex items-center justify-center gap-3 font-bold text-lg shadow-xl shadow-[#4383BF]/20 disabled:opacity-50 transition-all active:scale-[0.98]"
+                                    >
+                                        <span>Download Document</span>
+                                        <Download className="h-5 w-5 stroke-[3]" />
+                                    </button>
+
+                                    <p className="text-[#94a3b8] text-xs font-bold text-center">
+                                        Don&apos;t worry, we didn&apos;t make you dizzy.
+                                    </p>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <input
-                ref={fileInputRef}
-                type="file"
-                accept=".pdf"
-                multiple
-                className="hidden"
-                onChange={(e) => {
-                    if (e.target.files) {
-                        handleFileSelected(Array.from(e.target.files));
-                    }
-                }}
-            />
-        </div>
+                {/* Mobile Fixed Bottom Button */}
+                <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 shadow-lg z-50">
+                    <button
+                        onClick={savePdf}
+                        disabled={isProcessing || pages.length === 0}
+                        className="w-full bg-[#4383BF] hover:bg-[#3470A0] text-white font-semibold py-3.5 px-4 rounded-xl flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-md"
+                    >
+                        <Download className="h-5 w-5" />
+                        {isProcessing ? "Processing..." : "Download Document"}
+                    </button>
+                </div>
+
+                <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".pdf"
+                    multiple
+                    className="hidden"
+                    onChange={(e) => {
+                        if (e.target.files) {
+                            handleFileSelected(Array.from(e.target.files));
+                        }
+                    }}
+                />
+            </div>
+        </>
     );
 }
 
@@ -706,7 +755,7 @@ function SortablePageCard({
             )}>
                 <div className="bg-[#f8fafc] h-[240px] flex items-center justify-center p-4">
                     <div
-                        className="relative shadow-md bg-white transition-transform duration-200 origin-center"
+                        className="relative shadow-md bg-white transition-transform duration-200 origin-center flex items-center justify-center"
                         style={{
                             transform: `rotate(${page.rotation}deg)`,
                             width: 'auto',
@@ -721,10 +770,16 @@ function SortablePageCard({
                                 <span className="text-[10px] font-black uppercase tracking-wider">Blank</span>
                             </div>
                         ) : (
-                            <canvas
-                                ref={setCanvasRef}
-                                className="w-full h-full object-contain"
-                            />
+                            <>
+                                {/* Placeholder shown behind canvas */}
+                                <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+                                    <FileText className="h-12 w-12 text-gray-300 opacity-50" />
+                                </div>
+                                <canvas
+                                    ref={setCanvasRef}
+                                    className="relative z-10 max-w-full max-h-full object-contain"
+                                />
+                            </>
                         )}
                     </div>
                 </div>

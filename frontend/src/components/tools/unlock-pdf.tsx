@@ -76,8 +76,8 @@ export function UnlockPdfTool() {
                 <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-8">
                     {/* Lock Icon */}
                     <div className="flex justify-center mb-6">
-                        <div className="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center">
-                            <Lock className="h-8 w-8 text-blue-600" />
+                        <div className="w-16 h-16 rounded-full bg-[#4383BF]/10 flex items-center justify-center">
+                            <Lock className="h-8 w-8 text-[#4383BF]" />
                         </div>
                     </div>
 
@@ -120,7 +120,7 @@ export function UnlockPdfTool() {
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     onKeyPress={(e) => e.key === 'Enter' && unlockPdf()}
-                                    className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm pr-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm pr-10 focus:outline-none focus:ring-2 focus:ring-[#4383BF] focus:border-transparent"
                                     placeholder="Enter password"
                                 />
                                 <button
@@ -161,7 +161,7 @@ export function UnlockPdfTool() {
                     <Button
                         onClick={unlockPdf}
                         disabled={isProcessing || (isEncrypted && !password)}
-                        className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold text-base flex items-center justify-center gap-2"
+                        className="w-full h-12 bg-[#4383BF] hover:bg-[#3470A0] text-white rounded-lg font-semibold text-base flex items-center justify-center gap-2"
                     >
                         {isProcessing ? (
                             "Processing..."
@@ -176,7 +176,7 @@ export function UnlockPdfTool() {
                     {/* Forgot Password Link */}
                     {isEncrypted && (
                         <div className="text-center mt-4">
-                            <button className="text-sm text-blue-600 hover:text-blue-700 hover:underline">
+                            <button className="text-sm text-[#4383BF] hover:text-[#3470A0] hover:underline">
                                 I forgot the password
                             </button>
                         </div>
