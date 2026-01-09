@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { cn } from "@/lib/utils";
-import jsPDF from "jspdf";
+import { api } from "@/lib/services/api";
 import {
     Globe,
     Settings,
@@ -13,7 +13,10 @@ import {
     Check,
     AlertCircle,
     ExternalLink,
-    ChevronDown
+    ChevronDown,
+    Upload,
+    File,
+    X
 } from "lucide-react";
 
 interface GeneratedPdf {
@@ -23,10 +26,18 @@ interface GeneratedPdf {
 }
 
 export function HtmlToPdfTool() {
+    // Input mode: 'url' or 'file'
+    const [inputMode, setInputMode] = useState<'url' | 'file'>('url');
+    
     // URL input state
     const [url, setUrl] = useState("");
     const [urlError, setUrlError] = useState("");
     const [isValidUrl, setIsValidUrl] = useState(false);
+
+    // File input state
+    const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+    const [isDragging, setIsDragging] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Conversion state
     const [isConverting, setIsConverting] = useState(false);
@@ -81,6 +92,65 @@ export function HtmlToPdfTool() {
         setConversionError("");
     };
 
+    // File handling
+    const handleFileSelect = (file: File) => {
+        const validTypes = ['text/html', 'application/xhtml+xml'];
+        const validExtensions = ['.html', '.htm', '.xhtml'];
+        
+        const hasValidExtension = validExtensions.some(ext => 
+            file.name.toLowerCase().endsWith(ext)
+        );
+        
+        if (!validTypes.includes(file.type) && !hasValidExtension) {
+            setConversionError("Please upload an HTML file (.html, .htm)");
+            return;
+        }
+        
+        setUploadedFile(file);
+        setConversionError("");
+        setGeneratedPdf(null);
+        
+        // Set output filename based on uploaded file
+        const baseName = file.name.replace(/\.[^/.]+$/, "");
+        setOutputFilename(baseName);
+    };
+
+    const handleDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(false);
+        
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            handleFileSelect(files[0]);
+        }
+    };
+
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(true);
+    };
+
+    const handleDragLeave = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(false);
+    };
+
+    const removeFile = () => {
+        setUploadedFile(null);
+        setGeneratedPdf(null);
+        setConversionError("");
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
+    };
+
+    const switchInputMode = (mode: 'url' | 'file') => {
+        setInputMode(mode);
+        setGeneratedPdf(null);
+        setConversionError("");
+        setConversionProgress("");
+    };
+
     // Get page dimensions
     const getPageDimensions = () => {
         const sizes: { [key: string]: { width: number; height: number } } = {
@@ -106,8 +176,45 @@ export function HtmlToPdfTool() {
         return marginMap[margins] || 40;
     };
 
-    // Convert URL to PDF using html2pdf.app API service
+    // Convert to PDF - handles both URL and file modes
     const convertToPdf = async () => {
+        // File mode - use backend Gotenberg API
+        if (inputMode === 'file') {
+            if (!uploadedFile) {
+                setConversionError("Please upload an HTML file");
+                return;
+            }
+
+            setIsConverting(true);
+            setConversionProgress("Uploading file to server...");
+            setConversionError("");
+
+            try {
+                setConversionProgress("Converting HTML to PDF...");
+                
+                const pdfBlob = await api.htmlToPdf(uploadedFile);
+                
+                setConversionProgress("Finalizing PDF...");
+
+                setGeneratedPdf({
+                    blob: pdfBlob,
+                    url: URL.createObjectURL(pdfBlob),
+                    filename: `${outputFilename || 'converted'}.pdf`
+                });
+
+                setConversionProgress("Conversion complete!");
+
+            } catch (error: any) {
+                console.error("Conversion failed:", error);
+                setConversionError(error.message || "Failed to convert HTML to PDF");
+                setGeneratedPdf(null);
+            } finally {
+                setIsConverting(false);
+            }
+            return;
+        }
+
+        // URL mode - use Gotenberg via backend API
         if (!isValidUrl || !url.trim()) {
             setConversionError("Please enter a valid URL");
             return;
@@ -120,91 +227,14 @@ export function HtmlToPdfTool() {
         try {
             setConversionProgress("Rendering webpage to PDF...");
 
-            // Use html2pdf.app API (free tier available)
-            // This service renders the actual webpage with all styles, icons, and layout
-            const apiUrl = 'https://api.html2pdf.app/v1/generate';
-
-            // Build request parameters
-            const params = new URLSearchParams({
-                url: url,
-                apiKey: 'demo', // Demo key for testing - replace with your own for production
-                format: pageSize,
+            // Use Gotenberg via backend API for high-quality conversion
+            const pdfBlob = await api.urlToPdf(url, {
+                pageSize: pageSize,
                 orientation: orientation.toLowerCase(),
-                marginTop: margins === 'None' ? '0' : margins === 'Minimal' ? '5mm' : margins === 'Wide' ? '20mm' : '10mm',
-                marginBottom: margins === 'None' ? '0' : margins === 'Minimal' ? '5mm' : margins === 'Wide' ? '20mm' : '10mm',
-                marginLeft: margins === 'None' ? '0' : margins === 'Minimal' ? '5mm' : margins === 'Wide' ? '20mm' : '10mm',
-                marginRight: margins === 'None' ? '0' : margins === 'Minimal' ? '5mm' : margins === 'Wide' ? '20mm' : '10mm',
-                printBackground: includeBackground.toString(),
-                preferCSSPageSize: 'false',
-                javascript: enableJavascript.toString(),
+                margins: margins.toLowerCase(),
+                printBackground: includeBackground,
                 emulateMedia: printMedia ? 'print' : 'screen'
             });
-
-            // Make API request
-            const response = await fetch(`${apiUrl}?${params.toString()}`, {
-                method: 'GET',
-                headers: {
-                    'Accept': 'application/pdf'
-                }
-            });
-
-            if (!response.ok) {
-                // If the direct API fails, try alternative approach with POST
-                setConversionProgress("Trying alternative rendering method...");
-
-                // Fallback: Use PDFCrowd-style POST request
-                const fallbackResponse = await fetch('https://api.pdfendpoint.com/v1/convert', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        url: url,
-                        pdf_options: {
-                            format: pageSize,
-                            landscape: orientation === 'Landscape',
-                            print_background: includeBackground,
-                            margin: {
-                                top: margins === 'None' ? '0' : margins === 'Minimal' ? '10px' : margins === 'Wide' ? '40px' : '20px',
-                                bottom: margins === 'None' ? '0' : margins === 'Minimal' ? '10px' : margins === 'Wide' ? '40px' : '20px',
-                                left: margins === 'None' ? '0' : margins === 'Minimal' ? '10px' : margins === 'Wide' ? '40px' : '20px',
-                                right: margins === 'None' ? '0' : margins === 'Minimal' ? '10px' : margins === 'Wide' ? '40px' : '20px'
-                            }
-                        }
-                    })
-                });
-
-                if (!fallbackResponse.ok) {
-                    throw new Error("PDF service temporarily unavailable. Please try again later.");
-                }
-
-                const fallbackData = await fallbackResponse.json();
-                if (fallbackData.pdf_url) {
-                    // Download the PDF from the URL
-                    const pdfResponse = await fetch(fallbackData.pdf_url);
-                    const pdfBlob = await pdfResponse.blob();
-
-                    setGeneratedPdf({
-                        blob: pdfBlob,
-                        url: URL.createObjectURL(pdfBlob),
-                        filename: `${outputFilename || 'converted'}.pdf`
-                    });
-
-                    setConversionProgress("Conversion complete!");
-                    return;
-                }
-            }
-
-            // Get PDF blob from response
-            const pdfBlob = await response.blob();
-
-            if (pdfBlob.size < 1000) {
-                // If blob is too small, it might be an error response
-                const text = await pdfBlob.text();
-                if (text.includes('error') || text.includes('Error')) {
-                    throw new Error("Failed to render webpage. The URL may be inaccessible or blocked.");
-                }
-            }
 
             setConversionProgress("Finalizing PDF...");
 
@@ -272,15 +302,120 @@ export function HtmlToPdfTool() {
     );
 
     // Determine if convert button should be enabled
-    const canConvert = isValidUrl && url.trim().length > 0 && !isConverting;
+    const canConvert = inputMode === 'file' 
+        ? (uploadedFile !== null && !isConverting)
+        : (isValidUrl && url.trim().length > 0 && !isConverting);
 
     return (
         <div className="bg-[#f6f7f8] min-h-screen pb-8">
             <div className="max-w-[1800px] mx-auto px-4 py-4">
                 <div className="flex flex-col lg:flex-row gap-6">
-                    {/* Left Column - URL Input */}
+                    {/* Left Column - Input Selection */}
                     <div className="flex-1 lg:max-w-[calc(100%-448px)]">
+                        {/* Mode Toggle */}
+                        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 mb-4">
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => switchInputMode('url')}
+                                    className={cn(
+                                        "flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-all",
+                                        inputMode === 'url'
+                                            ? "bg-[#4383BF] text-white shadow-md"
+                                            : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                                    )}
+                                >
+                                    <Globe className="w-4 h-4" />
+                                    From URL
+                                </button>
+                                <button
+                                    onClick={() => switchInputMode('file')}
+                                    className={cn(
+                                        "flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-medium transition-all",
+                                        inputMode === 'file'
+                                            ? "bg-[#4383BF] text-white shadow-md"
+                                            : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                                    )}
+                                >
+                                    <Upload className="w-4 h-4" />
+                                    Upload File
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* File Upload Card */}
+                        {inputMode === 'file' && (
+                            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 mb-4">
+                                {/* Header */}
+                                <div className="flex items-center gap-3 mb-6">
+                                    <div className="w-12 h-12 bg-[#4383BF]/10 rounded-xl flex items-center justify-center">
+                                        <File className="w-6 h-6 text-[#4383BF]" />
+                                    </div>
+                                    <div>
+                                        <h2 className="text-lg font-semibold text-gray-900">Upload HTML File</h2>
+                                        <p className="text-sm text-gray-500">Upload an HTML file to convert to PDF</p>
+                                    </div>
+                                </div>
+
+                                {/* Drop Zone */}
+                                {!uploadedFile ? (
+                                    <div
+                                        onDrop={handleDrop}
+                                        onDragOver={handleDragOver}
+                                        onDragLeave={handleDragLeave}
+                                        onClick={() => fileInputRef.current?.click()}
+                                        className={cn(
+                                            "border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all",
+                                            isDragging
+                                                ? "border-[#4383BF] bg-[#4383BF]/5"
+                                                : "border-gray-300 hover:border-[#4383BF] hover:bg-gray-50"
+                                        )}
+                                    >
+                                        <input
+                                            ref={fileInputRef}
+                                            type="file"
+                                            accept=".html,.htm,.xhtml,text/html"
+                                            onChange={(e) => e.target.files?.[0] && handleFileSelect(e.target.files[0])}
+                                            className="hidden"
+                                        />
+                                        <Upload className={cn(
+                                            "w-12 h-12 mx-auto mb-4",
+                                            isDragging ? "text-[#4383BF]" : "text-gray-400"
+                                        )} />
+                                        <p className="text-lg font-medium text-gray-700 mb-1">
+                                            {isDragging ? "Drop your file here" : "Drag & drop your HTML file"}
+                                        </p>
+                                        <p className="text-sm text-gray-500">
+                                            or click to browse • Supports .html, .htm files
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <div className="bg-gray-50 rounded-xl border border-gray-200 p-4">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 bg-[#4383BF]/10 rounded-lg flex items-center justify-center">
+                                                    <FileText className="w-5 h-5 text-[#4383BF]" />
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-medium text-gray-900">{uploadedFile.name}</p>
+                                                    <p className="text-xs text-gray-500">
+                                                        {(uploadedFile.size / 1024).toFixed(1)} KB
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <button
+                                                onClick={removeFile}
+                                                className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                            >
+                                                <X className="w-5 h-5" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
                         {/* URL Input Card */}
+                        {inputMode === 'url' && (
                         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
                             {/* Header */}
                             <div className="flex items-center gap-3 mb-6">
@@ -366,17 +501,18 @@ export function HtmlToPdfTool() {
                                     </div>
                                 </div>
                             )}
-
-                            {/* Conversion Error */}
-                            {conversionError && (
-                                <div className="mt-4 p-4 bg-red-50 rounded-xl border border-red-200">
-                                    <div className="flex items-center gap-2 text-red-700">
-                                        <AlertCircle className="w-5 h-5" />
-                                        <p className="text-sm font-medium">{conversionError}</p>
-                                    </div>
-                                </div>
-                            )}
                         </div>
+                        )}
+
+                        {/* Conversion Error - shown for both modes */}
+                        {conversionError && (
+                            <div className="mt-4 p-4 bg-red-50 rounded-xl border border-red-200">
+                                <div className="flex items-center gap-2 text-red-700">
+                                    <AlertCircle className="w-5 h-5" />
+                                    <p className="text-sm font-medium">{conversionError}</p>
+                                </div>
+                            </div>
+                        )}
 
                         {/* Info Card */}
                         <div className="mt-4 bg-blue-50 rounded-xl border border-blue-200 p-4">
@@ -385,10 +521,20 @@ export function HtmlToPdfTool() {
                                 <div>
                                     <h3 className="text-sm font-medium text-blue-900">How it works</h3>
                                     <ul className="mt-2 text-sm text-blue-700 space-y-1">
-                                        <li>• Enter any public webpage URL</li>
-                                        <li>• Configure page settings on the right</li>
-                                        <li>• Click "Convert to PDF" to generate</li>
-                                        <li>• Download your PDF document</li>
+                                        {inputMode === 'file' ? (
+                                            <>
+                                                <li>• Upload an HTML file (.html, .htm)</li>
+                                                <li>• Click "Convert to PDF" to generate</li>
+                                                <li>• Download your PDF document</li>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <li>• Enter any public webpage URL</li>
+                                                <li>• Configure page settings on the right</li>
+                                                <li>• Click "Convert to PDF" to generate</li>
+                                                <li>• Download your PDF document</li>
+                                            </>
+                                        )}
                                     </ul>
                                 </div>
                             </div>

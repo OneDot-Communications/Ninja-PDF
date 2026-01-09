@@ -25,12 +25,15 @@ class GotenbergConverter:
     - Excel: .xls, .xlsx, .ods
     - PowerPoint: .ppt, .pptx, .odp
     - Other: .txt, .html, .csv
+    - URL: Any public webpage
     """
     
     TIMEOUT_SECONDS = 120  # 2 minutes timeout
     
-    # Gotenberg LibreOffice conversion endpoint
+    # Gotenberg endpoints
     LIBREOFFICE_ENDPOINT = "/forms/libreoffice/convert"
+    CHROMIUM_URL_ENDPOINT = "/forms/chromium/convert/url"
+    CHROMIUM_HTML_ENDPOINT = "/forms/chromium/convert/html"
     
     # Supported MIME types mapping
     SUPPORTED_EXTENSIONS = {
@@ -139,6 +142,105 @@ class GotenbergConverter:
             logger.error(f"Gotenberg conversion error: {e}")
             raise
 
+    @classmethod
+    def convert_url_to_pdf(
+        cls,
+        url: str,
+        page_size: str = "A4",
+        landscape: bool = False,
+        margin_top: str = "10mm",
+        margin_bottom: str = "10mm",
+        margin_left: str = "10mm",
+        margin_right: str = "10mm",
+        print_background: bool = True,
+        wait_delay: str = "2s",
+        emulate_media: str = "screen"
+    ) -> bytes:
+        """
+        Convert a URL/webpage to PDF using Gotenberg's Chromium engine.
+        
+        Args:
+            url: The webpage URL to convert
+            page_size: Paper size (A4, Letter, Legal, etc.)
+            landscape: Whether to use landscape orientation
+            margin_top: Top margin (e.g., "10mm", "1in")
+            margin_bottom: Bottom margin
+            margin_left: Left margin  
+            margin_right: Right margin
+            print_background: Whether to print background graphics
+            wait_delay: Time to wait before conversion (e.g., "2s")
+            emulate_media: Media type to emulate ("screen" or "print")
+        
+        Returns:
+            PDF content as bytes
+        
+        Raises:
+            Exception: If conversion fails
+        """
+        endpoint = f"{GOTENBERG_URL}{cls.CHROMIUM_URL_ENDPOINT}"
+        
+        # Paper size dimensions (width x height in inches)
+        paper_sizes = {
+            "A4": ("8.27in", "11.7in"),
+            "Letter": ("8.5in", "11in"),
+            "Legal": ("8.5in", "14in"),
+            "A3": ("11.7in", "16.54in"),
+            "A5": ("5.83in", "8.27in"),
+        }
+        
+        paper_width, paper_height = paper_sizes.get(page_size, paper_sizes["A4"])
+        
+        # Swap dimensions for landscape
+        if landscape:
+            paper_width, paper_height = paper_height, paper_width
+        
+        # Build form data as multipart (Gotenberg requires multipart/form-data)
+        # Using files parameter with None as file content to send as multipart
+        files = {
+            "url": (None, url),
+            "paperWidth": (None, paper_width),
+            "paperHeight": (None, paper_height),
+            "marginTop": (None, margin_top),
+            "marginBottom": (None, margin_bottom),
+            "marginLeft": (None, margin_left),
+            "marginRight": (None, margin_right),
+            "printBackground": (None, str(print_background).lower()),
+            "waitDelay": (None, wait_delay),
+            "emulateMediaType": (None, emulate_media),
+        }
+        
+        try:
+            logger.info(f"Converting URL to PDF via Gotenberg: {url}")
+            
+            response = requests.post(
+                endpoint,
+                files=files,
+                timeout=cls.TIMEOUT_SECONDS
+            )
+            
+            if response.status_code != 200:
+                error_msg = response.text[:500] if response.text else "Unknown error"
+                logger.error(f"Gotenberg URL conversion failed: {response.status_code} - {error_msg}")
+                raise Exception(f"Failed to convert URL: {error_msg}")
+            
+            pdf_bytes = response.content
+            
+            if len(pdf_bytes) < 100:
+                raise Exception("Converted PDF is too small, conversion may have failed")
+            
+            logger.info(f"Successfully converted URL to PDF ({len(pdf_bytes)} bytes)")
+            return pdf_bytes
+            
+        except requests.exceptions.Timeout:
+            logger.error(f"Gotenberg URL conversion timed out for {url}")
+            raise Exception("URL conversion timed out. The webpage may be too complex or slow to load.")
+        except requests.exceptions.ConnectionError as e:
+            logger.error(f"Cannot connect to Gotenberg: {e}")
+            raise Exception("Cannot connect to document conversion service")
+        except Exception as e:
+            logger.error(f"Gotenberg URL conversion error: {e}")
+            raise
+
 
 def convert_office_to_pdf_gotenberg(file) -> bytes:
     """
@@ -181,3 +283,47 @@ def convert_excel_to_pdf_gotenberg(file) -> bytes:
 def convert_powerpoint_to_pdf_gotenberg(file) -> bytes:
     """Convert PowerPoint presentation to PDF using Gotenberg."""
     return convert_office_to_pdf_gotenberg(file)
+
+
+def convert_url_to_pdf_gotenberg(
+    url: str,
+    page_size: str = "A4",
+    orientation: str = "portrait",
+    margins: str = "normal",
+    print_background: bool = True,
+    emulate_media: str = "screen"
+) -> bytes:
+    """
+    Convert a webpage URL to PDF using Gotenberg's Chromium engine.
+    
+    Args:
+        url: The webpage URL to convert
+        page_size: Paper size (A4, Letter, Legal, A3, A5)
+        orientation: "portrait" or "landscape"
+        margins: "none", "minimal", "normal", or "wide"
+        print_background: Whether to include background graphics
+        emulate_media: "screen" or "print"
+    
+    Returns:
+        PDF bytes
+    """
+    # Map margin presets to actual values
+    margin_map = {
+        "none": "0mm",
+        "minimal": "5mm",
+        "normal": "10mm",
+        "wide": "20mm"
+    }
+    margin_value = margin_map.get(margins.lower(), "10mm")
+    
+    return GotenbergConverter.convert_url_to_pdf(
+        url=url,
+        page_size=page_size,
+        landscape=(orientation.lower() == "landscape"),
+        margin_top=margin_value,
+        margin_bottom=margin_value,
+        margin_left=margin_value,
+        margin_right=margin_value,
+        print_background=print_background,
+        emulate_media=emulate_media
+    )

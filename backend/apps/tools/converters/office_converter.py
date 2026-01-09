@@ -167,7 +167,7 @@ def convert_powerpoint_to_pdf(file) -> bytes:
 
 def convert_html_to_pdf(file) -> bytes:
     """
-    Convert HTML to PDF using WeasyPrint for better rendering.
+    Convert HTML to PDF using Gotenberg (Chromium-based) for best rendering.
     
     Args:
         file: Django UploadedFile or file-like object
@@ -176,29 +176,49 @@ def convert_html_to_pdf(file) -> bytes:
         PDF bytes
     """
     try:
-        from weasyprint import HTML, CSS
+        # Try Gotenberg first (best quality - uses Chromium)
+        from apps.tools.converters.gotenberg_converter import GotenbergConverter
         
         content = file.read()
-        if isinstance(content, bytes):
-            html_content = content.decode('utf-8')
-        else:
-            html_content = content
+        filename = getattr(file, 'name', 'document.html')
         
-        # Create PDF from HTML
-        html = HTML(string=html_content)
-        pdf_bytes = html.write_pdf()
+        # Ensure filename has .html extension for Gotenberg
+        if not filename.lower().endswith('.html') and not filename.lower().endswith('.htm'):
+            filename = filename.rsplit('.', 1)[0] + '.html' if '.' in filename else filename + '.html'
         
-        return pdf_bytes
-    except ImportError:
-        # Fallback to LibreOffice if WeasyPrint not available
-        logger.warning("WeasyPrint not available, using LibreOffice for HTML to PDF")
-        content = file.read() if hasattr(file, 'read') else file
-        if isinstance(content, str):
-            content = content.encode('utf-8')
-        return LibreOfficeConverter.convert_to_pdf(content, 'html')
-    except Exception as e:
-        logger.error(f"HTML to PDF failed: {e}")
-        raise
+        return GotenbergConverter.convert_to_pdf(
+            input_bytes=content if isinstance(content, bytes) else content.encode('utf-8'),
+            filename=filename
+        )
+    except Exception as gotenberg_error:
+        logger.warning(f"Gotenberg HTML conversion failed, trying WeasyPrint: {gotenberg_error}")
+        
+        try:
+            from weasyprint import HTML
+            
+            file.seek(0)  # Reset file pointer
+            content = file.read()
+            if isinstance(content, bytes):
+                html_content = content.decode('utf-8')
+            else:
+                html_content = content
+            
+            # Create PDF from HTML
+            html = HTML(string=html_content)
+            pdf_bytes = html.write_pdf()
+            
+            return pdf_bytes
+        except ImportError:
+            # Fallback to LibreOffice if WeasyPrint not available
+            logger.warning("WeasyPrint not available, using LibreOffice for HTML to PDF")
+            file.seek(0)
+            content = file.read() if hasattr(file, 'read') else file
+            if isinstance(content, str):
+                content = content.encode('utf-8')
+            return LibreOfficeConverter.convert_to_pdf(content, 'html')
+        except Exception as e:
+            logger.error(f"HTML to PDF failed: {e}")
+            raise
 
 
 def convert_markdown_to_pdf(file) -> bytes:

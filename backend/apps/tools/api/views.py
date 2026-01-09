@@ -142,6 +142,56 @@ class HTMLToPDFView(PDFToolAPIView):
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+class URLToPDFView(PDFToolAPIView):
+    """Convert a webpage URL to PDF using Gotenberg's Chromium engine."""
+    
+    def post(self, request):
+        allowed, error = check_usage_limit(request, 'HTML_TO_PDF')  # Reuse HTML_TO_PDF quota
+        if not allowed: return error
+
+        # Get URL from request body
+        url = request.data.get('url')
+        if not url:
+            return Response({'error': 'URL is required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Validate URL
+        if not url.startswith(('http://', 'https://')):
+            return Response({'error': 'URL must start with http:// or https://'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Get optional parameters
+        page_size = request.data.get('pageSize', 'A4')
+        orientation = request.data.get('orientation', 'portrait')
+        margins = request.data.get('margins', 'normal')
+        print_background = request.data.get('printBackground', True)
+        emulate_media = request.data.get('emulateMedia', 'screen')
+        
+        # Convert boolean if string
+        if isinstance(print_background, str):
+            print_background = print_background.lower() == 'true'
+        
+        try:
+            from apps.tools.converters.gotenberg_converter import convert_url_to_pdf_gotenberg
+            result = convert_url_to_pdf_gotenberg(
+                url=url,
+                page_size=page_size,
+                orientation=orientation,
+                margins=margins,
+                print_background=print_background,
+                emulate_media=emulate_media
+            )
+            
+            # Generate filename from URL
+            from urllib.parse import urlparse
+            parsed = urlparse(url)
+            filename = parsed.netloc.replace('.', '_') or 'webpage'
+            
+            response = HttpResponse(result, content_type='application/pdf')
+            response['Content-Disposition'] = f'attachment; filename="{filename}.pdf"'
+            return response
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
 class MarkdownToPDFView(PDFToolAPIView):
     """Convert Markdown to PDF."""
     

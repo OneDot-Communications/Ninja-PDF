@@ -11,7 +11,7 @@ services:
       - "3001:3000"
     command:
       - "gotenberg"
-      - "--chromium-disable-javascript=true"
-      - "--chromium-allow-list=file:///tmp/.*"
+      - "--chromium-disable-javascript=false"
+      - "--chromium-allow-list=.*"
       - "--libreoffice-disable-routes=false"
       - "--api-timeout=120s"
