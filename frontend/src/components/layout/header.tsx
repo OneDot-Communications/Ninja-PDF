@@ -12,6 +12,7 @@ import { FaUser } from 'react-icons/fa6';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePathname } from "next/navigation";
+import { RegionIndicator } from "@/components/ui/region-indicator";
 
 export function Header() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -82,50 +83,58 @@ export function Header() {
                 </div>
 
                 {/* Desktop Actions */}
-                <div className="hidden md:flex items-center gap-2">
+                <div className="hidden md:flex items-center gap-3">
                     {/* Show skeleton until mounted to prevent hydration mismatch */}
                     {!mounted || (isLoading && !user) ? (
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-3">
                             <Skeleton className="h-10 w-16 rounded-lg" />
                             <Skeleton className="h-10 w-20 rounded-lg" />
+                            <Skeleton className="h-10 w-28 rounded-lg" />
                         </div>
-                    ) : !user ? (
-                        <>
-                            <Link href="/login">
-                                <div className="rounded-lg px-4 py-2 flex items-center justify-center h-10 cursor-pointer group">
-                                    <span className="text-slate-600 group-hover:text-slate-900 text-center font-medium leading-none transition-colors">
-                                        Login
-                                    </span>
-                                </div>
-                            </Link>
-                            <Link href="/signup">
-                                <div className="bg-[#FF5252] rounded-lg px-4 py-2 flex items-center justify-center h-10 overflow-hidden shadow-[0px_6px_20px_-8px_rgba(255,82,82,0.25)] cursor-pointer hover:bg-[#ff3b3b] transition-colors focus:outline-none focus:ring-2 focus:ring-[#FF5252]/30">
-                                    <span className="text-white text-center font-medium leading-none">
-                                        Sign Up
-                                    </span>
-                                </div>
-                            </Link>
-                        </>
                     ) : (
-                        <div className="flex items-center gap-3">
-                            <span className="text-sm font-medium text-slate-700 hidden lg:inline-block">
-                                Hello, {user.first_name || user.email?.split('@')[0] || 'User'}
-                            </span>
-                            <a
-                                href="/profile"
-                                className="cursor-pointer"
-                            >
-                                <Avatar className="w-9 h-9 ring-2 ring-slate-200 hover:ring-slate-300 transition-all">
-                                    <AvatarImage
-                                        src={user.avatar || undefined}
-                                        alt={user.first_name || "User"}
-                                    />
-                                    <AvatarFallback className="bg-slate-100 text-slate-600 text-sm font-medium">
-                                        {user.first_name?.[0] || 'U'}
-                                    </AvatarFallback>
-                                </Avatar>
-                            </a>
-                        </div>
+                        <>
+                            {!user ? (
+                                <>
+                                    <Link href="/login">
+                                        <div className="rounded-lg px-4 py-2 flex items-center justify-center h-10 cursor-pointer group">
+                                            <span className="text-slate-600 group-hover:text-slate-900 text-center font-medium leading-none transition-colors">
+                                                Login
+                                            </span>
+                                        </div>
+                                    </Link>
+                                    <Link href="/signup">
+                                        <div className="bg-[#FF5252] rounded-lg px-4 py-2 flex items-center justify-center h-10 overflow-hidden shadow-[0px_6px_20px_-8px_rgba(255,82,82,0.25)] cursor-pointer hover:bg-[#ff3b3b] transition-colors focus:outline-none focus:ring-2 focus:ring-[#FF5252]/30">
+                                            <span className="text-white text-center font-medium leading-none">
+                                                Sign Up
+                                            </span>
+                                        </div>
+                                    </Link>
+                                </>
+                            ) : (
+                                <div className="flex items-center gap-3">
+                                    <span className="text-sm font-medium text-slate-700 hidden lg:inline-block">
+                                        Hello, {user.first_name || user.email?.split('@')[0] || 'User'}
+                                    </span>
+                                    <a
+                                        href="/profile"
+                                        className="cursor-pointer"
+                                    >
+                                        <Avatar className="w-9 h-9 ring-2 ring-slate-200 hover:ring-slate-300 transition-all">
+                                            <AvatarImage
+                                                src={user.avatar || undefined}
+                                                alt={user.first_name || "User"}
+                                            />
+                                            <AvatarFallback className="bg-slate-100 text-slate-600 text-sm font-medium">
+                                                {user.first_name?.[0] || 'U'}
+                                            </AvatarFallback>
+                                        </Avatar>
+                                    </a>
+                                </div>
+                            )}
+                            
+                            {/* Region Indicator - Last in the right corner */}
+                            {mounted && <RegionIndicator />}
+                        </>
                     )}
                     <div ref={menuRef} className="relative">
                         {/*
@@ -278,6 +287,11 @@ export function Header() {
 
                                 {/* Mobile Menu Content */}
                                 <div className="flex-1 p-6 space-y-8">
+                                    {/* Region Indicator - Mobile */}
+                                    <div className="flex justify-center">
+                                        <RegionIndicator />
+                                    </div>
+
                                     {/* Actions */}
                                     <div className="grid grid-cols-2 gap-4">
                                         {!user ? (
