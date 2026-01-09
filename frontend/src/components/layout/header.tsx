@@ -12,6 +12,7 @@ import { FaUser } from 'react-icons/fa6';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePathname } from "next/navigation";
+import { RegionSelector } from "@/components/ui/region-selector";
 
 export function Header() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -105,6 +106,8 @@ export function Header() {
                                     </span>
                                 </div>
                             </Link>
+                            {/* Region Selector */}
+                            <RegionSelector />
                         </>
                     ) : (
                         <div className="flex items-center gap-3">
@@ -125,6 +128,8 @@ export function Header() {
                                     </AvatarFallback>
                                 </Avatar>
                             </a>
+                            {/* Region Selector */}
+                            <RegionSelector />
                         </div>
                     )}
                     <div ref={menuRef} className="relative">
@@ -315,6 +320,11 @@ export function Header() {
                                                 </Link>
                                             </div>
                                         )}
+                                    </div>
+
+                                    {/* Region Selector */}
+                                    <div className="flex justify-center pt-4 border-t border-slate-100">
+                                        <RegionSelector />
                                     </div>
 
                                     {/* Menu Sections */}

@@ -251,7 +251,7 @@ const ToolCard = ({ tool, index, onToolClick }: { tool: any; index: number; onTo
                     <div className="pt-3 border-t border-slate-50 flex items-center justify-end text-[11px] text-slate-400 font-medium mt-auto leading-[1]">
                         <div className="flex items-center gap-1">
                             <User className="w-3 h-3" />
-                            <span>0</span>
+                            <span>{tool.userCount ? (tool.userCount >= 1000 ? `${Math.round(tool.userCount / 1000)}k` : tool.userCount.toLocaleString()) : '0'}</span>
                         </div>
                     </div>
                 </div>
