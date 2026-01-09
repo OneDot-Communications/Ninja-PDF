@@ -367,6 +367,34 @@ export const api = {
   excelToPdf: (file: File, options?: any) => uploadFile("/api/tools/excel-to-pdf/", file, options),
   jpgToPdf: (file: File) => uploadFile("/api/tools/jpg-to-pdf/", file),
   htmlToPdf: (file: File) => uploadFile("/api/tools/html-to-pdf/", file),
+  urlToPdf: async (url: string, options?: {
+    pageSize?: string;
+    orientation?: string;
+    margins?: string;
+    printBackground?: boolean;
+    emulateMedia?: string;
+  }): Promise<Blob> => {
+    const formData = new FormData();
+    formData.append('url', url);
+    formData.append('pageSize', options?.pageSize || 'A4');
+    formData.append('orientation', options?.orientation || 'portrait');
+    formData.append('margins', options?.margins || 'normal');
+    formData.append('printBackground', String(options?.printBackground ?? true));
+    formData.append('emulateMedia', options?.emulateMedia || 'screen');
+
+    const response = await fetch(`${getBaseUrl()}/api/tools/url-to-pdf/`, {
+      method: 'POST',
+      credentials: 'include',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+    }
+
+    return response.blob();
+  },
   markdownToPdf: (file: File) => uploadFile("/api/tools/markdown-to-pdf/", file),
 
   // ─────────────────────────────────────────────────────────────────────────────

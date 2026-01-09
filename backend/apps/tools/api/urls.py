@@ -7,6 +7,7 @@ from apps.tools.api.views import (
     PowerpointToPDFView,
     JPGToPDFView,
     HTMLToPDFView,
+    URLToPDFView,
     MarkdownToPDFView,
     # Conversion FROM PDF
     PDFToJPGView,
@@ -42,6 +43,7 @@ urlpatterns = [
     path('powerpoint-to-pdf/', PowerpointToPDFView.as_view(), name='powerpoint-to-pdf'),
     path('jpg-to-pdf/', JPGToPDFView.as_view(), name='jpg-to-pdf'),
     path('html-to-pdf/', HTMLToPDFView.as_view(), name='html-to-pdf'),
+    path('url-to-pdf/', URLToPDFView.as_view(), name='url-to-pdf'),
     path('markdown-to-pdf/', MarkdownToPDFView.as_view(), name='markdown-to-pdf'),
     
     # ─────────────────────────────────────────────────────────────────────────
