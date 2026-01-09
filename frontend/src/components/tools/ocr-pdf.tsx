@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import FileUploadHero from "../ui/file-upload-hero";
@@ -365,11 +365,10 @@ export function OcrPdfTool() {
 
                     {/* Footer Copyright */}
                     <div className="text-center text-xs text-gray-500 mt-8">
-                        © 2023 I❤️Blue PDF. All rights reserved.
+                        Â© 2023 Iâ¤ï¸Blue PDF. All rights reserved.
                     </div>
                 </div>
             </div>
-        </div >
             <PasswordProtectedModal
                 isOpen={showPasswordModal}
                 onClose={() => setShowPasswordModal(false)}
