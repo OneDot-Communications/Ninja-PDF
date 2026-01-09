@@ -14,6 +14,15 @@ import {
 import { pdfStrategyManager, getPdfJs } from "@/lib/services/pdf-service";
 import { toast } from "@/lib/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "../ui/select";
+import { PasswordProtectedModal } from "../ui/password-protected-modal";
+import { isPasswordError } from "@/lib/utils";
 
 // Page number element interface
 interface PageNumberElement {
@@ -37,11 +46,13 @@ interface PageNumberElement {
 
 export function PageNumbersTool() {
     const [file, setFile] = useState<File | null>(null);
+    const [showPasswordModal, setShowPasswordModal] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
     const [numPages, setNumPages] = useState(0);
     const [isProcessing, setIsProcessing] = useState(false);
     const [pageNumberElement, setPageNumberElement] = useState<PageNumberElement | null>(null);
     const canvasRefs = useRef<(HTMLCanvasElement | null)[]>([]);
+    const mobileCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
     const [format, setFormat] = useState<"n" | "page-n" | "n-of-m" | "page-n-of-m">("n-of-m");
     const [startFrom, setStartFrom] = useState(1);
@@ -73,12 +84,31 @@ export function PageNumbersTool() {
             setFile(files[0]);
             setCurrentPage(1);
 
-            const pdfjsLib = await getPdfJs();
-            const arrayBuffer = await files[0].arrayBuffer();
-            const pdf = await (pdfjsLib as any).getDocument(new Uint8Array(arrayBuffer)).promise;
-            setNumPages(pdf.numPages);
+            try {
+                const pdfjsLib = await getPdfJs();
+                const arrayBuffer = await files[0].arrayBuffer();
+                const pdf = await (pdfjsLib as any).getDocument({
+                    data: new Uint8Array(arrayBuffer),
+                    verbosity: 0
+                }).promise;
+                setNumPages(pdf.numPages);
 
-            canvasRefs.current = Array(pdf.numPages).fill(null);
+                canvasRefs.current = Array(pdf.numPages).fill(null);
+            } catch (error: any) {
+                console.error("Error loading PDF:", error);
+                if (isPasswordError(error)) {
+                    setShowPasswordModal(true);
+                    setFile(null); // Clear file
+                    return;
+                }
+                toast.show({
+                    title: "Error loading PDF",
+                    message: "Failed to load PDF file",
+                    variant: "error",
+                    position: "top-right"
+                });
+                return;
+            }
 
             const newPageNumberElement: PageNumberElement = {
                 id: Math.random().toString(36).substr(2, 9),
@@ -113,31 +143,84 @@ export function PageNumbersTool() {
         if (!file) return;
 
         const renderAllPages = async () => {
-            const pdfjsLib = await getPdfJs();
-            const arrayBuffer = await file.arrayBuffer();
-            const pdf = await (pdfjsLib as any).getDocument(new Uint8Array(arrayBuffer)).promise;
-
-            // Render all pages
-            for (let i = 1; i <= pdf.numPages; i++) {
-                const page = await pdf.getPage(i);
-                const viewport = page.getViewport({ scale: 0.5 }); // Smaller scale for grid view
-
-                let canvas = canvasRefs.current[i - 1];
-                if (!canvas) continue;
-
-                const context = canvas.getContext("2d")!;
-                canvas.height = viewport.height;
-                canvas.width = viewport.width;
-
-                await page.render({
-                    canvasContext: context,
-                    viewport: viewport,
+            try {
+                const pdfjsLib = await getPdfJs();
+                const arrayBuffer = await file.arrayBuffer();
+                const pdf = await (pdfjsLib as any).getDocument({
+                    data: new Uint8Array(arrayBuffer),
+                    verbosity: 0
                 }).promise;
+
+                // Render all pages
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const viewport = page.getViewport({ scale: 0.5 }); // Smaller scale for grid view
+
+                    let canvas = canvasRefs.current[i - 1];
+                    if (!canvas) continue;
+
+                    const context = canvas.getContext("2d")!;
+                    canvas.height = viewport.height;
+                    canvas.width = viewport.width;
+
+                    await page.render({
+                        canvasContext: context,
+                        viewport: viewport,
+                    }).promise;
+                }
+            } catch (error: any) {
+                console.error("Error rendering pages:", error);
+                if (isPasswordError(error)) {
+                    setShowPasswordModal(true);
+                    setFile(null);
+                }
             }
         };
 
         renderAllPages();
     }, [file]);
+
+    // Render current page for mobile pagination view
+    useEffect(() => {
+        if (!file || numPages === 0) return;
+
+        const renderCurrentPage = async () => {
+            try {
+                const pdfjsLib = await getPdfJs();
+                const arrayBuffer = await file.arrayBuffer();
+                const pdf = await (pdfjsLib as any).getDocument({
+                    data: new Uint8Array(arrayBuffer),
+                    verbosity: 0
+                }).promise;
+
+                const page = await pdf.getPage(currentPage);
+                const viewport = page.getViewport({ scale: 0.8 }); // Larger scale for mobile single view
+
+                // Wait a tick for canvas to be mounted
+                setTimeout(async () => {
+                    let canvas = mobileCanvasRef.current;
+                    if (!canvas) return;
+
+                    const context = canvas.getContext("2d")!;
+                    canvas.height = viewport.height;
+                    canvas.width = viewport.width;
+
+                    await page.render({
+                        canvasContext: context,
+                        viewport: viewport,
+                    }).promise;
+                }, 100);
+            } catch (error: any) {
+                console.error("Error rendering current page:", error);
+                if (isPasswordError(error)) {
+                    setShowPasswordModal(true);
+                    setFile(null);
+                }
+            }
+        };
+
+        renderCurrentPage();
+    }, [file, currentPage, numPages]);
 
     const applyPageNumbers = async () => {
         if (!file || !pageNumberElement) return;
@@ -226,8 +309,8 @@ export function PageNumbersTool() {
     }
 
     return (
-        <div className="bg-[#f8f9fa] min-h-screen pb-8">
-            <div className="max-w-[1800px] mx-auto px-4 py-4">
+        <div className="bg-[#f8f9fa] min-h-screen pb-8 lg:pb-8">
+            <div className="max-w-[1800px] mx-auto px-4 py-4 pb-24 lg:pb-4">
                 <div className="flex flex-col lg:flex-row gap-6">
                     {/* Left Column - Page Grid */}
                     <div className="flex-1 lg:max-w-[calc(100%-448px)]">
@@ -253,8 +336,68 @@ export function PageNumbersTool() {
                             </div>
                         </div>
 
-                        {/* Grid of Pages */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {/* Mobile Pagination View - visible only on small screens */}
+                        <div className="lg:hidden">
+                            {/* Pagination Controls */}
+                            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-3 mb-4 flex items-center justify-center gap-4">
+                                <button
+                                    onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                                    disabled={currentPage <= 1}
+                                    className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                                >
+                                    <ChevronLeft className="w-5 h-5 text-gray-600" />
+                                </button>
+                                <span className="text-sm font-medium text-gray-700 min-w-[60px] text-center">
+                                    {currentPage}/{numPages}
+                                </span>
+                                <button
+                                    onClick={() => setCurrentPage(Math.min(numPages, currentPage + 1))}
+                                    disabled={currentPage >= numPages}
+                                    className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                                >
+                                    <ChevronRight className="w-5 h-5 text-gray-600" />
+                                </button>
+                            </div>
+
+                            {/* Single Page Preview */}
+                            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                                <div className="relative bg-gray-50 min-h-[400px] flex items-center justify-center overflow-hidden p-4">
+                                    <div className="relative shadow-md max-w-full max-h-full">
+                                        <canvas
+                                            ref={mobileCanvasRef}
+                                            className="block max-w-full max-h-[380px] object-contain"
+                                        />
+                                        {/* Page number overlay preview */}
+                                        {shouldShowPageNumber(currentPage) && (
+                                            <div
+                                                className="absolute text-sm font-medium pointer-events-none"
+                                                style={{
+                                                    color,
+                                                    fontSize: `${fontSize * 0.5}px`,
+                                                    fontFamily,
+                                                    fontWeight: isBold ? 'bold' : 'normal',
+                                                    fontStyle: isItalic ? 'italic' : 'normal',
+                                                    textDecoration: isUnderline ? 'underline' : 'none',
+                                                    opacity,
+                                                    ...(position.includes('bottom') ? { bottom: `${margin * 0.5}px` } : { top: `${margin * 0.5}px` }),
+                                                    ...(position.includes('left') ? { left: `${margin * 0.5}px` } :
+                                                        position.includes('right') ? { right: `${margin * 0.5}px` } :
+                                                            { left: '50%', transform: 'translateX(-50%)' })
+                                                }}
+                                            >
+                                                {generatePageNumberText(currentPage)}
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-sm rounded-full px-2 py-1 text-white text-xs font-bold">
+                                        Page {currentPage}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Desktop Grid View - hidden on small screens */}
+                        <div className="hidden lg:grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                             {Array.from({ length: numPages }).map((_, index) => (
                                 <div
                                     key={index}
@@ -364,19 +507,25 @@ export function PageNumbersTool() {
                                 </div>
                             </div>
 
+
+
                             {/* Number Format */}
                             <div className="mb-6">
                                 <label className="text-sm font-medium text-gray-700 block mb-2">Number Format</label>
-                                <select
+                                <Select
                                     value={format}
-                                    onChange={(e) => setFormat(e.target.value as any)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                                    onValueChange={(value) => setFormat(value as any)}
                                 >
-                                    <option value="n">1</option>
-                                    <option value="page-n">Page 1</option>
-                                    <option value="n-of-m">1 of N</option>
-                                    <option value="page-n-of-m">Page 1 of N</option>
-                                </select>
+                                    <SelectTrigger className="w-full bg-white">
+                                        <SelectValue placeholder="Select format" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="n">1</SelectItem>
+                                        <SelectItem value="page-n">Page 1</SelectItem>
+                                        <SelectItem value="n-of-m">1 of N</SelectItem>
+                                        <SelectItem value="page-n-of-m">Page 1 of N</SelectItem>
+                                    </SelectContent>
+                                </Select>
                                 <p className="text-xs text-gray-500 mt-2">
                                     Pro tip: "Page X of Y" is great for contracts. Roman numerals for prefaces.
                                 </p>
@@ -390,22 +539,20 @@ export function PageNumbersTool() {
                                 <div className="flex gap-3">
                                     {/* Font Family Selector */}
                                     <div className="flex-1 relative">
-                                        <select
+                                        <Select
                                             value={fontFamily}
-                                            onChange={(e) => setFontFamily(e.target.value)}
-                                            className="w-full h-12 appearance-none rounded-xl border border-gray-300 pl-4 pr-8 bg-white text-gray-900 text-sm font-medium focus:border-blue-600 outline-none"
+                                            onValueChange={setFontFamily}
                                         >
-                                            <option value="Helvetica">Helvetica</option>
-                                            <option value="Times-Roman">Times New Roman</option>
-                                            <option value="Courier">Courier</option>
-                                            <option value="Arial">Arial</option>
-                                        </select>
-                                        {/* Chevron Icon */}
-                                        <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500">
-                                            <svg width="10" height="6" viewBox="0 0 10 6" fill="none">
-                                                <path d="M1 1L5 5L9 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                                            </svg>
-                                        </div>
+                                            <SelectTrigger className="w-full h-12 rounded-xl border border-gray-300 bg-white text-gray-900 text-sm font-medium focus:border-blue-600 outline-none">
+                                                <SelectValue placeholder="Select font" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="Helvetica">Helvetica</SelectItem>
+                                                <SelectItem value="Times-Roman">Times New Roman</SelectItem>
+                                                <SelectItem value="Courier">Courier</SelectItem>
+                                                <SelectItem value="Arial">Arial</SelectItem>
+                                            </SelectContent>
+                                        </Select>
                                     </div>
 
                                     {/* Color Picker */}
@@ -490,8 +637,8 @@ export function PageNumbersTool() {
                                 </div>
                             </div>
 
-                            {/* Apply Button - pushed to bottom */}
-                            <div className="mt-auto pt-6">
+                            {/* Apply Button - pushed to bottom (desktop only) */}
+                            <div className="mt-auto pt-6 hidden lg:block">
                                 <button
                                     onClick={applyPageNumbers}
                                     disabled={isProcessing}
@@ -513,6 +660,23 @@ export function PageNumbersTool() {
                     </div>
                 </div>
             </div>
+
+            {/* Mobile Fixed Bottom Button */}
+            <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 shadow-lg z-50">
+                <button
+                    onClick={applyPageNumbers}
+                    disabled={isProcessing}
+                    className="w-full bg-[#4383BF] hover:bg-[#3470A0] text-white font-semibold py-3.5 px-4 rounded-xl flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-md"
+                >
+                    <Download className="h-5 w-5" />
+                    {isProcessing ? "Processing..." : "Apply Page Numbers"}
+                </button>
+            </div>
+            <PasswordProtectedModal
+                isOpen={showPasswordModal}
+                onClose={() => setShowPasswordModal(false)}
+                toolName="page-numbers"
+            />
         </div>
     );
 }

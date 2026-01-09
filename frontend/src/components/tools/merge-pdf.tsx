@@ -10,6 +10,8 @@ import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { pdfApi } from "@/lib/services/pdf-api";
 import { getPdfJs } from "@/lib/services/pdf-service";
 import { toast } from "@/lib/hooks/use-toast";
+import { isPasswordError } from "@/lib/utils";
+import { PasswordProtectedModal } from "../ui/password-protected-modal";
 
 interface MergeFile {
     id: string;
@@ -26,6 +28,7 @@ export function MergePdfTool() {
     const [flatten, setFlatten] = useState(false);
     const [loadingPreviews, setLoadingPreviews] = useState(false);
     const [showArrangeMenu, setShowArrangeMenu] = useState(false);
+    const [showPasswordModal, setShowPasswordModal] = useState(false);
 
     // Lenient header sniff: look for %PDF within first 1KB (some files have BOM/whitespace).
     const isLikelyPdf = async (file: File): Promise<boolean> => {
@@ -108,6 +111,14 @@ export function MergePdfTool() {
                 pagePreviews = previews.pagePreviews;
             } catch (error) {
                 console.warn("PDF parsing failed for preview; skipping file", f.name, error);
+
+                if ((error as any).message?.includes('password') || (error as any).name === 'PasswordException' || (error as any).message?.includes('No password given')) {
+                    setShowPasswordModal(true);
+                    // We don't continue here because we want to let the user know, but maybe skipping adding it is safer or consistent. 
+                    // Actually, if we skip adding it, the user sees modal and knows.
+                    continue;
+                }
+
                 toast.show({
                     title: "Preview Failed",
                     message: `${f.name} could not be read as a PDF.`,
@@ -239,7 +250,7 @@ export function MergePdfTool() {
             let errorMessage = "Failed to merge PDFs. Please try again.";
             if (error.message?.includes('corrupted') || error.message?.includes('Invalid PDF structure')) {
                 errorMessage = "One or more PDF files appear to be corrupted. Try using the Repair PDF tool first.";
-            } else if (error.message?.includes('encrypted') || error.message?.includes('password')) {
+            } else if (isPasswordError(error)) {
                 errorMessage = "One or more PDF files are encrypted. Please use the Unlock PDF tool first.";
             }
 
@@ -256,27 +267,39 @@ export function MergePdfTool() {
 
     if (files.length === 0) {
         return (
-            <div className="min-h-[calc(100vh-120px)] flex items-center justify-center">
-                <FileUploadHero
-                    title="Merge PDF"
-                    description="Drag & drop your PDF's here"
-                    onFilesSelected={handleFilesSelected}
-                    maxFiles={20}
-                    accept={{ "application/pdf": [".pdf"] }}
+            <>
+                <div className="min-h-[calc(100vh-120px)] flex items-center justify-center">
+                    <FileUploadHero
+                        title="Merge PDF"
+                        description="Drag & drop your PDF's here"
+                        onFilesSelected={handleFilesSelected}
+                        maxFiles={20}
+                        accept={{ "application/pdf": [".pdf"] }}
+                    />
+                </div>
+                <PasswordProtectedModal
+                    isOpen={showPasswordModal}
+                    onClose={() => setShowPasswordModal(false)}
+                    toolName="merging"
                 />
-            </div>
+            </>
         );
     }
 
     return (
         <div className="bg-[#f6f7f8] min-h-screen relative">
+            <PasswordProtectedModal
+                isOpen={showPasswordModal}
+                onClose={() => setShowPasswordModal(false)}
+                toolName="merging"
+            />
             <div className="max-w-[1800px] mx-auto px-4 py-4 md:py-8">
                 <div className="flex flex-col lg:flex-row gap-4 lg:gap-8">
                     {/* Left Column - Files and Controls (Expanded) */}
                     <div className="flex-1 max-w-full lg:max-w-[1200px]">
                         {/* Header Section */}
                         <div className="mb-4 md:mb-8">
-                            <h1 className="text-[#111418] text-2xl md:text-3xl lg:text-[32px] font-bold leading-8 md:leading-10 mb-2" style={{letterSpacing: '-0.8px'}}>
+                            <h1 className="text-[#111418] text-2xl md:text-3xl lg:text-[32px] font-bold leading-8 md:leading-10 mb-2" style={{ letterSpacing: '-0.8px' }}>
                                 Merge PDF
                             </h1>
                             <p className="text-[#617289] text-sm md:text-base leading-5 md:leading-6 font-normal">

@@ -101,12 +101,12 @@ export const FileUploadHero = ({
 
 
 
-          {/* Normal content (button centered; icons positioned to the right) */}
-          <div className="relative w-full flex justify-center items-center">
+          {/* Normal content (button centered; icons positioned to the right on desktop, below on mobile) */}
+          <div className="relative w-full flex flex-col md:flex-row justify-center items-center">
             <Button
               type="button"
               onClick={open}
-              className={`h-16 md:h-20 lg:h-24 px-10 md:px-12 lg:px-16 text-xl md:text-2xl lg:text-3xl font-semibold rounded-xl transition-all shadow-[0_12px_30px_rgba(19,109,236,0.16)] bg-[#4383BF] hover:bg-[#3470A0] text-white flex items-center justify-center mx-auto`}
+              className={`h-16 md:h-20 lg:h-24 px-10 md:px-12 lg:px-16 text-xl md:text-2xl lg:text-3xl font-semibold rounded-xl transition-all shadow-[0_12px_30px_rgba(19,109,236,0.16)] bg-[#4383BF] hover:bg-[#3470A0] text-white flex items-center justify-center mx-auto md:mx-0`}
             >
               <span className="flex items-center gap-2 md:gap-3">
                 <UploadCloud className="w-5 h-5 md:w-6 md:h-6" />
@@ -114,13 +114,14 @@ export const FileUploadHero = ({
               </span>
             </Button>
 
-            {/* Icons positioned to the right of center so they don't shift the button */}
-            <div className="absolute left-1/2 translate-x-[110px] md:translate-x-[160px] lg:translate-x-[210px] top-1/2 -translate-y-1/2 flex flex-col items-start gap-2 md:gap-3">
-              <div className="flex gap-2 md:gap-3">
+            {/* Icons: Stacked below on mobile, positioned to the right of center on desktop */}
+            {/* Icons: Stacked below on mobile (row), positioned to the right of center on desktop (cluster) */}
+            <div className="mt-8 md:mt-0 md:absolute md:left-1/2 md:translate-x-[160px] lg:translate-x-[210px] md:top-1/2 md:-translate-y-1/2 flex flex-row md:flex-col items-center md:items-start gap-3 md:gap-3">
+              <div className="flex gap-3 md:gap-3">
                 <button
                   type="button"
                   aria-label="Upload from Google Drive"
-                  className="w-8 h-8 md:w-9 md:h-9 rounded-full bg-white border border-slate-200 shadow flex items-center justify-center"
+                  className="w-8 h-8 md:w-9 md:h-9 rounded-full bg-white border border-slate-200 shadow flex items-center justify-center hover:bg-gray-50 transition-colors"
                   onClick={(e) => { e.stopPropagation(); alert('Upload from Google Drive coming soon'); }}
                   title="Google Drive"
                 >
@@ -129,18 +130,18 @@ export const FileUploadHero = ({
                 <button
                   type="button"
                   aria-label="Upload from Dropbox"
-                  className="w-8 h-8 md:w-9 md:h-9 rounded-full bg-white border border-slate-200 shadow flex items-center justify-center"
+                  className="w-8 h-8 md:w-9 md:h-9 rounded-full bg-white border border-slate-200 shadow flex items-center justify-center hover:bg-gray-50 transition-colors"
                   onClick={(e) => { e.stopPropagation(); alert('Upload from Dropbox coming soon'); }}
                   title="Dropbox"
                 >
                   <img src="/merge/dropbox.png" alt="Dropbox" className="w-4 h-4 md:w-5 md:h-5 object-contain" />
                 </button>
               </div>
-              <div className="mt-1">
+              <div className="mt-0 md:mt-1">
                 <button
                   type="button"
                   aria-label="Upload from URL"
-                  className="w-8 h-8 md:w-9 md:h-9 rounded-full bg-white border border-slate-200 shadow flex items-center justify-center"
+                  className="w-8 h-8 md:w-9 md:h-9 rounded-full bg-white border border-slate-200 shadow flex items-center justify-center hover:bg-gray-50 transition-colors"
                   onClick={(e) => { e.stopPropagation(); alert('Upload from URL coming soon'); }}
                   title="From link"
                 >

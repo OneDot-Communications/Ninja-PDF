@@ -10,6 +10,7 @@ interface PdfPreviewProps {
     scale?: number;
     className?: string;
     onLoadSuccess?: (numPages: number) => void;
+    onError?: (error: any) => void;
     children?: React.ReactNode;
     contentRef?: React.RefObject<HTMLDivElement | null>;
 }
@@ -20,6 +21,7 @@ export function PdfPreview({
     scale = 1,
     className,
     onLoadSuccess,
+    onError,
     children,
     contentRef
 }: PdfPreviewProps) {
@@ -86,6 +88,7 @@ export function PdfPreview({
             } catch (err: any) {
                 if (err.name !== 'RenderingCancelledException') {
                     console.error("Error rendering PDF:", err);
+                    if (onError) onError(err);
                     if (isMounted) {
                         if (err.name === 'InvalidPDFException' || err.message?.includes('Invalid PDF structure')) {
                             setError("Invalid or corrupted PDF file.");
@@ -117,7 +120,7 @@ export function PdfPreview({
                 renderTaskRef.current = null;
             }
         };
-    }, [file, pageNumber, scale, onLoadSuccess]);
+    }, [file, pageNumber, scale, onLoadSuccess, onError]);
 
     return (
         <div className={cn("relative flex items-center justify-center bg-muted/20 min-h-[600px]", className)}>

@@ -49,14 +49,13 @@ export default function ExtractImagesPage() {
             const OPS = (pdfjsLib as any).OPS;
             const processedImageData = new Set<string>(); // Track processed images by data hash
 
+            // First pass: Try to extract embedded XObject images
             for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
                 setProgress(`Scanning page ${pageNum} of ${totalPages}...`);
 
                 try {
                     const page = await pdf.getPage(pageNum);
-                    const viewport = page.getViewport({ scale: 1 });
-                    const pageWidth = viewport.width;
-                    const pageHeight = viewport.height;
+                    const viewport = page.getViewport({ scale: 2 }); // Higher scale for better quality
 
                     // Render page first to load all image resources
                     const canvas = document.createElement('canvas');
@@ -72,7 +71,7 @@ export default function ExtractImagesPage() {
 
                     // Find unique image operators (deduplicate by name)
                     const seenNames = new Set<string>();
-                    const imageOps: { name: string; type: string }[] = [];
+                    const imageOps: { name: string; type: string; args?: any }[] = [];
 
                     for (let i = 0; i < resources.fnArray.length; i++) {
                         const op = resources.fnArray[i];
@@ -85,7 +84,14 @@ export default function ExtractImagesPage() {
                                 imageOps.push({ name, type: 'xobject' });
                             }
                         } else if (op === OPS.paintInlineImageXObject && args?.[0]) {
-                            imageOps.push({ name: `inline_${i}`, type: 'inline' });
+                            // Inline images - pass the actual data
+                            imageOps.push({ name: `inline_${i}`, type: 'inline', args: args[0] });
+                        } else if (op === OPS.paintImageMaskXObject && args?.[0]) {
+                            const name = typeof args[0] === 'string' ? args[0] : `mask_${i}`;
+                            if (!seenNames.has(name)) {
+                                seenNames.add(name);
+                                imageOps.push({ name, type: 'mask' });
+                            }
                         }
                     }
 
@@ -99,8 +105,10 @@ export default function ExtractImagesPage() {
                         try {
                             let imgData: any = null;
 
-                            if (imgOp.type === 'xobject') {
-                                // Fast extraction with 500ms timeout
+                            if (imgOp.type === 'inline') {
+                                imgData = imgOp.args;
+                            } else if (imgOp.type === 'xobject' || imgOp.type === 'mask') {
+                                // Increased timeout to 2000ms for slower images
                                 imgData = await new Promise<any>((resolve) => {
                                     let resolved = false;
                                     const timeout = setTimeout(() => {
@@ -108,7 +116,7 @@ export default function ExtractImagesPage() {
                                             resolved = true;
                                             resolve(null);
                                         }
-                                    }, 500); // 500ms timeout - fast fail
+                                    }, 2000); // 2 second timeout
 
                                     try {
                                         page.objs.get(imgOp.name, (data: any) => {
@@ -138,8 +146,8 @@ export default function ExtractImagesPage() {
 
                             console.log(`  ${imgOp.name}: ${imgWidth}x${imgHeight}`);
 
-                            // Skip invalid dimensions
-                            if (imgWidth < 10 || imgHeight < 10) {
+                            // Skip very small images (icons, bullets, etc.)
+                            if (imgWidth < 5 || imgHeight < 5) {
                                 console.log(`    Skipped: too small`);
                                 continue;
                             }
@@ -158,12 +166,20 @@ export default function ExtractImagesPage() {
 
                             // Handle ImageBitmap
                             if (imgData.bitmap instanceof ImageBitmap) {
-                                imgCtx.drawImage(imgData.bitmap, 0, 0);
                                 imgWidth = imgData.bitmap.width;
                                 imgHeight = imgData.bitmap.height;
                                 imgCanvas.width = imgWidth;
                                 imgCanvas.height = imgHeight;
                                 imgCtx.drawImage(imgData.bitmap, 0, 0);
+                                extracted = true;
+                            }
+                            // Handle HTMLImageElement or HTMLCanvasElement
+                            else if (imgData instanceof HTMLImageElement || imgData instanceof HTMLCanvasElement) {
+                                imgWidth = imgData.width;
+                                imgHeight = imgData.height;
+                                imgCanvas.width = imgWidth;
+                                imgCanvas.height = imgHeight;
+                                imgCtx.drawImage(imgData, 0, 0);
                                 extracted = true;
                             }
                             // Handle raw pixel data
@@ -208,8 +224,11 @@ export default function ExtractImagesPage() {
 
                             const dataUrl = imgCanvas.toDataURL('image/png');
 
-                            // Skip duplicates based on data URL hash
-                            const hash = dataUrl.slice(-100); // Simple hash using end of data
+                            // Better deduplication: use a hash of a sample of the image data
+                            const sampleSize = Math.min(500, dataUrl.length);
+                            const startPos = Math.floor(dataUrl.length / 3);
+                            const hash = dataUrl.substring(startPos, startPos + sampleSize);
+
                             if (processedImageData.has(hash)) {
                                 console.log(`    Skipped: duplicate`);
                                 continue;
@@ -219,7 +238,7 @@ export default function ExtractImagesPage() {
                             images.push({
                                 id: `page-${pageNum}-image-${imageIndex}`,
                                 dataUrl,
-                                name: `page-${pageNum}-image-${imageIndex}.png`,
+                                name: `Image ${images.length + 1}`,
                                 pageNumber: pageNum,
                                 imageIndex,
                                 width: imgWidth,
@@ -234,9 +253,53 @@ export default function ExtractImagesPage() {
                         }
                     }
 
+                    // Cleanup
+                    canvas.remove();
                     page.cleanup();
                 } catch (pageErr) {
                     console.warn(`Error processing page ${pageNum}:`, pageErr);
+                }
+            }
+
+            // If no images found through XObject extraction, try rendering pages as images
+            if (images.length === 0) {
+                console.log("No XObject images found. Rendering pages as fallback...");
+                setProgress("Rendering pages as images...");
+
+                for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+                    setProgress(`Rendering page ${pageNum} of ${totalPages}...`);
+
+                    try {
+                        const page = await pdf.getPage(pageNum);
+                        const viewport = page.getViewport({ scale: 2 });
+
+                        const canvas = document.createElement('canvas');
+                        const context = canvas.getContext('2d');
+                        if (!context) continue;
+
+                        canvas.width = viewport.width;
+                        canvas.height = viewport.height;
+
+                        await page.render({ canvasContext: context, viewport }).promise;
+
+                        const dataUrl = canvas.toDataURL('image/png');
+
+                        images.push({
+                            id: `page-${pageNum}`,
+                            dataUrl,
+                            name: `Page ${pageNum}`,
+                            pageNumber: pageNum,
+                            imageIndex: 1,
+                            width: Math.round(viewport.width),
+                            height: Math.round(viewport.height),
+                            selected: true
+                        });
+
+                        canvas.remove();
+                        page.cleanup();
+                    } catch (pageErr) {
+                        console.warn(`Error rendering page ${pageNum}:`, pageErr);
+                    }
                 }
             }
 
