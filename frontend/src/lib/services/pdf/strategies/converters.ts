@@ -1,6 +1,40 @@
 
 import { PDFDocument } from '../../../external/pdf-lib.esm.js';
 import { getPdfJs, StrategyResult } from '../utils';
+import { api } from '../../api';
+
+/**
+ * Convert Office documents (Word, Excel, PowerPoint) to PDF using the backend API.
+ * The backend uses Gotenberg (LibreOffice-based) for high-quality conversion.
+ */
+async function convertOfficeToBackend(file: File, type: 'word' | 'excel' | 'powerpoint'): Promise<StrategyResult> {
+    try {
+        let result: Blob;
+        
+        switch (type) {
+            case 'word':
+                result = await api.wordToPdf(file);
+                break;
+            case 'excel':
+                result = await api.excelToPdf(file);
+                break;
+            case 'powerpoint':
+                result = await api.powerpointToPdf(file);
+                break;
+            default:
+                throw new Error(`Unknown conversion type: ${type}`);
+        }
+        
+        return {
+            blob: result,
+            fileName: file.name.replace(/\.[^/.]+$/, "") + ".pdf",
+            extension: 'pdf'
+        };
+    } catch (error: any) {
+        console.error(`${type} to PDF backend conversion failed:`, error);
+        throw new Error(error.message || `Failed to convert ${type} to PDF`);
+    }
+}
 
 export async function convertFromPdf(file: File, options: { format: 'jpeg' | 'png', dpi: number, pageRange?: string, mergeOutput?: boolean }): Promise<StrategyResult> {
     const pdfjsLib = await getPdfJs();
@@ -485,87 +519,31 @@ export async function convertToPdf(files: File[], options: any): Promise<Strateg
     return { blob, fileName: `${file.name}.pdf`, extension: 'pdf' };
 }
 
+/**
+ * Convert Word document to PDF using Gotenberg backend.
+ * This provides high-quality conversion using LibreOffice.
+ */
 export async function wordToPdf(files: File[], options: any): Promise<StrategyResult> {
     const file = files[0];
-    const arrayBuffer = await file.arrayBuffer();
+    return convertOfficeToBackend(file, 'word');
+}
 
-    // 1. Convert DOCX to HTML using Mammoth
-    const mammoth = await import("mammoth");
-    const result = await mammoth.convertToHtml({ arrayBuffer: arrayBuffer });
-    const htmlContent = result.value;
+/**
+ * Convert Excel spreadsheet to PDF using Gotenberg backend.
+ * This provides high-quality conversion using LibreOffice.
+ */
+export async function excelToPdf(files: File[], options: any): Promise<StrategyResult> {
+    const file = files[0];
+    return convertOfficeToBackend(file, 'excel');
+}
 
-    if (!htmlContent) {
-        throw new Error("Could not extract content from Word document.");
-    }
-
-    // 2. Create a temporary container for the HTML
-    // IMPORTANT: precise styling is needed for html2canvas to capture it correctly.
-    // It must be 'visible' in the DOM, even if obscured.
-    const container = document.createElement('div');
-    container.innerHTML = `
-        <div style="font-family: Arial, sans-serif; font-size: 11pt; line-height: 1.5; color: #000; background: white; padding: 40px; min-height: 842px;">
-            <style>
-                p { margin-bottom: 10pt; }
-                h1, h2, h3 { margin-top: 20pt; margin-bottom: 10pt; font-weight: bold; }
-                table { border-collapse: collapse; width: 100%; border: 1px solid #ccc; margin-bottom: 15px; }
-                td, th { border: 1px solid #ccc; padding: 5px; }
-            </style>
-            ${htmlContent}
-        </div>
-    `;
-    container.style.width = '595pt'; // A4 width in points
-    container.style.position = 'fixed'; // Fixed to ensure it renders
-    container.style.top = '0';
-    container.style.left = '0';
-    container.style.zIndex = '-1000'; // Behind everything
-    container.style.backgroundColor = 'white'; // Ensure background is white
-    document.body.appendChild(container);
-
-    try {
-        // 3. Convert HTML to PDF using jsPDF
-        const { jsPDF } = await import("jspdf");
-        const doc = new jsPDF({
-            format: 'a4',
-            unit: 'pt',
-            orientation: 'portrait'
-        });
-
-        // Use a longer timeout or await proper rendering
-        await new Promise<void>((resolve, reject) => {
-            doc.html(container, {
-                callback: (doc) => {
-                    resolve();
-                },
-                x: 0,
-                y: 0,
-                autoPaging: 'text',
-                width: 595, // Match container width
-                windowWidth: 800, // Ensure window width is sufficient
-                margin: [0, 0, 0, 0],
-                html2canvas: {
-                    scale: 0.75, // Adjust scale if needed (96dpi vs 72pt approx)
-                    logging: false,
-                    useCORS: true
-                }
-            });
-        });
-
-        const blob = doc.output('blob');
-        return {
-            blob,
-            fileName: file.name.replace(/\.[^/.]+$/, "") + ".pdf",
-            extension: 'pdf'
-        };
-
-    } catch (e) {
-        console.error("Word to PDF generation failed:", e);
-        throw e;
-    } finally {
-        // Clean up
-        if (document.body.contains(container)) {
-            document.body.removeChild(container);
-        }
-    }
+/**
+ * Convert PowerPoint presentation to PDF using Gotenberg backend.
+ * This provides high-quality conversion using LibreOffice.
+ */
+export async function powerpointToPdf(files: File[], options: any): Promise<StrategyResult> {
+    const file = files[0];
+    return convertOfficeToBackend(file, 'powerpoint');
 }
 
 export async function pdfToWord(file: File, options: any): Promise<StrategyResult> {

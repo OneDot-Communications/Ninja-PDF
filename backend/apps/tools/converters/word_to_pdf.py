@@ -1,6 +1,7 @@
 """
 Word to PDF Converter
 Pure transformation - no Django, no DB.
+Uses Gotenberg (LibreOffice-based) for best results.
 """
 import subprocess
 import tempfile
@@ -22,6 +23,26 @@ def convert(input_path: str, output_path: str, **parameters) -> dict:
         dict: {success, pages, message}
     """
     try:
+        # Try Gotenberg first (best quality)
+        try:
+            from apps.tools.converters.gotenberg_converter import GotenbergConverter
+            
+            with open(input_path, 'rb') as f:
+                content = f.read()
+            
+            filename = os.path.basename(input_path)
+            pdf_bytes = GotenbergConverter.convert_to_pdf(content, filename)
+            
+            with open(output_path, 'wb') as f:
+                f.write(pdf_bytes)
+            
+            logger.info(f"Converted Word to PDF via Gotenberg: {output_path}")
+            return {'success': True, 'message': 'Conversion complete (Gotenberg)'}
+            
+        except Exception as gotenberg_error:
+            logger.warning(f"Gotenberg conversion failed, trying LibreOffice: {gotenberg_error}")
+        
+        # Fallback to local LibreOffice
         output_dir = os.path.dirname(output_path)
         
         result = subprocess.run(
@@ -38,9 +59,9 @@ def convert(input_path: str, output_path: str, **parameters) -> dict:
         if temp_output != output_path:
             os.rename(temp_output, output_path)
         
-        logger.info(f"Converted Word to PDF: {output_path}")
+        logger.info(f"Converted Word to PDF via LibreOffice: {output_path}")
         
-        return {'success': True, 'message': 'Conversion complete'}
+        return {'success': True, 'message': 'Conversion complete (LibreOffice)'}
         
     except subprocess.TimeoutExpired:
         return {'success': False, 'message': 'Conversion timed out'}
@@ -52,6 +73,7 @@ def convert(input_path: str, output_path: str, **parameters) -> dict:
 def convert_word_to_pdf(file) -> bytes:
     """
     Convert Word document to PDF (API wrapper).
+    Uses Gotenberg as primary converter, with fallbacks.
     
     Args:
         file: Django UploadedFile or file-like object
@@ -68,7 +90,14 @@ def convert_word_to_pdf(file) -> bytes:
         if ext not in ('docx', 'doc', 'odt', 'rtf'):
             ext = 'docx'
         
-        # Try LibreOffice first
+        # Try Gotenberg first (best quality, recommended)
+        try:
+            from apps.tools.converters.gotenberg_converter import GotenbergConverter
+            return GotenbergConverter.convert_to_pdf(content, filename)
+        except Exception as gotenberg_error:
+            logger.warning(f"Gotenberg conversion failed: {gotenberg_error}")
+        
+        # Fallback to local LibreOffice
         try:
             from apps.tools.converters.office_converter import LibreOfficeConverter
             return LibreOfficeConverter.convert_to_pdf(content, ext)

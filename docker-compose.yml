@@ -1,0 +1,17 @@
+# Gotenberg service for Office-to-PDF conversion
+# Usage: docker-compose up -d
+# Django backend connects to http://localhost:3001
+
+services:
+  gotenberg:
+    image: gotenberg/gotenberg:8
+    container_name: gotenberg
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
+    command:
+      - "gotenberg"
+      - "--chromium-disable-javascript=true"
+      - "--chromium-allow-list=file:///tmp/.*"
+      - "--libreoffice-disable-routes=false"
+      - "--api-timeout=120s"

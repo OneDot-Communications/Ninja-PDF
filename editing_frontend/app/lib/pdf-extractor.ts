@@ -4,7 +4,9 @@ import { PDFTextItem } from '@/app/types/pdf-editor';
 
 // Configure PDF.js worker
 if (typeof window !== 'undefined') {
-    pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+    // Use local worker file from public folder instead of CDN
+    // This avoids "Failed to fetch dynamically imported module" errors
+    pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
 }
 
 export async function loadPDF(file: File) {
