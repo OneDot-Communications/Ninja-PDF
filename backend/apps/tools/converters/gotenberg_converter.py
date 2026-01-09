@@ -73,8 +73,7 @@ class GotenbergConverter:
         filename: str,
         content_type: Optional[str] = None,
         landscape: bool = False,
-        page_ranges: Optional[str] = None,
-        native_pdf_format: bool = True
+        page_ranges: Optional[str] = None
     ) -> bytes:
         """
         Convert a document to PDF using Gotenberg.
@@ -85,7 +84,6 @@ class GotenbergConverter:
             content_type: MIME type of the document (optional)
             landscape: Whether to use landscape orientation
             page_ranges: Page ranges to convert (e.g., "1-3,5")
-            native_pdf_format: Use native PDF format if available
         
         Returns:
             PDF content as bytes
@@ -101,21 +99,12 @@ class GotenbergConverter:
         if not content_type:
             content_type = 'application/octet-stream'
         
-        # Prepare the multipart form data
+        # Prepare the multipart form data - Gotenberg expects just the file
         files = {
             'files': (filename, input_bytes, content_type)
         }
         
-        # Prepare form data for options
-        data = {}
-        if landscape:
-            data['landscape'] = 'true'
-        if page_ranges:
-            data['pageRanges'] = page_ranges
-        if native_pdf_format:
-            data['nativePdfFormat'] = 'true'
-        
-        # Make request to Gotenberg
+        # Make request to Gotenberg - minimal parameters for best accuracy
         url = f"{GOTENBERG_URL}{cls.LIBREOFFICE_ENDPOINT}"
         
         try:
@@ -124,7 +113,6 @@ class GotenbergConverter:
             response = requests.post(
                 url,
                 files=files,
-                data=data if data else None,
                 timeout=cls.TIMEOUT_SECONDS
             )
             
@@ -152,7 +140,7 @@ class GotenbergConverter:
             raise
 
 
-def convert_office_to_pdf_gotenberg(file, landscape: bool = False) -> bytes:
+def convert_office_to_pdf_gotenberg(file) -> bytes:
     """
     Convert Office document (Word, Excel, PowerPoint) to PDF using Gotenberg.
     
@@ -160,7 +148,6 @@ def convert_office_to_pdf_gotenberg(file, landscape: bool = False) -> bytes:
     
     Args:
         file: Django UploadedFile or file-like object with .name attribute
-        landscape: Whether to use landscape orientation
     
     Returns:
         PDF bytes
@@ -171,13 +158,10 @@ def convert_office_to_pdf_gotenberg(file, landscape: bool = False) -> bytes:
     try:
         content = file.read()
         filename = getattr(file, 'name', 'document.docx')
-        content_type = getattr(file, 'content_type', None)
         
         return GotenbergConverter.convert_to_pdf(
             input_bytes=content,
-            filename=filename,
-            content_type=content_type,
-            landscape=landscape
+            filename=filename
         )
     except Exception as e:
         logger.error(f"Office to PDF conversion failed: {e}")
@@ -186,14 +170,14 @@ def convert_office_to_pdf_gotenberg(file, landscape: bool = False) -> bytes:
 
 def convert_word_to_pdf_gotenberg(file) -> bytes:
     """Convert Word document to PDF using Gotenberg."""
-    return convert_office_to_pdf_gotenberg(file, landscape=False)
+    return convert_office_to_pdf_gotenberg(file)
 
 
-def convert_excel_to_pdf_gotenberg(file, landscape: bool = True) -> bytes:
+def convert_excel_to_pdf_gotenberg(file) -> bytes:
     """Convert Excel spreadsheet to PDF using Gotenberg."""
-    return convert_office_to_pdf_gotenberg(file, landscape=landscape)
+    return convert_office_to_pdf_gotenberg(file)
 
 
-def convert_powerpoint_to_pdf_gotenberg(file, landscape: bool = True) -> bytes:
+def convert_powerpoint_to_pdf_gotenberg(file) -> bytes:
     """Convert PowerPoint presentation to PDF using Gotenberg."""
-    return convert_office_to_pdf_gotenberg(file, landscape=landscape)
+    return convert_office_to_pdf_gotenberg(file)
