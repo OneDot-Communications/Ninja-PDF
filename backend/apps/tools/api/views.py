@@ -655,26 +655,47 @@ class MergePDFView(PDFToolAPIView):
         if not files or len(files) < 2:
             return Response({'error': 'At least 2 files required for merge'}, status=status.HTTP_400_BAD_REQUEST)
 
+        # Optional output filename
+        output_filename = request.POST.get('outputFileName', 'merged.pdf')
+        if not output_filename.endswith('.pdf'):
+            output_filename += '.pdf'
         
         try:
             import fitz
-            merged = fitz.open()
             
+            # Validate that all files are PDFs
             for file in files:
-                pdf = fitz.open(stream=file.read(), filetype="pdf")
-                merged.insert_pdf(pdf)
-                pdf.close()
+                if not file.name.lower().endswith('.pdf'):
+                    return Response({'error': f'File {file.name} is not a PDF'}, status=status.HTTP_400_BAD_REQUEST)
             
-            output = io.BytesIO()
-            merged.save(output)
-            merged.close()
-            output.seek(0)
+            merged = fitz.open()
+            pdf_objects = []  # Keep track for proper cleanup
             
-            response = HttpResponse(output.read(), content_type='application/pdf')
-            response['Content-Disposition'] = 'attachment; filename="merged.pdf"'
-            return response
+            try:
+                for file in files:
+                    pdf = fitz.open(stream=file.read(), filetype="pdf")
+                    pdf_objects.append(pdf)
+                    merged.insert_pdf(pdf)
+                
+                output = io.BytesIO()
+                merged.save(output)
+                output.seek(0)
+                
+                response = HttpResponse(output.read(), content_type='application/pdf')
+                response['Content-Disposition'] = f'attachment; filename="{output_filename}"'
+                return response
+                
+            finally:
+                # Ensure all PDFs are closed
+                merged.close()
+                for pdf in pdf_objects:
+                    pdf.close()
+                    
+        except fitz.FileDataError as e:
+            return Response({'error': f'Invalid PDF file: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            logger.error(f"PDF merge failed: {str(e)}", exc_info=True)
+            return Response({'error': f'Merge failed: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class SplitPDFView(PDFToolAPIView):

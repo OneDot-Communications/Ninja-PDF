@@ -8,6 +8,7 @@ import { ArrowRight, Download, Trash2, FileText, Settings, CheckSquare, Square, 
 import { motion, AnimatePresence } from "framer-motion";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { pdfApi } from "@/lib/services/pdf-api";
+import { pdfStrategyManager } from "@/lib/services/pdf-service";
 import { getPdfJs } from "@/lib/services/pdf-service";
 import { toast } from "@/lib/hooks/use-toast";
 import { isPasswordError } from "@/lib/utils";
@@ -221,8 +222,8 @@ export function MergePdfTool() {
             const ranges = files.map(f => f.range);
             const fileObjects = files.map(f => f.file);
 
-            // Uses client-side processing (no backend endpoint for merge yet)
-            const result = await pdfApi.merge(fileObjects, { ranges, flatten });
+            // Use fast client-side processing only
+            const result = await pdfStrategyManager.execute("merge", fileObjects, { ranges, flatten });
 
             const url = URL.createObjectURL(result.blob);
             const link = document.createElement("a");
@@ -310,21 +311,29 @@ export function MergePdfTool() {
                         {/* Files Grid */}
                         <div className="flex-1 overflow-hidden">
                             <DragDropContext onDragEnd={onDragEnd}>
-                                <Droppable droppableId="files" direction="vertical">
-                                    {(provided) => (
+                                <Droppable droppableId="files">
+                                    {(provided, snapshot) => (
                                         <div
                                             {...provided.droppableProps}
                                             ref={provided.innerRef}
-                                            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4 pb-4 h-full"
+                                            className={`flex flex-wrap gap-3 md:gap-4 pb-4 h-full justify-center lg:justify-start transition-all duration-300 ${snapshot.isDraggingOver ? 'bg-blue-50/50 rounded-lg p-2' : ''}`}
                                         >
                                             {files.map((item, index) => (
                                                 <Draggable key={item.id} draggableId={item.id} index={index}>
-                                                    {(provided) => (
+                                                    {(provided, snapshot) => (
                                                         <div
                                                             ref={provided.innerRef}
                                                             {...provided.draggableProps}
                                                             {...provided.dragHandleProps}
-                                                            className="bg-white rounded-xl border-0 flex-shrink-0 w-full max-w-[200px] mx-auto h-auto shadow-sm hover:shadow-md transition-shadow cursor-move"
+                                                            className={`bg-white rounded-xl border-0 flex-shrink-0 w-[200px] h-auto shadow-sm hover:shadow-md cursor-grab active:cursor-grabbing transition-shadow duration-200 ${
+                                                                snapshot.isDragging 
+                                                                    ? 'shadow-2xl !scale-105 !rotate-2 z-[1000]' 
+                                                                    : ''
+                                                            }`}
+                                                            style={{
+                                                                ...provided.draggableProps.style,
+                                                                pointerEvents: snapshot.isDragging ? 'none' : 'auto'
+                                                            }}
                                                         >
                                                             <div className="bg-[#f1f5f9] w-full aspect-[3/4] relative rounded-t-xl">
                                                                 <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-sm rounded-full w-5 h-5 flex items-center justify-center">
@@ -386,7 +395,7 @@ export function MergePdfTool() {
                                                     };
                                                     input.click();
                                                 }}
-                                                className="bg-blue-50 rounded-xl border-2 border-blue-200 border-dashed flex-shrink-0 w-[204.8px] h-[273.08px] flex flex-col items-center justify-center cursor-pointer hover:bg-blue-100 transition-colors"
+                                                className="bg-blue-50 rounded-xl border-2 border-blue-200 border-dashed flex-shrink-0 w-[200px] h-[273.08px] flex flex-col items-center justify-center cursor-pointer hover:bg-blue-100 transition-colors"
                                             >
                                                 <div className="bg-blue-100 rounded-full w-12 h-12 flex items-center justify-center mb-4">
                                                     <Plus className="h-6 w-6 text-[#4383BF]" />

@@ -276,7 +276,7 @@ export const pdfApi = {
     // PDF MANIPULATION (client-side only for now - backend can be added later)
     // ─────────────────────────────────────────────────────────────────────────────
     merge: async (files: File[], options?: any): Promise<ProcessingResult> => {
-        // Call Spring Boot backend API for PDF merging
+        // Call Django backend API for PDF merging
         const formData = new FormData();
         files.forEach(file => {
             formData.append('files', file);
@@ -285,7 +285,7 @@ export const pdfApi = {
             formData.append('outputFileName', options.outputFileName);
         }
 
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/pdf/merge`, {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/tools/merge/`, {
             method: 'POST',
             body: formData,
         });

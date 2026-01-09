@@ -283,3 +283,18 @@ body {
         background-size: contain;
     }
 }
+
+/* Smooth drag and drop styles */
+[data-rbd-draggable-context-id] {
+    /* Let react-beautiful-dnd handle positioning */
+}
+
+[data-rbd-draggable-id] {
+    /* Smooth transitions when not dragging */
+    transition: transform 0.001s cubic-bezier(0.2, 0, 0, 1);
+}
+
+[data-rbd-draggable-id]:not([data-is-dragging="true"]) {
+    /* Instant snap when dropped */
+    transition: none;
+}
