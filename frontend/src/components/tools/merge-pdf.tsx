@@ -1,12 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback, useRef, useMemo } from "react";
 import { PDFDocument } from "pdf-lib";
 import FileUploadHero from "../ui/file-upload-hero";
 import { Button } from "../ui/button";
-import { ArrowRight, Download, Trash2, FileText, Settings, CheckSquare, Square, ArrowUpDown, GitMerge, Plus, SortAsc, SortDesc } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
-import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
+import { ArrowRight, Download, Trash2, FileText, Settings, CheckSquare, Square, ArrowUpDown, GitMerge, Plus, SortAsc, SortDesc, GripVertical } from "lucide-react";
+import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
 import { pdfApi } from "@/lib/services/pdf-api";
 import { pdfStrategyManager } from "@/lib/services/pdf-service";
 import { getPdfJs } from "@/lib/services/pdf-service";
@@ -30,6 +29,9 @@ export function MergePdfTool() {
     const [loadingPreviews, setLoadingPreviews] = useState(false);
     const [showArrangeMenu, setShowArrangeMenu] = useState(false);
     const [showPasswordModal, setShowPasswordModal] = useState(false);
+    const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+    const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
 
     // Lenient header sniff: look for %PDF within first 1KB (some files have BOM/whitespace).
     const isLikelyPdf = async (file: File): Promise<boolean> => {
@@ -44,7 +46,7 @@ export function MergePdfTool() {
     };
 
     const generatePdfPreview = async (file: File): Promise<{ previewUrl: string; pagePreviews: string[] }> => {
-        // Render the first few pages entirely on the client—no backend dependency.
+        // Fast preview generation with lower quality for speed
         try {
             const pdfjsLib = await getPdfJs();
             const arrayBuffer = await file.arrayBuffer();
@@ -57,19 +59,16 @@ export function MergePdfTool() {
             }).promise;
 
             const previews: string[] = [];
-            const pagesToRender = Math.min(pdf.numPages || 1, 3);
-
-            for (let i = 1; i <= pagesToRender; i++) {
-                const page = await pdf.getPage(i);
-                const viewport = page.getViewport({ scale: 1.4 });
-                const canvas = document.createElement("canvas");
-                const context = canvas.getContext("2d");
-                if (!context) continue;
-
+            // Only render first page for faster loading
+            const page = await pdf.getPage(1);
+            const viewport = page.getViewport({ scale: 0.5 }); // Lower scale for faster rendering
+            const canvas = document.createElement("canvas");
+            const context = canvas.getContext("2d");
+            if (context) {
                 canvas.height = viewport.height;
                 canvas.width = viewport.width;
                 await page.render({ canvasContext: context, viewport }).promise;
-                previews.push(canvas.toDataURL('image/png'));
+                previews.push(canvas.toDataURL('image/jpeg', 0.6)); // JPEG with compression
             }
 
             return { previewUrl: previews[0] || "", pagePreviews: previews };
@@ -82,12 +81,10 @@ export function MergePdfTool() {
     const handleFilesSelected = async (newFiles: File[]) => {
         setLoadingPreviews(true);
 
-        const prepared: MergeFile[] = [];
-
-        for (const f of newFiles) {
+        // Process files in parallel for faster loading
+        const processFile = async (f: File): Promise<MergeFile | null> => {
             const isPdf = await isLikelyPdf(f);
             if (!isPdf) {
-                // Warn but still attempt to handle; some PDFs have padded headers.
                 toast.show({
                     title: "Unusual PDF",
                     message: `${f.name} looks non-standard. We'll still try to open it.`,
@@ -96,55 +93,55 @@ export function MergePdfTool() {
                 });
             }
 
-            let pageCount = 0;
-            let previewUrl = "";
-            let pagePreviews: string[] = [];
-
             try {
-                // Light read to get page count quickly
                 const arrayBuffer = await f.arrayBuffer();
                 const pdfDoc = await PDFDocument.load(arrayBuffer, { ignoreEncryption: true });
-                pageCount = pdfDoc.getPageCount();
+                const pageCount = pdfDoc.getPageCount();
 
-                // Generate first-page preview(s) client-side
+                // Generate preview in parallel
                 const previews = await generatePdfPreview(f);
-                previewUrl = previews.previewUrl;
-                pagePreviews = previews.pagePreviews;
+
+                return {
+                    id: Math.random().toString(36).substr(2, 9),
+                    file: f,
+                    range: "all",
+                    pageCount,
+                    previewUrl: previews.previewUrl,
+                    pagePreviews: previews.pagePreviews
+                };
             } catch (error) {
-                console.warn("PDF parsing failed for preview; skipping file", f.name, error);
-
-                if ((error as any).message?.includes('password') || (error as any).name === 'PasswordException' || (error as any).message?.includes('No password given')) {
+                if ((error as any).message?.includes('password') || (error as any).name === 'PasswordException') {
                     setShowPasswordModal(true);
-                    // We don't continue here because we want to let the user know, but maybe skipping adding it is safer or consistent. 
-                    // Actually, if we skip adding it, the user sees modal and knows.
-                    continue;
+                    return null;
                 }
-
                 toast.show({
                     title: "Preview Failed",
-                    message: `${f.name} could not be read as a PDF.`,
+                    message: `${f.name} could not be read.`,
                     variant: "error",
                     position: "top-right",
                 });
-                continue;
+                return null;
             }
+        };
 
-            prepared.push({
-                id: Math.random().toString(36).substr(2, 9),
-                file: f,
-                range: "all",
-                pageCount,
-                previewUrl,
-                pagePreviews
-            });
+        // Process all files in parallel (batch of 5 at a time)
+        const batchSize = 5;
+        const allPrepared: MergeFile[] = [];
+        
+        for (let i = 0; i < newFiles.length; i += batchSize) {
+            const batch = newFiles.slice(i, i + batchSize);
+            const results = await Promise.all(batch.map(processFile));
+            allPrepared.push(...results.filter((r): r is MergeFile => r !== null));
+            // Update state progressively for visual feedback
+            if (allPrepared.length > 0) {
+                setFiles(prev => {
+                    const existingIds = new Set(prev.map(p => p.id));
+                    const newItems = allPrepared.filter(p => !existingIds.has(p.id));
+                    return [...prev, ...newItems];
+                });
+            }
         }
 
-        if (prepared.length === 0) {
-            setLoadingPreviews(false);
-            return;
-        }
-
-        setFiles((prev) => [...prev, ...prepared]);
         setLoadingPreviews(false);
     };
 
@@ -156,12 +153,43 @@ export function MergePdfTool() {
         setFiles(prev => prev.map((f, i) => i === index ? { ...f, range } : f));
     };
 
-    const onDragEnd = (result: any) => {
-        if (!result.destination) return;
-        const items = Array.from(files);
-        const [reorderedItem] = items.splice(result.source.index, 1);
-        items.splice(result.destination.index, 0, reorderedItem);
-        setFiles(items);
+    // Swap files when dropping
+    const handleDragStart = (index: number) => {
+        setDraggedIndex(index);
+    };
+
+    const handleDragOver = (e: React.DragEvent, index: number) => {
+        e.preventDefault();
+        if (draggedIndex !== null && draggedIndex !== index) {
+            setHoveredIndex(index);
+        }
+    };
+
+    const handleDragLeave = () => {
+        setHoveredIndex(null);
+    };
+
+    const handleDrop = (targetIndex: number) => {
+        if (draggedIndex === null || draggedIndex === targetIndex) {
+            setDraggedIndex(null);
+            setHoveredIndex(null);
+            return;
+        }
+
+        setFiles(prev => {
+            const newFiles = [...prev];
+            const [draggedItem] = newFiles.splice(draggedIndex, 1);
+            newFiles.splice(targetIndex, 0, draggedItem);
+            return newFiles;
+        });
+
+        setDraggedIndex(null);
+        setHoveredIndex(null);
+    };
+
+    const handleDragEnd = () => {
+        setDraggedIndex(null);
+        setHoveredIndex(null);
     };
 
     const sortFiles = (direction: 'asc' | 'desc') => {
@@ -309,108 +337,125 @@ export function MergePdfTool() {
                         </div>
 
                         {/* Files Grid */}
-                        <div className="flex-1 overflow-hidden">
-                            <DragDropContext onDragEnd={onDragEnd}>
-                                <Droppable droppableId="files">
-                                    {(provided, snapshot) => (
-                                        <div
-                                            {...provided.droppableProps}
-                                            ref={provided.innerRef}
-                                            className={`flex flex-wrap gap-3 md:gap-4 pb-4 h-full justify-center lg:justify-start transition-all duration-300 ${snapshot.isDraggingOver ? 'bg-blue-50/50 rounded-lg p-2' : ''}`}
-                                        >
-                                            {files.map((item, index) => (
-                                                <Draggable key={item.id} draggableId={item.id} index={index}>
-                                                    {(provided, snapshot) => (
-                                                        <div
-                                                            ref={provided.innerRef}
-                                                            {...provided.draggableProps}
-                                                            {...provided.dragHandleProps}
-                                                            className={`bg-white rounded-xl border-0 flex-shrink-0 w-[200px] h-auto shadow-sm hover:shadow-md cursor-grab active:cursor-grabbing transition-shadow duration-200 ${
-                                                                snapshot.isDragging 
-                                                                    ? 'shadow-2xl !scale-105 !rotate-2 z-[1000]' 
-                                                                    : ''
-                                                            }`}
-                                                            style={{
-                                                                ...provided.draggableProps.style,
-                                                                pointerEvents: snapshot.isDragging ? 'none' : 'auto'
-                                                            }}
-                                                        >
-                                                            <div className="bg-[#f1f5f9] w-full aspect-[3/4] relative rounded-t-xl">
-                                                                <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-sm rounded-full w-5 h-5 flex items-center justify-center">
-                                                                    <span className="text-white font-bold text-xs">{index + 1}</span>
-                                                                </div>
-                                                                {/* PDF Preview */}
-                                                                {item.previewUrl ? (
-                                                                    <div className="w-full h-full relative">
-                                                                        <img
-                                                                            src={item.previewUrl}
-                                                                            alt={`First page of ${item.file.name}`}
-                                                                            className="w-full h-full object-contain rounded-t-xl"
-                                                                        />
-                                                                        <div className="absolute bottom-2 right-2 bg-black/70 backdrop-blur-sm rounded px-2 py-1">
-                                                                            <span className="text-white text-xs font-medium">Page 1</span>
-                                                                        </div>
-                                                                    </div>
-                                                                ) : (
-                                                                    <div className="w-full h-full flex items-center justify-center">
-                                                                        <FileText className="h-16 w-16 text-gray-400" />
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                            <div className="p-3">
-                                                                <h3 className="text-[#111418] font-bold text-sm leading-5 mb-1 truncate" title={item.file.name}>
-                                                                    {item.file.name.replace('.pdf', '')}
-                                                                </h3>
-                                                                <div className="flex items-center justify-between">
-                                                                    <span className="text-[#617289] font-medium text-xs">
-                                                                        {item.pageCount ? `${item.pageCount} pages` : `${(item.file.size / 1024 / 1024).toFixed(1)} MB`}
-                                                                    </span>
-                                                                    <button
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            removeFile(index);
-                                                                        }}
-                                                                        className="text-red-500 hover:text-red-700 p-1"
-                                                                    >
-                                                                        <Trash2 className="h-4 w-4" />
-                                                                    </button>
-                                                                </div>
+                        <div 
+                            ref={containerRef}
+                            className="flex-1 overflow-y-auto overflow-x-hidden max-h-[calc(100vh-280px)] pr-2" 
+                            style={{ scrollbarGutter: 'stable' }}
+                        >
+                            <LayoutGroup>
+                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-3 md:gap-4 pb-4">
+                                    <AnimatePresence mode="popLayout">
+                                        {files.map((item, index) => (
+                                            <motion.div
+                                                key={item.id}
+                                                layout
+                                                layoutId={item.id}
+                                                initial={{ opacity: 0, scale: 0.8, y: 20 }}
+                                                animate={{ 
+                                                    opacity: draggedIndex === index ? 0.5 : 1, 
+                                                    scale: hoveredIndex === index && draggedIndex !== null ? 1.05 : 1,
+                                                    y: 0,
+                                                    boxShadow: hoveredIndex === index && draggedIndex !== null
+                                                        ? "0 0 0 3px rgba(67, 131, 191, 0.5)"
+                                                        : "0 1px 3px 0 rgba(0, 0, 0, 0.1)"
+                                                }}
+                                                exit={{ opacity: 0, scale: 0.8, transition: { duration: 0.15 } }}
+                                                transition={{
+                                                    layout: { type: "spring", stiffness: 350, damping: 25 },
+                                                    opacity: { duration: 0.2 },
+                                                    scale: { duration: 0.2 }
+                                                }}
+                                                draggable
+                                                onDragStart={() => handleDragStart(index)}
+                                                onDragOver={(e) => handleDragOver(e as any, index)}
+                                                onDragLeave={handleDragLeave}
+                                                onDrop={() => handleDrop(index)}
+                                                onDragEnd={handleDragEnd}
+                                                whileHover={{ y: -4, boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.15)" }}
+                                                className={`bg-white rounded-xl border-2 cursor-grab active:cursor-grabbing select-none transition-colors ${
+                                                    hoveredIndex === index && draggedIndex !== null && draggedIndex !== index
+                                                        ? 'border-[#4383BF]'
+                                                        : 'border-transparent'
+                                                }`}
+                                            >
+                                                <div className="bg-[#f1f5f9] w-full aspect-[3/4] relative rounded-t-xl overflow-hidden">
+                                                    <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-sm rounded-full w-6 h-6 flex items-center justify-center z-10">
+                                                        <span className="text-white font-bold text-xs">{index + 1}</span>
+                                                    </div>
+                                                    {/* PDF Preview */}
+                                                    {item.previewUrl ? (
+                                                        <div className="w-full h-full relative">
+                                                            <img
+                                                                src={item.previewUrl}
+                                                                alt={`First page of ${item.file.name}`}
+                                                                className="w-full h-full object-contain rounded-t-xl pointer-events-none"
+                                                                draggable={false}
+                                                            />
+                                                            <div className="absolute bottom-2 right-2 bg-black/70 backdrop-blur-sm rounded px-2 py-1">
+                                                                <span className="text-white text-xs font-medium">Page 1</span>
                                                             </div>
                                                         </div>
+                                                    ) : (
+                                                        <div className="w-full h-full flex items-center justify-center">
+                                                            <FileText className="h-12 w-12 text-gray-400" />
+                                                        </div>
                                                     )}
-                                                </Draggable>
-                                            ))}
-
-                                            {/* Add More Files Card */}
-                                            <div
-                                                onClick={() => {
-                                                    // Trigger file upload
-                                                    const input = document.createElement('input');
-                                                    input.type = 'file';
-                                                    input.multiple = true;
-                                                    input.accept = '.pdf';
-                                                    input.onchange = (e) => {
-                                                        const files = Array.from((e.target as HTMLInputElement).files || []);
-                                                        handleFilesSelected(files);
-                                                    };
-                                                    input.click();
-                                                }}
-                                                className="bg-blue-50 rounded-xl border-2 border-blue-200 border-dashed flex-shrink-0 w-[200px] h-[273.08px] flex flex-col items-center justify-center cursor-pointer hover:bg-blue-100 transition-colors"
-                                            >
-                                                <div className="bg-blue-100 rounded-full w-12 h-12 flex items-center justify-center mb-4">
-                                                    <Plus className="h-6 w-6 text-[#4383BF]" />
                                                 </div>
-                                                <div className="text-center">
-                                                    <div className="text-[#4383BF] font-bold text-sm mb-1">Add more files</div>
-                                                    <div className="text-blue-600 text-xs">or drag & drop here</div>
+                                                <div className="p-2.5">
+                                                    <h3 className="text-[#111418] font-bold text-xs leading-4 mb-1 truncate" title={item.file.name}>
+                                                        {item.file.name.replace('.pdf', '')}
+                                                    </h3>
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="text-[#617289] font-medium text-[10px]">
+                                                            {item.pageCount ? `${item.pageCount} pg` : `${(item.file.size / 1024 / 1024).toFixed(1)} MB`}
+                                                        </span>
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                e.preventDefault();
+                                                                removeFile(index);
+                                                            }}
+                                                            onDragStart={(e) => e.stopPropagation()}
+                                                            className="text-red-500 hover:text-red-700 p-1 rounded-md hover:bg-red-50 transition-colors"
+                                                        >
+                                                            <Trash2 className="h-3.5 w-3.5" />
+                                                        </button>
+                                                    </div>
                                                 </div>
-                                            </div>
+                                            </motion.div>
+                                        ))}
+                                    </AnimatePresence>
 
-                                            {provided.placeholder}
+                                    {/* Add More Files Card */}
+                                    <motion.div
+                                        layout
+                                        initial={{ opacity: 0, scale: 0.9 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        onClick={() => {
+                                            const input = document.createElement('input');
+                                            input.type = 'file';
+                                            input.multiple = true;
+                                            input.accept = '.pdf';
+                                            input.onchange = (e) => {
+                                                const files = Array.from((e.target as HTMLInputElement).files || []);
+                                                handleFilesSelected(files);
+                                            };
+                                            input.click();
+                                        }}
+                                        className="bg-blue-50 rounded-xl border-2 border-blue-200 border-dashed aspect-[3/4] flex flex-col items-center justify-center cursor-pointer hover:bg-blue-100 hover:border-blue-300 transition-all"
+                                        whileHover={{ y: -4 }}
+                                        whileTap={{ scale: 0.98 }}
+                                    >
+                                        <div className="bg-blue-100 rounded-full w-10 h-10 flex items-center justify-center mb-3">
+                                            <Plus className="h-5 w-5 text-[#4383BF]" />
                                         </div>
-                                    )}
-                                </Droppable>
-                            </DragDropContext>
+                                        <div className="text-center">
+                                            <div className="text-[#4383BF] font-bold text-xs mb-0.5">Add more</div>
+                                            <div className="text-blue-500 text-[10px]">drag & drop</div>
+                                        </div>
+                                    </motion.div>
+                                </div>
+                            </LayoutGroup>
                         </div>
                     </div>
 

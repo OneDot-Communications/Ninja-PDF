@@ -284,17 +284,44 @@ body {
     }
 }
 
-/* Smooth drag and drop styles */
-[data-rbd-draggable-context-id] {
-    /* Let react-beautiful-dnd handle positioning */
+/* Smooth drag and drop animations */
+.reorder-item {
+    will-change: transform;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
 }
 
-[data-rbd-draggable-id] {
-    /* Smooth transitions when not dragging */
-    transition: transform 0.001s cubic-bezier(0.2, 0, 0, 1);
+/* Prevent text selection during drag */
+[draggable="true"] {
+    user-select: none;
+    -webkit-user-select: none;
 }
 
-[data-rbd-draggable-id]:not([data-is-dragging="true"]) {
-    /* Instant snap when dropped */
-    transition: none;
+/* Drag ghost customization */
+[draggable="true"]:active {
+    cursor: grabbing;
+}
+
+/* GPU acceleration for drag items */
+[style*="transform"] {
+    will-change: transform;
+    transform: translateZ(0);
+}
+
+/* Custom scrollbar for file grid */
+.overflow-y-auto::-webkit-scrollbar {
+    width: 6px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
 }
