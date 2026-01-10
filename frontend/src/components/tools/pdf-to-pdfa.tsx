@@ -15,16 +15,19 @@ import {
     Lightbulb,
     ChevronDown,
     CheckSquare,
-    Square
+    Square,
+    Trash2
 } from "lucide-react";
 import { cn, isPasswordError } from "@/lib/utils";
 import { pdfApi } from "@/lib/services/pdf-api";
+import { getPdfJs } from "@/lib/services/pdf-service";
 import { toast } from "@/lib/hooks/use-toast";
 import { PasswordProtectedModal } from "../ui/password-protected-modal";
 
 interface FileInfo {
     file: File;
     size: string;
+    previewUrl?: string;
 }
 
 const conformanceLevels = [
@@ -74,6 +77,8 @@ export function PdfToPdfATool() {
     const [allowDowngrade, setAllowDowngrade] = useState(true);
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [showPasswordModal, setShowPasswordModal] = useState(false);
+    const [loadingPreview, setLoadingPreview] = useState(false);
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
     const formatFileSize = (bytes: number): string => {
         if (bytes >= 1024 * 1024) {
@@ -82,13 +87,51 @@ export function PdfToPdfATool() {
         return `${(bytes / 1024).toFixed(0)} KB`;
     };
 
-    const handleFileSelected = (files: File[]) => {
+    const generatePdfPreview = async (file: File): Promise<string> => {
+        try {
+            const pdfjsLib = await getPdfJs();
+            const arrayBuffer = await file.arrayBuffer();
+            const uint8Array = new Uint8Array(arrayBuffer);
+
+            const pdf = await (pdfjsLib as any).getDocument({
+                data: uint8Array,
+                cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/cmaps/',
+                cMapPacked: true,
+            }).promise;
+
+            // Render first page with good quality for single preview
+            const page = await pdf.getPage(1);
+            const viewport = page.getViewport({ scale: 1.5 }); // Higher scale for better quality
+            const canvas = document.createElement("canvas");
+            const context = canvas.getContext("2d");
+            if (context) {
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+                await page.render({ canvasContext: context, viewport }).promise;
+                return canvas.toDataURL('image/jpeg', 0.85); // High quality JPEG
+            }
+
+            return "";
+        } catch (error) {
+            console.warn("PDF preview generation failed:", error);
+            return "";
+        }
+    };
+
+    const handleFileSelected = async (files: File[]) => {
         if (files.length > 0) {
             const file = files[0];
+            setLoadingPreview(true);
+            
+            const preview = await generatePdfPreview(file);
+            
             setFileInfo({
                 file,
                 size: formatFileSize(file.size),
+                previewUrl: preview,
             });
+            
+            setLoadingPreview(false);
         }
     };
 
@@ -158,79 +201,92 @@ export function PdfToPdfATool() {
 
     return (
         <>
-            <div className="bg-[#f6f7f8] min-h-screen relative">
-                <div className="max-w-[1800px] mx-auto px-4 py-4 md:py-8">
-                    <div className="flex flex-col lg:flex-row gap-4 lg:gap-8">
-                        {/* Left Column - File Info */}
+            <div className="bg-[#f6f7f8] min-h-screen relative overflow-hidden">
+                <div className="max-w-[1800px] mx-auto px-4 py-4 md:py-6 overflow-hidden">
+                    <div className="flex flex-col lg:flex-row gap-4 lg:gap-6 overflow-hidden">
+                        {/* Left Column - File Preview */}
                         <div className="flex-1 max-w-full lg:max-w-[1200px]">
-                            {/* Control Bar */}
-                            <div className="bg-white/95 backdrop-blur-sm rounded-xl border border-[#e2e8f0] shadow-sm mb-4 p-4">
-                                <div className="flex items-center justify-between flex-wrap gap-4">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 bg-[#4383BF]/10 rounded-lg flex items-center justify-center">
-                                            <Archive className="h-5 w-5 text-[#4383BF]" />
-                                        </div>
-                                        <div>
-                                            <h2 className="text-lg font-bold text-gray-900">{fileInfo.file.name}</h2>
-                                            <p className="text-sm text-gray-500">PDF • {fileInfo.size}</p>
-                                        </div>
-                                    </div>
+                            {/* File Preview Card */}
+                            <div className="bg-white rounded-xl border border-[#e2e8f0] shadow-sm p-4 lg:p-6 h-[calc(100vh-120px)] lg:h-[calc(100vh-120px)] flex flex-col overflow-hidden relative">
+                                {/* Delete Button */}
+                                <div className="absolute top-4 right-4 z-10">
                                     <button
                                         onClick={removeFile}
-                                        className="rounded-lg flex items-center gap-2 px-3 py-2 hover:bg-red-50 transition-colors text-gray-600 hover:text-red-600"
+                                        className="bg-red-500 hover:bg-red-600 text-white rounded-lg p-2 shadow-md transition-all hover:shadow-lg"
+                                        title="Delete file"
                                     >
-                                        <X className="h-5 w-5" />
-                                        <span className="font-bold text-sm">Remove File</span>
+                                        <Trash2 className="h-4 w-4" />
                                     </button>
                                 </div>
-                            </div>
 
-                            {/* File Preview Card */}
-                            <div className="bg-white rounded-xl border border-[#e2e8f0] shadow-sm p-8">
-                                <div className="flex flex-col items-center justify-center py-12">
-                                    <div className="w-24 h-24 bg-[#4383BF]/10 rounded-2xl flex items-center justify-center mb-6">
-                                        <Archive className="h-12 w-12 text-[#4383BF]" />
-                                    </div>
-                                    <h3 className="text-xl font-bold text-[#111418] mb-2">{fileInfo.file.name}</h3>
-                                    <p className="text-[#617289] text-sm mb-4">{fileInfo.size} • Ready to convert</p>
+                                {/* Mobile Settings Button */}
+                                <div className="lg:hidden absolute bottom-20 left-4 z-10">
+                                    <button
+                                        onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                                        className="bg-[#4383BF] hover:bg-[#3A74A8] text-white rounded-lg px-4 py-2 flex items-center gap-2 font-semibold text-sm shadow-lg transition-all"
+                                    >
+                                        <Settings className="h-4 w-4" />
+                                        <span>Options</span>
+                                    </button>
+                                </div>
 
-                                    {/* Status Indicator */}
-                                    <div className="bg-[#f6f7f8] rounded-xl px-6 py-4 text-center">
-                                        <div className="flex items-center gap-2 justify-center text-[#4383BF]">
-                                            <Archive className="h-5 w-5" />
-                                            <span className="font-bold">File uploaded successfully</span>
+                                {/* PDF Preview */}
+                                <div className="flex-1 flex items-center justify-center overflow-hidden">
+                                    {loadingPreview ? (
+                                        <div className="flex flex-col items-center justify-center">
+                                            <Loader2 className="h-12 w-12 text-[#4383BF] animate-spin mb-4" />
+                                            <p className="text-sm text-[#617289]">Generating preview...</p>
                                         </div>
-                                        <p className="text-sm text-[#617289] mt-1">Ready to convert to PDF/A</p>
-                                    </div>
+                                    ) : fileInfo.previewUrl ? (
+                                        <img
+                                            src={fileInfo.previewUrl}
+                                            alt="PDF Preview"
+                                            className="max-w-full max-h-full object-contain rounded-lg border-2 border-[#e2e8f0] shadow-lg"
+                                        />
+                                    ) : (
+                                        <div className="w-24 h-24 bg-[#4383BF]/10 rounded-2xl flex items-center justify-center">
+                                            <Archive className="h-12 w-12 text-[#4383BF]" />
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>
 
                         {/* Right Sidebar - Desktop */}
-                        <div className="hidden lg:block lg:w-[424px] lg:fixed lg:right-4 lg:top-20 lg:bottom-4 lg:z-10">
-                            <div className="bg-white rounded-3xl border border-[#e2e8f0] p-6 h-full flex flex-col shadow-xl">
-                                {/* Header */}
-                                <div className="flex items-center gap-2 pb-4 border-b border-[#e2e8f0] mb-6">
-                                    <Settings className="h-5 w-5 text-[#111418]" />
-                                    <h2 className="text-[#111418] font-bold text-lg">PDF to PDF/A</h2>
+                        <div className="hidden lg:block lg:w-[400px] lg:fixed lg:right-4 lg:top-20 lg:bottom-4 lg:z-10">
+                            <div className="bg-white rounded-2xl border border-[#e2e8f0] p-6 h-full flex flex-col shadow-xl overflow-hidden">
+                                {/* File Info & Remove */}
+                                <div className="pb-4 border-b border-[#e2e8f0] mb-6">
+                                    <div className="flex items-start justify-between gap-3 mb-3">
+                                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                                            <div className="w-10 h-10 bg-[#4383BF]/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                                                <Archive className="h-5 w-5 text-[#4383BF]" />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <h2 className="text-sm font-bold text-gray-900 truncate">{fileInfo.file.name}</h2>
+                                                <p className="text-xs text-gray-500">{fileInfo.size}</p>
+                                            </div>
+                                        </div>
+                                        <button
+                                            onClick={removeFile}
+                                            className="rounded-lg p-2 hover:bg-red-50 transition-colors text-gray-400 hover:text-red-600 flex-shrink-0"
+                                            title="Remove file"
+                                        >
+                                            <X className="h-5 w-5" />
+                                        </button>
+                                    </div>
+                                    <div className="bg-gradient-to-r from-[#4383BF]/10 to-[#4383BF]/5 rounded-lg px-3 py-2">
+                                        <p className="text-xs text-[#4383BF] font-medium">Ready to convert to PDF/A</p>
+                                    </div>
                                 </div>
 
                                 {/* Content */}
-                                <div className="flex-1 space-y-6 overflow-y-auto">
-                                    {/* Info Box */}
-                                    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-100 p-4">
-                                        <p className="text-sm text-blue-800 leading-relaxed">
-                                            PDF/A is an ISO-standardized version of the Portable Document Format (PDF) specialized for use in the archiving and long-term preservation of electronic documents.
-                                        </p>
-                                        <p className="text-sm text-blue-700 mt-3">
-                                            Choose with what conformance level you want to convert your document:
-                                        </p>
-                                    </div>
+                                <div className="flex-1 space-y-5 overflow-y-auto">
 
                                     {/* Conformance Level Dropdown */}
                                     <div>
-                                        <label className="text-[#617289] font-bold text-xs uppercase tracking-wider mb-3 block">
-                                            Set the PDF/A conformance level
+                                        <label className="text-[#617289] font-semibold text-xs uppercase tracking-wider mb-2 block">
+                                            Conformance Level
                                         </label>
                                         <div className="relative">
                                             <button
@@ -268,25 +324,10 @@ export function PdfToPdfATool() {
                                         </div>
                                     </div>
 
-                                    {/* Selected Level Info */}
-                                    {selectedLevel && (
-                                        <div className="bg-[#f6f7f8] rounded-xl p-4">
-                                            <p className="text-xs text-[#617289] mb-3">{selectedLevel.desc}</p>
-                                            <ul className="space-y-2">
-                                                {selectedLevel.features.map((feature, idx) => (
-                                                    <li key={idx} className="flex items-start gap-2 text-xs text-[#4383BF]">
-                                                        <span className="text-[#4383BF] mt-0.5">•</span>
-                                                        <span>{feature}</span>
-                                                    </li>
-                                                ))}
-                                            </ul>
-                                        </div>
-                                    )}
-
                                     {/* Allow Downgrade Checkbox */}
                                     <div
                                         onClick={() => setAllowDowngrade(!allowDowngrade)}
-                                        className="flex items-start gap-3 p-4 bg-[#f8f9fa] rounded-xl cursor-pointer hover:bg-gray-100 transition-colors"
+                                        className="flex items-start gap-3 p-3 bg-[#f8f9fa] rounded-xl cursor-pointer hover:bg-gray-100 transition-colors"
                                     >
                                         <div className="mt-0.5">
                                             {allowDowngrade ? (
@@ -296,24 +337,9 @@ export function PdfToPdfATool() {
                                             )}
                                         </div>
                                         <div className="flex-1">
-                                            <p className="text-sm font-bold text-[#111418]">Allow Downgrade of PDF/A Compliance Level</p>
-                                            <p className="text-xs text-[#617289] mt-1">
-                                                In order to convert to PDF/A, when certain elements are found in the original PDF, it's possible that a conformance downgrade is needed to be able to perform the conversion.
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    {/* Tip Box */}
-                                    <div className="bg-[#f8f9fa] rounded-2xl p-4 flex gap-3">
-                                        <div className="mt-0.5">
-                                            <div className="w-5 h-5 flex items-center justify-center">
-                                                <Lightbulb className="h-4 w-4 text-[#fbbf24] fill-current" />
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <p className="text-[#617289] text-xs font-bold uppercase tracking-wider mb-1">Tip</p>
-                                            <p className="text-[#617289] text-sm leading-relaxed">
-                                                PDF/A-2b is recommended for most archiving needs as it balances compatibility with modern features.
+                                            <p className="text-sm font-semibold text-[#111418]">Auto-optimize compatibility</p>
+                                            <p className="text-xs text-[#617289] mt-0.5">
+                                                Allow automatic level adjustment for successful conversion
                                             </p>
                                         </div>
                                     </div>
@@ -350,78 +376,98 @@ export function PdfToPdfATool() {
                             </div>
                         </div>
 
-                        {/* Mobile Options Panel */}
-                        <div className="lg:hidden bg-white rounded-xl border border-[#e2e8f0] shadow-sm p-6 space-y-6 mb-24">
-                            {/* Info Box */}
-                            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-100 p-4">
-                                <p className="text-sm text-blue-800 leading-relaxed">
-                                    PDF/A is an ISO-standardized version for archiving and long-term preservation.
-                                </p>
-                            </div>
-
-                            {/* Conformance Level Dropdown */}
-                            <div>
-                                <label className="text-[#617289] font-bold text-xs uppercase tracking-wider mb-3 block">
-                                    PDF/A conformance level
-                                </label>
-                                <div className="relative">
-                                    <button
-                                        onClick={() => setDropdownOpen(!dropdownOpen)}
-                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm bg-white flex items-center justify-between"
-                                    >
-                                        <span className="font-medium text-gray-900">{selectedLevel?.name}</span>
-                                        <ChevronDown className={cn(
-                                            "w-4 h-4 text-gray-500 transition-transform duration-200",
-                                            dropdownOpen && "rotate-180"
-                                        )} />
-                                    </button>
-                                    {dropdownOpen && (
-                                        <div className="absolute z-20 w-full mt-1.5 bg-white rounded-xl border border-gray-200 shadow-lg py-1">
-                                            {conformanceLevels.map((level) => (
-                                                <button
-                                                    key={level.id}
-                                                    onClick={() => {
-                                                        setConformance(level.id as any);
-                                                        setDropdownOpen(false);
-                                                    }}
-                                                    className={cn(
-                                                        "w-full px-4 py-3 text-sm text-left flex items-center justify-between",
-                                                        conformance === level.id
-                                                            ? "bg-[#E42527]/10 text-[#E42527] font-medium"
-                                                            : "text-gray-700"
-                                                    )}
-                                                >
-                                                    {level.name}
-                                                    {conformance === level.id && <Check className="w-4 h-4" />}
-                                                </button>
-                                            ))}
+                        {/* Mobile Options Bottom Sheet */}
+                        {mobileMenuOpen && (
+                            <>
+                                {/* Backdrop */}
+                                <div 
+                                    className="lg:hidden fixed inset-0 bg-black/50 z-40 animate-in fade-in duration-200"
+                                    onClick={() => setMobileMenuOpen(false)}
+                                />
+                                
+                                {/* Bottom Sheet */}
+                                <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-3xl shadow-2xl animate-in slide-in-from-bottom duration-300">
+                                    <div className="p-6 max-h-[70vh] overflow-y-auto">
+                                        {/* Handle Bar */}
+                                        <div className="w-12 h-1 bg-gray-300 rounded-full mx-auto mb-6"></div>
+                                        
+                                        {/* File Info */}
+                                        <div className="flex items-center gap-3 pb-4 border-b border-[#e2e8f0] mb-5">
+                                            <div className="w-10 h-10 bg-[#4383BF]/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                                                <Archive className="h-5 w-5 text-[#4383BF]" />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <h2 className="text-sm font-bold text-gray-900 truncate">{fileInfo.file.name}</h2>
+                                                <p className="text-xs text-gray-500">{fileInfo.size}</p>
+                                            </div>
                                         </div>
-                                    )}
-                                </div>
-                            </div>
 
-                            {/* Allow Downgrade Checkbox */}
-                            <div
-                                onClick={() => setAllowDowngrade(!allowDowngrade)}
-                                className="flex items-start gap-3 p-4 bg-[#f8f9fa] rounded-xl cursor-pointer"
-                            >
-                                <div className="mt-0.5">
-                                    {allowDowngrade ? (
-                                        <CheckSquare className="w-5 h-5 text-[#4383BF]" />
-                                    ) : (
-                                        <Square className="w-5 h-5 text-gray-400" />
-                                    )}
-                                </div>
-                                <div className="flex-1">
-                                    <p className="text-sm font-bold text-[#111418]">Allow Downgrade</p>
-                                    <p className="text-xs text-[#617289] mt-1">
-                                        Allow conformance level downgrade if needed for conversion.
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
+                                        {/* Conformance Level Dropdown */}
+                                        <div className="mb-5">
+                                            <label className="text-[#617289] font-semibold text-xs uppercase tracking-wider mb-2 block">
+                                                Conformance Level
+                                            </label>
+                                            <div className="relative">
+                                                <button
+                                                    onClick={() => setDropdownOpen(!dropdownOpen)}
+                                                    className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm bg-white flex items-center justify-between"
+                                                >
+                                                    <span className="font-medium text-gray-900">{selectedLevel?.name}</span>
+                                                    <ChevronDown className={cn(
+                                                        "w-4 h-4 text-gray-500 transition-transform duration-200",
+                                                        dropdownOpen && "rotate-180"
+                                                    )} />
+                                                </button>
+                                                {dropdownOpen && (
+                                                    <div className="absolute z-20 w-full mt-1.5 bg-white rounded-xl border border-gray-200 shadow-lg py-1">
+                                                        {conformanceLevels.map((level) => (
+                                                            <button
+                                                                key={level.id}
+                                                                onClick={() => {
+                                                                    setConformance(level.id as any);
+                                                                    setDropdownOpen(false);
+                                                                }}
+                                                                className={cn(
+                                                                    "w-full px-4 py-3 text-sm text-left flex items-center justify-between",
+                                                                    conformance === level.id
+                                                                        ? "bg-[#4383BF]/10 text-[#4383BF] font-medium"
+                                                                        : "text-gray-700"
+                                                                )}
+                                                            >
+                                                                {level.name}
+                                                                {conformance === level.id && <Check className="w-4 h-4" />}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
 
-                        {/* Mobile Convert Button */}
+                                        {/* Allow Downgrade Checkbox */}
+                                        <div
+                                            onClick={() => setAllowDowngrade(!allowDowngrade)}
+                                            className="flex items-start gap-3 p-3 bg-[#f8f9fa] rounded-xl cursor-pointer"
+                                        >
+                                            <div className="mt-0.5">
+                                                {allowDowngrade ? (
+                                                    <CheckSquare className="w-5 h-5 text-[#4383BF]" />
+                                                ) : (
+                                                    <Square className="w-5 h-5 text-gray-400" />
+                                                )}
+                                            </div>
+                                            <div className="flex-1">
+                                                <p className="text-sm font-semibold text-[#111418]">Auto-optimize</p>
+                                                <p className="text-xs text-[#617289] mt-0.5">
+                                                    Allow automatic adjustment for conversion
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </>
+                        )}
+
+                        {/* Mobile Convert Button - Permanently Fixed */}
                         <div className="lg:hidden fixed bottom-4 left-4 right-4 z-40">
                             <Button
                                 onClick={convertToPdfA}
