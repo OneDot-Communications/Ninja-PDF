@@ -1,70 +1,85 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef } from "react";
 import { saveAs } from "file-saver";
 import JSZip from "jszip";
 import FileUploadHero from "../ui/file-upload-hero";
-import { FileText, Archive, X, Plus, Check } from "lucide-react";
+import { FileText, Archive, X, Plus, Check, Trash2 } from "lucide-react";
 import { pdfApi } from "@/lib/services/pdf-api";
 import { toast } from "@/lib/hooks/use-toast";
-import { isPasswordError } from "@/lib/utils";
 import * as pdfjsLib from "pdfjs-dist";
-import { PasswordProtectedModal } from "../ui/password-protected-modal";
 
-interface PagePreview {
-    pageNumber: number;
-    image: string;
-    width: number;
-    height: number;
+// Configure PDF.js worker (only if not already set by another module)
+if (typeof window !== "undefined" && !pdfjsLib.GlobalWorkerOptions.workerSrc) {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
 }
 
 export function CompressPdfTool() {
     const [files, setFiles] = useState<File[]>([]);
     const [isProcessing, setIsProcessing] = useState(false);
     const [compressionLevel, setCompressionLevel] = useState<"recommended" | "extreme" | "less">("recommended");
-    const [targetSize, setTargetSize] = useState<number>(60); // 0-100 slider value
-    const [viewMode, setViewMode] = useState<"file" | "page">("file");
     const [previews, setPreviews] = useState<{ [key: string]: string }>({});
-    const [showPasswordModal, setShowPasswordModal] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // Generate preview for a PDF file (client-side using pdfjs)
+    const generatePreview = async (file: File): Promise<string | null> => {
+        try {
+            const arrayBuffer = await file.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+            const page = await pdf.getPage(1);
+
+            const scale = 0.5;
+            const viewport = page.getViewport({ scale });
+
+            const canvas = document.createElement("canvas");
+            const context = canvas.getContext("2d");
+            if (!context) return null;
+
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
+
+            await page.render({
+                canvasContext: context,
+                viewport: viewport,
+            }).promise;
+
+            return canvas.toDataURL("image/png");
+        } catch (error) {
+            console.error("Error generating preview:", error);
+            return null;
+        }
+    };
 
     const handleFileSelected = async (newFiles: File[]) => {
         const pdfFiles = newFiles.filter(f => f.type === "application/pdf");
         setFiles(prev => [...prev, ...pdfFiles]);
 
-        // Generate previews for new files
+        // Generate previews for each file
         for (const file of pdfFiles) {
-            await generatePreview(file);
+            const preview = await generatePreview(file);
+            if (preview) {
+                setPreviews(prev => ({
+                    ...prev,
+                    [file.name]: preview
+                }));
+            }
         }
     };
 
-    const generatePreview = async (file: File) => {
-        try {
-            const result = await pdfApi.getPagePreviews(file);
-            if (result?.previews?.[0]) {
-                setPreviews(prev => ({
-                    ...prev,
-                    [file.name]: result.previews[0].image
-                }));
-            }
-        } catch (error: any) {
-            console.error("Failed to generate preview:", error);
-            if (isPasswordError(error)) {
-                setShowPasswordModal(true);
-            }
-        }
-    };
+
 
     const removeFile = (index: number) => {
         setFiles(prev => {
             const newFiles = [...prev];
             const removed = newFiles.splice(index, 1);
-            // Remove preview
-            setPreviews(prev => {
-                const newPreviews = { ...prev };
-                delete newPreviews[removed[0].name];
-                return newPreviews;
-            });
+            // Also remove the preview for this file
+            if (removed[0]) {
+                setPreviews(prev => {
+                    const newPreviews = { ...prev };
+                    delete newPreviews[removed[0].name];
+                    return newPreviews;
+                });
+            }
             return newFiles;
         });
     };
@@ -83,10 +98,8 @@ export function CompressPdfTool() {
         setIsProcessing(true);
 
         try {
-            const backendLevel = compressionLevel === "extreme" ? "extreme" : "recommended";
-
             if (files.length === 1) {
-                const result = await pdfApi.compress(files[0], backendLevel);
+                const result = await pdfApi.compress(files[0], compressionLevel);
                 saveAs(result.blob, result.fileName || `compressed-${files[0].name}`);
             } else {
                 const zip = new JSZip();
@@ -95,12 +108,12 @@ export function CompressPdfTool() {
                     const file = files[i];
                     toast.show({
                         title: "Compressing",
-                        message: `Compressing ${i + 1} of ${files.length}: ${file.name}`,
+                        message: `Processing ${i + 1} of ${files.length}: ${file.name}`,
                         variant: "default",
                         position: "top-right",
                     });
 
-                    const result = await pdfApi.compress(file, backendLevel);
+                    const result = await pdfApi.compress(file, compressionLevel);
                     const fileName = result.fileName || `compressed-${file.name}`;
                     zip.file(fileName, result.blob);
                 }
@@ -174,11 +187,6 @@ export function CompressPdfTool() {
                         }}
                     />
                 </div>
-                <PasswordProtectedModal
-                    isOpen={showPasswordModal}
-                    onClose={() => setShowPasswordModal(false)}
-                    toolName="compressing"
-                />
             </>
         );
     }
@@ -190,42 +198,28 @@ export function CompressPdfTool() {
         <div className="bg-[#f6f7f8] min-h-screen relative">
             <div className="max-w-[1800px] mx-auto px-4 py-4 md:py-8">
                 <div className="flex flex-col lg:flex-row gap-4 lg:gap-8">
-                    {/* Left Column - File Grid (Expanded like merge PDF) */}
-                    <div className="flex-1 max-w-full lg:max-w-[1200px]">
-                        {/* View Mode Toggle + Controls */}
-                        <div className="bg-white/95 backdrop-blur-sm rounded-xl border border-[#e2e8f0] shadow-sm p-4 mb-6">
-                            <div className="flex items-center justify-between flex-wrap gap-4">
-                                {/* View Toggle */}
-                                <div className="bg-[#f0f2f4] rounded-lg p-1 flex">
-                                    <button
-                                        onClick={() => setViewMode("file")}
-                                        className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${viewMode === "file"
-                                            ? "bg-white text-[#4383BF] shadow"
-                                            : "text-[#617289]"
-                                            }`}
-                                    >
-                                        File View
-                                    </button>
-                                    <button
-                                        onClick={() => setViewMode("page")}
-                                        className={`px-4 py-2 rounded-md text-sm font-bold transition-all ${viewMode === "page"
-                                            ? "bg-white text-[#4383BF] shadow"
-                                            : "text-[#617289]"
-                                            }`}
-                                    >
-                                        Page View
-                                    </button>
+                    {/* Left Column - File Grid (Expanded with margin for sidebar) */}
+                    <div className="flex-1 lg:mr-[440px]">
+                        {/* File Info Bar */}
+                        <div className="bg-white rounded-xl border border-[#e2e8f0] shadow-sm p-4 mb-6">
+                            <div className="flex items-center justify-between">
+                                {/* File Name and Size */}
+                                <div className="flex items-center gap-2">
+                                    <span className="text-[#111418] font-medium">
+                                        {files.length === 1 ? files[0].name : `${files.length} files selected`}
+                                    </span>
+                                    <span className="text-[#617289]">
+                                        ({formatFileSize(files.reduce((sum, f) => sum + f.size, 0))})
+                                    </span>
                                 </div>
 
-                                {/* Clear All Button */}
+                                {/* Remove File Button */}
                                 <button
                                     onClick={clearAll}
-                                    className="flex items-center gap-2 text-[#617289] hover:text-red-600 transition-colors px-3 py-2 rounded-lg hover:bg-red-50"
+                                    className="flex items-center gap-2 text-[#4383BF] hover:text-[#3470A0] transition-colors px-3 py-1.5 rounded-lg hover:bg-blue-50"
                                 >
-                                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                                        <path d="M15 16h4v2h-4zm0-8h7v2h-7zm0 4h6v2h-6zM3 18c0 1.1.9 2 2 2h6c1.1 0 2-.9 2-2V8H3v10zM14 5h-3l-1-1H6L5 5H2v2h12z" />
-                                    </svg>
-                                    <span className="text-sm font-bold">Clear All</span>
+                                    <Trash2 className="w-4 h-4" />
+                                    <span className="text-sm font-medium">Remove File</span>
                                 </button>
                             </div>
                         </div>
@@ -242,7 +236,7 @@ export function CompressPdfTool() {
                                         {previews[file.name] ? (
                                             <img
                                                 src={previews[file.name]}
-                                                alt={`Preview ${index + 1}`}
+                                                alt={`Preview of ${file.name}`}
                                                 className="max-w-full max-h-full object-contain p-4"
                                             />
                                         ) : (
@@ -304,46 +298,98 @@ export function CompressPdfTool() {
 
                             {/* Compression Levels */}
                             <div className="flex-1 overflow-y-auto mb-6">
-                                <div className="space-y-3">
-                                    {[{
-                                        value: "extreme",
-                                        title: "EXTREME COMPRESSION",
-                                        desc: "Less quality, high compression"
-                                    }, {
-                                        value: "recommended",
-                                        title: "RECOMMENDED COMPRESSION",
-                                        desc: "Good quality, good compression"
-                                    }, {
-                                        value: "less",
-                                        title: "LESS COMPRESSION",
-                                        desc: "High quality, less compression"
-                                    }].map((item) => {
-                                        const isActive = compressionLevel === item.value;
-                                        return (
-                                            <button
-                                                key={item.value}
-                                                onClick={() => setCompressionLevel(item.value as any)}
-                                                className={`w-full text-left p-4 rounded-lg transition-colors ${isActive ? "bg-[#f1f4fb] border-2 border-[#4383BF]" : "bg-[#f6f7f8] border-2 border-transparent hover:bg-[#e2e8f0]"
-                                                    }`}
-                                            >
-                                                <div className="flex items-center justify-between">
-                                                    <div>
-                                                        <div className="text-[#e11d48] text-sm font-bold tracking-tight">
-                                                            {item.title}
-                                                        </div>
-                                                        <div className="text-[#0f172a] text-sm mt-1">
-                                                            {item.desc}
-                                                        </div>
-                                                    </div>
-                                                    {isActive && (
-                                                        <span className="w-8 h-8 bg-[#22c55e] rounded-full flex items-center justify-center text-white shadow">
-                                                            <Check className="h-4 w-4" />
-                                                        </span>
-                                                    )}
+                                <div className="space-y-4">
+                                    {/* Extreme Option */}
+                                    <button
+                                        onClick={() => setCompressionLevel("extreme")}
+                                        className={`w-full text-left p-4 rounded-xl border-2 transition-all duration-200 relative group
+                                            ${compressionLevel === "extreme"
+                                                ? "bg-white border-blue-600 shadow-sm"
+                                                : "bg-white border-gray-100 hover:border-blue-100 shadow-sm"}`}
+                                    >
+                                        <div className="flex items-start gap-4">
+                                            <div className="flex-shrink-0 w-10 h-10 rounded-full bg-[#FFEBEE] flex items-center justify-center text-[#EF4444]">
+                                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                                    <path d="M4 14h6v6" />
+                                                    <path d="M20 10h-6V4" />
+                                                    <path d="M14 10l7-7" />
+                                                    <path d="M3 21l7-7" />
+                                                </svg>
+                                            </div>
+                                            <div className="flex-1">
+                                                <div className="font-bold text-[#111827] text-base mb-1">Extreme</div>
+                                                <div className="text-gray-500 text-sm leading-relaxed">
+                                                    Maximum space saving. Lower image quality.
                                                 </div>
-                                            </button>
-                                        );
-                                    })}
+                                            </div>
+                                            {compressionLevel === "extreme" && (
+                                                <div className="absolute top-4 right-4">
+                                                    <div className="bg-[#22c55e] rounded-full p-1">
+                                                        <Check className="w-3 h-3 text-white" />
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </button>
+
+                                    {/* Recommended Option */}
+                                    <button
+                                        onClick={() => setCompressionLevel("recommended")}
+                                        className={`w-full text-left p-4 rounded-xl border-2 transition-all duration-200 relative group
+                                            ${compressionLevel === "recommended"
+                                                ? "bg-white border-blue-600 shadow-sm"
+                                                : "bg-white border-gray-100 hover:border-blue-100 shadow-sm"}`}
+                                    >
+                                        <div className="flex items-start gap-4">
+                                            <div className="flex-shrink-0 w-10 h-10 rounded-full bg-[#E3F2FD] flex items-center justify-center text-[#2563EB]">
+                                                {/* Thumbs Up Icon */}
+                                                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" className="transform -scale-x-100">
+                                                    <path d="M2 20h2c.55 0 1-.45 1-1v-9c0-.55-.45-1-1-1H2v11zm19.83-7.12c.11-.25.17-.52.17-.8V11c0-1.1-.9-2-2-2h-5.5l.92-4.65c.05-.22.02-.46-.08-.66-.23-.45-.52-.86-.88-1.22L14 2 7.59 8.41C7.21 8.79 7 9.3 7 9.83v7.84C7 18.95 8.05 20 9.34 20h8.11c.7 0 1.36-.37 1.72-.97l2.66-6.15z" />
+                                                </svg>
+                                            </div>
+                                            <div className="flex-1">
+                                                <div className="font-bold text-[#2563EB] text-base mb-1">Recommended</div>
+                                                <div className="text-gray-500 text-sm leading-relaxed">
+                                                    Optimal balance between quality and file size.
+                                                </div>
+                                            </div>
+                                            {compressionLevel === "recommended" && (
+                                                <div className="absolute top-4 right-4">
+                                                    <div className="bg-[#22c55e] rounded-full p-1">
+                                                        <Check className="w-3 h-3 text-white" />
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </button>
+
+                                    {/* High Quality Option */}
+                                    <button
+                                        onClick={() => setCompressionLevel("less")}
+                                        className={`w-full text-left p-4 rounded-xl border-2 transition-all duration-200 relative group
+                                            ${compressionLevel === "less"
+                                                ? "bg-white border-blue-600 shadow-sm"
+                                                : "bg-white border-gray-100 hover:border-blue-100 shadow-sm"}`}
+                                    >
+                                        <div className="flex items-start gap-4">
+                                            <div className="flex-shrink-0 w-10 h-10 rounded-full bg-[#EDE7F6] flex items-center justify-center text-[#7C3AED]">
+                                                <div className="font-black text-xs border-2 border-current rounded px-0.5 py-px tracking-tighter">HQ</div>
+                                            </div>
+                                            <div className="flex-1">
+                                                <div className="font-bold text-[#111827] text-base mb-1">High Quality</div>
+                                                <div className="text-gray-500 text-sm leading-relaxed">
+                                                    Minimal compression. Best for retaining details.
+                                                </div>
+                                            </div>
+                                            {compressionLevel === "less" && (
+                                                <div className="absolute top-4 right-4">
+                                                    <div className="bg-[#22c55e] rounded-full p-1">
+                                                        <Check className="w-3 h-3 text-white" />
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </button>
                                 </div>
                             </div>
 
@@ -383,11 +429,6 @@ export function CompressPdfTool() {
                         handleFileSelected(Array.from(e.target.files));
                     }
                 }}
-            />
-            <PasswordProtectedModal
-                isOpen={showPasswordModal}
-                onClose={() => setShowPasswordModal(false)}
-                toolName="compressing"
             />
         </div>
     );

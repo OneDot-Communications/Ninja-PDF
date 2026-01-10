@@ -241,7 +241,6 @@ export const tools = [
         category: "Edit PDF",
         isNew: true,
         color: toolColors.pdf,
-        comingSoon: true,
         userCount: 3892,
     },
     {

@@ -102,32 +102,9 @@ export const pdfApi = {
     // ─────────────────────────────────────────────────────────────────────────────
     // PDF COMPRESSION
     // ─────────────────────────────────────────────────────────────────────────────
-    compress: async (file: File, level: "recommended" | "extreme"): Promise<ProcessingResult> => {
-        return withFallback(
-            async () => {
-                const formData = new FormData();
-                formData.append("file", file);
-                formData.append("level", level);
-
-                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/pdf/compress`, {
-                    method: "POST",
-                    body: formData,
-                });
-
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    throw new Error(`Compress failed: ${errorText}`);
-                }
-
-                const blob = await response.blob();
-                return blob;
-            },
-            async () => {
-                const processor = await getClientProcessor();
-                return processor.execute("compress", [file], { level });
-            },
-            `compressed-${file.name}`
-        );
+    compress: async (file: File, level: string): Promise<ProcessingResult> => {
+        const processor = await getClientProcessor();
+        return processor.execute("compress", [file], { level });
     },
 
     // ─────────────────────────────────────────────────────────────────────────────
@@ -309,40 +286,44 @@ export const pdfApi = {
     },
 
     split: async (file: File, options: any): Promise<ProcessingResult> => {
-        // Call Spring Boot backend API for PDF splitting
-        const formData = new FormData();
-        formData.append('file', file);
-        if (options?.selectedPages && options.selectedPages.length > 0) {
-            // Convert page numbers to array of integers
-            options.selectedPages.forEach((page: number) => {
-                formData.append('pages', page.toString());
-            });
-        }
-        if (options?.outputFileName) {
-            formData.append('outputFileName', options.outputFileName);
-        }
+        return withFallback(
+            async () => {
+                // Call Spring Boot backend API for PDF splitting
+                const formData = new FormData();
+                formData.append('file', file);
+                if (options?.selectedPages && options.selectedPages.length > 0) {
+                    // Convert page numbers to array of integers
+                    options.selectedPages.forEach((page: number) => {
+                        formData.append('pages', page.toString());
+                    });
+                }
+                if (options?.outputFileName) {
+                    formData.append('outputFileName', options.outputFileName);
+                }
+                if (options?.splitMode) {
+                    formData.append('splitMode', options.splitMode);
+                    formData.append('mode', options.splitMode);
+                }
 
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/pdf/split`, {
-            method: 'POST',
-            body: formData,
-        });
+                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/pdf/split`, {
+                    method: 'POST',
+                    body: formData,
+                });
 
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`Split failed: ${errorText}`);
-        }
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`Split failed: ${errorText}`);
+                }
 
-        const blob = await response.blob();
-        const contentDisposition = response.headers.get('Content-Disposition');
-        let fileName = 'split.pdf';
-        if (contentDisposition) {
-            const match = contentDisposition.match(/filename="([^"]+)"/);
-            if (match) {
-                fileName = match[1];
-            }
-        }
-
-        return { blob, fileName };
+                const blob = await response.blob();
+                return blob;
+            },
+            async () => {
+                const processor = await getClientProcessor();
+                return processor.execute("split", [file], options);
+            },
+            options?.outputFileName || `split-${file.name}`
+        );
     },
 
     getPagePreviews: async (file: File): Promise<{ previews: Array<{ pageNumber: number; image: string; width: number; height: number }>; totalPages: number }> => {

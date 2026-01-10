@@ -266,11 +266,82 @@ export async function organizePdf(files: File[], options: any): Promise<Strategy
     return { blob, fileName: `organized-${file.name}`, extension: 'pdf' };
 }
 
-export async function compressPdf(file: File, options: { level: 'recommended' | 'extreme' }): Promise<StrategyResult> {
+export async function compressPdf(file: File, options: { level: 'recommended' | 'extreme' | 'high' | 'medium' }): Promise<StrategyResult> {
+    // For 'less' compression (high quality), we just return the original file 
+    // or we could use pdf-lib specific optimization if available. 
+    // For now, let's treat 'high'/'less' as just a pass-through or very light optimization.
+    if (options.level === 'high' || options.level === 'medium') {
+        const arrayBuffer = await file.arrayBuffer();
+        const pdfDoc = await PDFDocument.load(arrayBuffer);
+        const pdfBytes = await pdfDoc.save();
+        const blob = new Blob([pdfBytes as any], { type: 'application/pdf' });
+        return {
+            blob,
+            fileName: `compressed-${file.name}`,
+            extension: 'pdf'
+        };
+    }
+
+    // For 'recommended' (medium) and 'extreme', we use rasterization
+    const { jsPDF } = await import("jspdf");
+    const pdfjsLib = await import("pdfjs-dist");
+
+    // Configure worker
+    if (typeof window !== "undefined" && !pdfjsLib.GlobalWorkerOptions.workerSrc) {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+    }
+
     const arrayBuffer = await file.arrayBuffer();
-    const pdfDoc = await PDFDocument.load(arrayBuffer);
-    const pdfBytes = await pdfDoc.save();
-    const blob = new Blob([pdfBytes as any], { type: 'application/pdf' });
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    const totalPages = pdf.numPages;
+
+    // Compression settings
+    const quality = options.level === 'extreme' ? 0.4 : 0.7;
+    const scale = options.level === 'extreme' ? 0.7 : 1.0;
+
+    // We need to initialize jsPDF with the format of the first page to avoid default A4 issues
+    const firstPage = await pdf.getPage(1);
+    const firstViewport = firstPage.getViewport({ scale: scale });
+
+    const doc = new jsPDF({
+        orientation: firstViewport.width > firstViewport.height ? "l" : "p",
+        unit: "pt",
+        format: [firstViewport.width, firstViewport.height],
+        compress: true
+    });
+
+    for (let i = 1; i <= totalPages; i++) {
+        const page = await pdf.getPage(i);
+        const viewport = page.getViewport({ scale: scale });
+
+        // For pages after the first one, add a new page with its specific dimensions
+        if (i > 1) {
+            doc.addPage(
+                [viewport.width, viewport.height],
+                viewport.width > viewport.height ? "l" : "p"
+            );
+        }
+
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        if (!context) continue;
+
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+
+        await page.render({
+            canvasContext: context,
+            viewport: viewport,
+        }).promise;
+
+        const imgData = canvas.toDataURL('image/jpeg', quality);
+
+        // Add image to the current page (filling it completely)
+        doc.addImage(imgData, 'JPEG', 0, 0, viewport.width, viewport.height, undefined, 'FAST');
+    }
+
+    const blob = doc.output('blob');
+
     return {
         blob,
         fileName: `compressed-${file.name}`,
